@@ -399,59 +399,6 @@ export default function StudioLiveSessionPage() {
   }, [sessionId]);
 
   useEffect(() => {
-    if (!sessionId || !session) return;
-
-    let cancelled = false;
-
-    const syncSpeakerReservations = async () => {
-      try {
-        const response = await fetch(`/api/reservations?sessionId=${encodeURIComponent(sessionId)}`, { cache: "no-store" });
-        if (!response.ok) return;
-        const payload = (await response.json()) as { reservations?: Reservation[] };
-        if (cancelled) return;
-
-        const activeSpeakerReservations = (payload.reservations ?? []).filter(
-          (reservation) => reservation.type === "speaker" && reservation.status === "reserved",
-        );
-        const activeIds = new Set(activeSpeakerReservations.map((reservation) => reservation.userId));
-
-        setParticipants((prev) => {
-          const byId = new Map(prev.map((participant) => [participant.id, participant]));
-
-          activeSpeakerReservations.forEach((reservation) => {
-            const existing = byId.get(reservation.userId);
-            byId.set(reservation.userId, {
-              id: reservation.userId,
-              name: existing?.name ?? reservation.userName,
-              status: existing?.isSpeaking ? "speaking" : existing && existing.status !== "requested" ? existing.status : "requested",
-              muted: existing?.muted ?? false,
-              isSpeaking: existing?.isSpeaking ?? false,
-              audioLevel: existing?.audioLevel ?? 0,
-              lastSpokeAt: existing?.lastSpokeAt ?? null,
-            });
-          });
-
-          return Array.from(byId.values()).filter(
-            (participant) => participant.status !== "requested" || activeIds.has(participant.id),
-          );
-        });
-      } catch {
-        // no-op: reservations are a best-effort waiting list for the overlay.
-      }
-    };
-
-    void syncSpeakerReservations();
-    const interval = window.setInterval(() => {
-      void syncSpeakerReservations();
-    }, 10000);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-    };
-  }, [session, sessionId]);
-
-  useEffect(() => {
     if (!sessionId) return;
     let cancelled = false;
 
