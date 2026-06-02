@@ -31,6 +31,7 @@ export type SessionUser = {
   plan?: SubscriptionPlan;
   subscriptionStatus?: SubscriptionStatus;
   subscriptionRenewsAt?: string;
+  bannedAt?: string;
 };
 
 export type AuthSession = {
