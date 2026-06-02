@@ -8,6 +8,16 @@ import { useI18n } from "../../lib/i18n";
 import { useUserSession } from "../../lib/userSession";
 import type { SignupInput, UserRole } from "../../lib/apiTypes";
 
+const ROLE_CARDS: { role: UserRole; label: string; description: string }[] = [
+  { role: "listener", label: "Listener", description: "視聴・予約・通知向け" },
+  { role: "vtuber", label: "VTuber", description: "配信作成・管理" },
+  {
+    role: "supporter",
+    label: "日本人サポーター",
+    description: "VTuber×Aimerセッションの通訳・盛り上げ役",
+  },
+];
+
 async function postJson<T>(url: string, body: unknown) {
   const response = await fetch(url, {
     method: "POST",
@@ -76,6 +86,9 @@ export default function SignupPage() {
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [role, setRole] = useState<UserRole>("listener");
+  const [supporterGuidelinesAccepted, setSupporterGuidelinesAccepted] = useState(false);
+  const [supporterMotivation, setSupporterMotivation] = useState("");
+  const [supporterFavoriteVtuber, setSupporterFavoriteVtuber] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -145,6 +158,10 @@ export default function SignupPage() {
       setError(tx("ディスプレイネームを入力してください。", "Please enter your display name."));
       return;
     }
+    if (role === "supporter" && !supporterGuidelinesAccepted) {
+      setError("サポーターガイドラインへの同意が必要です。");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -156,6 +173,7 @@ export default function SignupPage() {
         provider: "password",
         termsAccepted,
         privacyAccepted,
+        bio: role === "supporter" && supporterMotivation.trim() ? supporterMotivation.trim() : undefined,
       };
       await postJson("/api/auth/signup", payload);
       await refreshSession();
@@ -222,31 +240,43 @@ export default function SignupPage() {
                 </div>
               </>
             ) : step === 2 ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => setRole("listener")}
-                  className={`rounded-2xl border px-4 py-3 text-left transition ${
-                    role === "listener"
-                      ? "border-[var(--brand-secondary)] bg-[color-mix(in_srgb,var(--brand-secondary)_10%,transparent)]"
-                      : "border-white/10 bg-white/[0.015]"
-                  }`}
-                >
-                  <p className="text-sm font-semibold text-[var(--brand-text)]">Listener</p>
-                  <p className="mt-1 text-xs text-[var(--brand-text-muted)]">{tx("視聴・予約・通知向け", "For watching, reservations, and notifications")}</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole("vtuber")}
-                  className={`rounded-2xl border px-4 py-3 text-left transition ${
-                    role === "vtuber"
-                      ? "border-[var(--brand-secondary)] bg-[color-mix(in_srgb,var(--brand-secondary)_10%,transparent)]"
-                      : "border-white/10 bg-white/[0.015]"
-                  }`}
-                >
-                  <p className="text-sm font-semibold text-[var(--brand-text)]">VTuber</p>
-                  <p className="mt-1 text-xs text-[var(--brand-text-muted)]">{tx("配信作成・管理", "Create and manage streams")}</p>
-                </button>
+              <div className="grid gap-3">
+                {ROLE_CARDS.map(({ role: r, label, description }) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRole(r)}
+                    className={`rounded-2xl border px-4 py-3.5 text-left transition ${
+                      role === r
+                        ? "border-[var(--brand-secondary)] bg-[color-mix(in_srgb,var(--brand-secondary)_10%,transparent)]"
+                        : "border-white/10 bg-white/[0.015]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-[var(--brand-text)]">{label}</p>
+                      {r === "supporter" && (
+                        <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-bold text-purple-400">
+                          日本語話者向け
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-xs text-[var(--brand-text-muted)]">{description}</p>
+                    {r === "supporter" && (
+                      <p className="mt-1.5 text-[11px] text-[var(--brand-text-muted)]">
+                        ガイドライン同意・電話番号認証が必要 /{" "}
+                        <a
+                          href="/supporter-guidelines"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-purple-400 underline-offset-2 hover:underline"
+                        >
+                          規約を確認する →
+                        </a>
+                      </p>
+                    )}
+                  </button>
+                ))}
               </div>
             ) : (
               <>
@@ -254,6 +284,56 @@ export default function SignupPage() {
                   <TextInput value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
                 </InputLabel>
                 <p className="text-xs text-[var(--brand-text-muted)]">{tx("この表示名は配信枠やチャットに表示されます。", "This display name appears in stream sessions and chat.")}</p>
+
+                {role === "supporter" && (
+                  <div className="space-y-4 rounded-2xl border border-purple-500/20 bg-purple-500/5 p-4">
+                    <p className="text-xs font-semibold text-purple-300">サポーター追加情報</p>
+
+                    <InputLabel label="応援しているVTuber（任意）">
+                      <TextInput
+                        placeholder="例：〇〇ちゃん"
+                        value={supporterFavoriteVtuber}
+                        onChange={(e) => setSupporterFavoriteVtuber(e.target.value)}
+                      />
+                    </InputLabel>
+
+                    <InputLabel label="参加動機（任意）">
+                      <textarea
+                        placeholder="例：フィリピン人との交流を通じて英語を練習したい"
+                        value={supporterMotivation}
+                        onChange={(e) => setSupporterMotivation(e.target.value)}
+                        rows={3}
+                        className="w-full resize-none border border-[var(--brand-text-muted)]/70 bg-transparent px-3 py-2.5 text-sm text-[var(--brand-text)] outline-none transition focus:border-[var(--brand-secondary)]"
+                      />
+                    </InputLabel>
+
+                    <label className="flex items-start gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={supporterGuidelinesAccepted}
+                        onChange={(e) => setSupporterGuidelinesAccepted(e.target.checked)}
+                        className="mt-0.5 shrink-0"
+                      />
+                      <span>
+                        <Link
+                          href="/supporter-guidelines"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[var(--brand-secondary)] underline-offset-2 hover:underline"
+                        >
+                          サポーターガイドライン
+                        </Link>
+                        を読み、すべての内容に同意します
+                        <span className="ml-1 text-red-400">*</span>
+                      </span>
+                    </label>
+
+                    <div className="rounded-xl bg-white/5 px-3 py-2.5 text-xs text-[var(--brand-text-muted)]">
+                      アカウント作成後、設定ページから電話番号の認証を完了してください。
+                      電話番号認証が完了するまでスピーカー予約はできません。
+                    </div>
+                  </div>
+                )}
               </>
             )}
 

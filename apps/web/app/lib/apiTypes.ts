@@ -1,4 +1,4 @@
-export type UserRole = "listener" | "vtuber";
+export type UserRole = "listener" | "vtuber" | "supporter";
 export type AuthProvider = "password" | "google" | "google_demo";
 export type SubscriptionPlan = "free" | "aimer";
 export type SubscriptionStatus = "inactive" | "trialing" | "active" | "past_due" | "canceled";

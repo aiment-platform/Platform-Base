@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useI18n } from "../../lib/i18n";
 
 export function Footer() {
@@ -28,7 +29,11 @@ export function Footer() {
  <ul className="space-y-2 text-sm text-[var(--brand-text-muted)]">
  <li>{tx("ヘルプセンター", "Help Center")}</li>
  <li>{tx("コミュニティ", "Community")}</li>
- <li>{tx("ガイドライン", "Guidelines")}</li>
+ <li>
+   <Link href="/supporter-guidelines" className="transition hover:text-[var(--brand-text)]">
+     {tx("サポーター規約", "Supporter Guidelines")}
+   </Link>
+ </li>
  </ul>
  </div>
  <div>
@@ -43,8 +48,8 @@ export function Footer() {
  <div className="flex items-center justify-between pt-8 text-sm text-[var(--brand-text-muted)]">
  <p>© 2026 aiment. All rights reserved.</p>
  <div className="flex items-center gap-6">
- <span>{tx("プライバシーポリシー", "Privacy Policy")}</span>
- <span>{tx("利用規約", "Terms of Use")}</span>
+ <Link href="/privacy" className="transition hover:text-[var(--brand-text)]">{tx("プライバシーポリシー", "Privacy Policy")}</Link>
+ <Link href="/terms" className="transition hover:text-[var(--brand-text)]">{tx("利用規約", "Terms of Use")}</Link>
  </div>
  </div>
  </div>
