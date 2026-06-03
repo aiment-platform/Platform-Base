@@ -1,6 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getRuntimeConfig, isAllowedOrigin } from "./lib/runtimeConfig";
 
+// Cookie name must match SESSION_COOKIE in app/lib/server/auth.ts
+const SESSION_COOKIE = "aiment_dev_session";
+
+const ADMIN_IDS = new Set(
+  (process.env.ADMIN_USER_IDS ?? "").split(",").map((s) => s.trim()).filter(Boolean),
+);
+
 type BucketState = {
   count: number;
   resetAt: number;
@@ -57,6 +64,20 @@ function checkRateLimit(request: NextRequest, config: ReturnType<typeof getRunti
 }
 
 export function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Admin route protection — UX-layer redirect only.
+  // Handler and DAL each independently verify admin identity — see CVE-2025-29927.
+  if (pathname.startsWith("/admin")) {
+    if (ADMIN_IDS.size > 0) {
+      const userId = request.cookies.get(SESSION_COOKIE)?.value;
+      if (!userId || !ADMIN_IDS.has(userId)) {
+        return NextResponse.redirect(new URL("/", request.url));
+      }
+    }
+    return NextResponse.next();
+  }
+
   const config = getRuntimeConfig();
   const origin = request.headers.get("origin");
 
@@ -91,5 +112,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/:path*"],
+  matcher: ["/admin/:path*", "/api/:path*"],
 };
