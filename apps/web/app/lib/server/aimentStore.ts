@@ -176,7 +176,13 @@ function normalizeStreamSession(entry: Partial<StreamSession>): StreamSession | 
 function normalizeStoredUser(entry: Partial<StoredUser>): StoredUser | null {
   if (typeof entry.id !== "string" || typeof entry.name !== "string") return null;
   const role =
-    entry.role === "vtuber" ? "vtuber" : entry.role === "listener" ? "listener" : null;
+    entry.role === "vtuber"
+      ? "vtuber"
+      : entry.role === "listener"
+        ? "listener"
+        : entry.role === "supporter"
+          ? "supporter"
+          : null;
   if (!role) return null;
 
   const legacyDefaults = LEGACY_USER_DEFAULTS[entry.id] ?? {};
