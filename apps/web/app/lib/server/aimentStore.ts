@@ -234,6 +234,7 @@ function normalizeStoredUser(entry: Partial<StoredUser>): StoredUser | null {
       typeof entry.verificationRequestedAt === "string"
         ? entry.verificationRequestedAt
         : undefined,
+    bannedAt: typeof entry.bannedAt === "string" ? entry.bannedAt : undefined,
   };
 }
 
@@ -324,6 +325,7 @@ async function initSchema() {
   await db`ALTER TABLE users ADD COLUMN IF NOT EXISTS country TEXT`;
   await db`ALTER TABLE users ADD COLUMN IF NOT EXISTS language_level TEXT`;
   await db`ALTER TABLE users ADD COLUMN IF NOT EXISTS sns_twitter TEXT`;
+  await db`ALTER TABLE users ADD COLUMN IF NOT EXISTS banned_at TEXT`;
   await db`ALTER TABLE users ADD COLUMN IF NOT EXISTS sns_youtube TEXT`;
   await db`
     CREATE TABLE IF NOT EXISTS stream_sessions (
@@ -397,6 +399,7 @@ function rowToStoredUser(row: any): StoredUser {
     pendingEmailCode: row.pending_email_code ?? undefined,
     pendingPhoneCode: row.pending_phone_code ?? undefined,
     verificationRequestedAt: row.verification_requested_at ?? undefined,
+    bannedAt: row.banned_at ?? undefined,
   };
 }
 
@@ -2001,4 +2004,60 @@ export async function deleteUser(userId: string): Promise<void> {
     store.users = store.users.filter((u) => u.id !== userId);
     return null;
   });
+}
+
+// ---------------------------------------------------------------------------
+// Admin-only functions
+// ---------------------------------------------------------------------------
+
+export async function listAllUsers(actorId: string): Promise<SessionUser[]> {
+  if (!isAdminUser(actorId)) throw new Error("Admin access required");
+
+  if (USE_NEON) {
+    await ensureSchema();
+    const db = getDb();
+    const rows = await db`SELECT * FROM users ORDER BY created_at DESC`;
+    return rows.map(rowToStoredUser).map(sanitizeUser);
+  }
+
+  const store = await readStore();
+  return store.users.map(sanitizeUser);
+}
+
+export async function adminUpdateUser(
+  actorId: string,
+  targetId: string,
+  updates: { role?: SessionUser["role"]; bannedAt?: string | null },
+): Promise<SessionUser> {
+  if (!isAdminUser(actorId)) throw new Error("Admin access required");
+  // Prevent admin from modifying other admin accounts
+  if (isAdminUser(targetId)) throw new Error("Cannot modify another admin account");
+
+  if (USE_NEON) {
+    await ensureSchema();
+    const db = getDb();
+    if (updates.role !== undefined) {
+      await db`UPDATE users SET role = ${updates.role} WHERE id = ${targetId}`;
+    }
+    if ("bannedAt" in updates) {
+      const val = updates.bannedAt ?? null;
+      await db`UPDATE users SET banned_at = ${val} WHERE id = ${targetId}`;
+    }
+    const rows = await db`SELECT * FROM users WHERE id = ${targetId} LIMIT 1`;
+    if (!rows[0]) throw new Error("User not found");
+    return sanitizeUser(rowToStoredUser(rows[0]));
+  }
+
+  let result: SessionUser | null = null;
+  await mutateStore((store) => {
+    const idx = store.users.findIndex((u) => u.id === targetId);
+    if (idx === -1) throw new Error("User not found");
+    const user = store.users[idx];
+    if (updates.role !== undefined) user.role = updates.role;
+    if ("bannedAt" in updates) user.bannedAt = updates.bannedAt ?? undefined;
+    result = sanitizeUser(user);
+    return null;
+  });
+  if (!result) throw new Error("User not found");
+  return result;
 }
