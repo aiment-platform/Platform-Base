@@ -281,3 +281,25 @@ export type MonitoringSummary = {
   serverErrors: number;
   recentEvents: MonitoringEvent[];
 };
+
+export type SupporterApplicationStatus = "pending" | "won" | "lost" | "cancelled";
+
+export type SupporterApplication = {
+  id: string;
+  sessionId: string;
+  userId: string;
+  userName: string;
+  status: SupporterApplicationStatus;
+  createdAt: string;
+};
+
+export type CreateSupporterApplicationInput = {
+  sessionId: string;
+};
+
+export type LotteryResult = {
+  sessionId: string;
+  slots: number;
+  totalApplicants: number;
+  winnerIds: string[];
+};
