@@ -31,6 +31,7 @@ import {
 } from "../../lib/chatMessages";
 import { useI18n } from "../../lib/i18n";
 import { getStreamSession, listActiveStreamSessions, type StreamSession } from "../../lib/streamSessions";
+import { useWatchTimeTracker } from "../../hooks/useWatchTimeTracker";
 
 type Role = "host" | "listener" | "speaker" | "unknown";
 type RequestedRole = "host" | "listener" | "speaker";
@@ -415,6 +416,13 @@ export default function RoomPage() {
   const canSendMic = assignedRole === "host" || assignedRole === "speaker";
   const canSendCam = assignedRole === "host";
   const senderRole = requestedRole === "host" ? "vtuber" : requestedRole;
+
+  useWatchTimeTracker({
+    streamSessionId: roomId,
+    hostUserId: session?.hostUserId,
+    connected: status === "connected",
+    isHost: requestedRole === "host",
+  });
 
   const clearSpeakingTimer = useCallback((participantId: string) => {
     const timer = speakingLingerTimersRef.current.get(participantId);

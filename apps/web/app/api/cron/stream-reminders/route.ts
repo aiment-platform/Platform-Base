@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { listSessionsStartingBetween } from "@/app/lib/server/aimentStore";
 import { sendStreamReminder } from "@/app/lib/server/mailer";
+import { cleanupStaleWatchSessions } from "@/app/lib/server/watchTimeStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,7 +49,8 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ ok: true, sent, errors: errors.length > 0 ? errors : undefined });
+    const staleCleaned = await cleanupStaleWatchSessions().catch(() => 0);
+    return NextResponse.json({ ok: true, sent, staleCleaned, errors: errors.length > 0 ? errors : undefined });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed";
     return NextResponse.json({ error: message }, { status: 500 });

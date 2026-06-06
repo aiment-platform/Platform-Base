@@ -7,6 +7,7 @@ import type {
   SupporterApplication,
   SupporterApplicationStatus,
 } from "../apiTypes";
+import { incrementHostWinCount } from "./watchTimeStore";
 
 // ---------------------------------------------------------------------------
 // Storage backend
@@ -176,22 +177,27 @@ export async function getMyApplication(
 export async function runSupporterLottery(
   sessionId: string,
   slots: number,
+  hostUserId: string,
 ): Promise<LotteryResult> {
   if (USE_NEON) {
     await ensureSchema();
     const db = getDb();
 
+    // ホスト別の視聴時間・当選回数を使って重み付き抽選
     const rows = await db`
-      SELECT sa.user_id, u.watch_time_hours, u.supporter_win_count
+      SELECT sa.user_id,
+             COALESCE(uhs.watch_time_hours, 0) AS watch_time_hours,
+             COALESCE(uhs.win_count, 0) AS win_count
       FROM supporter_applications sa
-      JOIN users u ON u.id = sa.user_id
+      LEFT JOIN user_host_stats uhs
+        ON uhs.viewer_user_id = sa.user_id AND uhs.host_user_id = ${hostUserId}
       WHERE sa.session_id = ${sessionId} AND sa.status = 'pending'
     `;
 
     const candidates: LotteryCandidate[] = rows.map((r) => ({
       userId: r.user_id as string,
       watchTimeHours: Number(r.watch_time_hours ?? 0),
-      winCount: Number(r.supporter_win_count ?? 0),
+      winCount: Number(r.win_count ?? 0),
     }));
 
     const winnerIds = drawLottery(candidates, slots);
@@ -204,9 +210,7 @@ export async function runSupporterLottery(
         WHERE session_id = ${sessionId} AND user_id = ANY(${winnerIds})
       `;
       for (const id of winnerIds) {
-        await db`
-          UPDATE users SET supporter_win_count = supporter_win_count + 1 WHERE id = ${id}
-        `;
+        await incrementHostWinCount(id, hostUserId);
       }
     }
     if (loserIds.length > 0) {
@@ -220,22 +224,24 @@ export async function runSupporterLottery(
     return { sessionId, slots, totalApplicants: candidates.length, winnerIds };
   }
 
-  // In-memory path
+  // In-memory path — hostUserId ベースの視聴時間を使う
   const pending = memApplications.filter(
     (a) => a.sessionId === sessionId && a.status === "pending",
   );
-  const candidates: LotteryCandidate[] = pending.map((a) => ({
-    userId: a.userId,
-    watchTimeHours: a.watchTimeHours,
-    winCount: a.winCount,
-  }));
+  const { getUserHostStats } = await import("./watchTimeStore");
+  const candidates: LotteryCandidate[] = await Promise.all(
+    pending.map(async (a) => {
+      const stats = await getUserHostStats(a.userId, hostUserId);
+      return { userId: a.userId, watchTimeHours: stats.watchTimeHours, winCount: stats.winCount };
+    }),
+  );
 
   const winnerIds = drawLottery(candidates, slots);
 
   for (const app of pending) {
     if (winnerIds.includes(app.userId)) {
       app.status = "won";
-      memWinCounts.set(app.userId, (memWinCounts.get(app.userId) ?? 0) + 1);
+      await incrementHostWinCount(app.userId, hostUserId);
     } else {
       app.status = "lost";
     }
