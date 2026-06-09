@@ -44,8 +44,9 @@ export default function AdminReservationsPage() {
   const cancelled = reservations.filter((r) => r.status === "cancelled");
 
   return (
-    <div className="min-h-screen bg-[#0d0d12] p-8 text-white">
-      <h1 className="mb-6 text-xl font-bold">Admin — 予約者一覧</h1>
+    <div className="p-8">
+      <h1 className="mb-1 text-2xl font-bold">予約者一覧</h1>
+      <p className="mb-6 text-sm text-white/40">セッション ID で予約者を検索</p>
 
       <div className="mb-6 flex gap-2">
         <input

@@ -62,17 +62,17 @@ export default function AdminIngressPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[var(--brand-bg-900)] p-8 text-[var(--brand-text)]">
-      <div className="mx-auto max-w-4xl">
+    <main className="p-8">
+      <div className="max-w-4xl">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">LiveKit Ingress Manager</h1>
-            <p className="mt-1 text-sm text-[var(--brand-text-muted)]">Temporary admin page</p>
+            <h1 className="text-2xl font-bold">Ingress 管理</h1>
+            <p className="mt-1 text-sm text-white/40">LiveKit Ingress（OBSなどの配信キー）</p>
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => void load()}
-              className="rounded-lg bg-[var(--brand-surface-soft)] px-4 py-2 text-sm"
+              className="rounded-lg bg-white/10 px-4 py-2 text-sm"
             >
               Refresh
             </button>
@@ -92,21 +92,21 @@ export default function AdminIngressPage() {
         )}
 
         {loading ? (
-          <p className="text-[var(--brand-text-muted)]">Loading...</p>
+          <p className="text-white/40">Loading...</p>
         ) : ingresses.length === 0 ? (
-          <div className="rounded-2xl bg-[var(--brand-surface)] p-8 text-center text-[var(--brand-text-muted)]">
+          <div className="rounded-2xl bg-white/5 p-8 text-center text-white/40">
             No ingresses found.
           </div>
         ) : (
           <div className="space-y-3">
             {ingresses.map((ing) => (
-              <div key={ing.ingressId} className="rounded-2xl bg-[var(--brand-surface)] p-4">
+              <div key={ing.ingressId} className="rounded-2xl bg-white/5 p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1 space-y-1">
                     <p className="font-semibold">{ing.name || "(no name)"}</p>
-                    <p className="text-xs text-[var(--brand-text-muted)]">ID: {ing.ingressId}</p>
-                    <p className="text-xs text-[var(--brand-text-muted)]">Room: {ing.roomName || "—"}</p>
-                    <p className="text-xs text-[var(--brand-text-muted)]">State: {ing.state}</p>
+                    <p className="text-xs text-white/40">ID: {ing.ingressId}</p>
+                    <p className="text-xs text-white/40">Room: {ing.roomName || "—"}</p>
+                    <p className="text-xs text-white/40">State: {ing.state}</p>
                   </div>
                   <button
                     onClick={() => void handleDelete(ing.ingressId)}

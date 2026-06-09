@@ -44,11 +44,13 @@ export async function POST(request: Request) {
   try {
     await requireAdmin();
 
-    const body = (await request.json()) as { sessionId: string; slots: number };
-    if (!body.sessionId) return NextResponse.json({ error: "sessionId is required" }, { status: 400 });
+    const body = (await request.json()) as { sessionId: string; slots: number; hostUserId: string };
+    if (!body.sessionId || !body.hostUserId) {
+      return NextResponse.json({ error: "sessionId and hostUserId are required" }, { status: 400 });
+    }
 
     const slots = typeof body.slots === "number" && body.slots > 0 ? body.slots : 1;
-    const result = await runSupporterLottery(body.sessionId, slots);
+    const result = await runSupporterLottery(body.sessionId, slots, body.hostUserId);
     return NextResponse.json({ result });
   } catch (error) {
     const message = error instanceof Error ? error.message : "抽選に失敗しました。";
