@@ -365,6 +365,21 @@ async function initSchema() {
   await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS rtmp_url TEXT`;
   await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS planned_duration_min INTEGER`;
   await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS japanese_level INTEGER`;
+  // Columns added to CREATE TABLE after initial deploy — must also be here for existing DBs
+  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT ''`;
+  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT ''`;
+  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS thumbnail TEXT NOT NULL DEFAULT '/image/thumbnail/thumbnail_5.png'`;
+  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS host_name TEXT NOT NULL DEFAULT ''`;
+  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS participation_type TEXT NOT NULL DEFAULT 'First-come'`;
+  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS required_plan TEXT NOT NULL DEFAULT 'free'`;
+  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS reservation_required BOOLEAN NOT NULL DEFAULT FALSE`;
+  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS slots_total INTEGER NOT NULL DEFAULT 10`;
+  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS slots_left INTEGER NOT NULL DEFAULT 10`;
+  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS speaker_slots_total INTEGER NOT NULL DEFAULT 5`;
+  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS speaker_slots_left INTEGER NOT NULL DEFAULT 5`;
+  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS speaker_required_plan TEXT NOT NULL DEFAULT 'free'`;
+  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS preferred_video_device_id TEXT`;
+  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS preferred_video_label TEXT`;
   await db`
     CREATE TABLE IF NOT EXISTS reservations (
       reservation_id TEXT PRIMARY KEY,
@@ -378,6 +393,9 @@ async function initSchema() {
     )
   `;
   await db`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS payment_intent_id TEXT`;
+  await db`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'listener'`;
+  await db`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS cancelled_at TEXT`;
+  await db`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS email TEXT`;
 }
 
 // Row → TypeScript type converters
@@ -1339,7 +1357,7 @@ export async function createStreamSession(
         planned_duration_min, japanese_level
       ) VALUES (
         ${sessionId}, ${hostUser.id}, ${input.title.trim()}, 'prelive', ${now},
-        ${normalizeStartsAt(input.startsAt)}, ${input.description.trim()}, ${input.category.trim()},
+        ${normalizeStartsAt(input.startsAt)}, ${input.description.trim()}, ${(input.category ?? "").trim()},
         ${input.thumbnail ?? "/image/thumbnail/thumbnail_5.png"},
         ${input.hostName?.trim() || hostUser.name},
         ${input.participationType ?? "First-come"}, ${input.requiredPlan ?? "free"},
@@ -1367,7 +1385,7 @@ export async function createStreamSession(
       createdAt: now,
       startsAt: normalizeStartsAt(input.startsAt),
       description: input.description.trim(),
-      category: input.category.trim(),
+      category: (input.category ?? "").trim(),
       thumbnail: input.thumbnail ?? "/image/thumbnail/thumbnail_5.png",
       hostName: input.hostName?.trim() || hostUser.name,
       participationType: input.participationType ?? "First-come",

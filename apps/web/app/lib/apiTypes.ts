@@ -101,7 +101,7 @@ export type StreamSession = {
 export type CreateStreamSessionInput = {
   title: string;
   description: string;
-  category: string;
+  category?: string;
   thumbnail?: string;
   hostName?: string;
   startsAt?: string;
