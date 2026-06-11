@@ -38,7 +38,9 @@ export default function StudioPreLivePage() {
   const [thumbnail, setThumbnail] = useState(DEFAULT_THUMBNAIL);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [plannedDurationMin, setPlannedDurationMin] = useState<string>("60");
+  const [speakerSlotsTotal, setSpeakerSlotsTotal] = useState(5);
+  const [speakerRequiredPlan, setSpeakerRequiredPlan] = useState<SubscriptionPlan>("free");
+  const [plannedDurationMin, setPlannedDurationMin] = useState(60);
   const [japaneseLevel, setJapaneseLevel] = useState(3);
   const [chatInput, setChatInput] = useState("");
   const [notices, setNotices] = useState<NoticeItem[]>([]);
@@ -113,9 +115,12 @@ export default function StudioPreLivePage() {
         startsAt,
         participationType: "First-come",
         slotsTotal: 50,
-        speakerSlotsTotal: 5,
-        plannedDurationMin: plannedDuration,
+        speakerSlotsTotal,
+        speakerRequiredPlan,
+        plannedDurationMin,
         japaneseLevel,
+        preferredVideoDeviceId: selectedVideoDeviceId || undefined,
+        preferredVideoLabel: selectedVideoLabel || undefined,
       });
 
       if (publishMode === "go_live_now") {
@@ -311,7 +316,46 @@ export default function StudioPreLivePage() {
                     </div>
                   </div>
 
-                  {/* 概要 */}
+                  <div className="rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 lg:col-span-2">
+                    <p className="mb-2 text-[11px] font-semibold text-[var(--brand-text-muted)]">{tx("配信詳細設定", "Session Details")}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="grid gap-1 text-xs">
+                        <span className="text-[var(--brand-text-muted)]">{tx("配信予定時間", "Planned duration")}</span>
+                        <select
+                          value={plannedDurationMin}
+                          onChange={(e) => setPlannedDurationMin(Number(e.target.value))}
+                          className="rounded-lg bg-[var(--brand-surface)] px-2 py-1.5 text-[var(--brand-text)] outline-none"
+                        >
+                          <option value={30}>30 {tx("分", "min")} — ₱200</option>
+                          <option value={45}>45 {tx("分", "min")} — ₱200</option>
+                          <option value={60}>60 {tx("分", "min")} — ₱200</option>
+                          <option value={90}>90 {tx("分", "min")} — ₱400</option>
+                          <option value={120}>120 {tx("分", "min")} — ₱400</option>
+                        </select>
+                      </label>
+                      <div className="grid gap-1 text-xs">
+                        <span className="text-[var(--brand-text-muted)]">{tx("日本語レベル（想定）", "Japanese level (expected)")}</span>
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map((level) => (
+                            <button
+                              key={level}
+                              type="button"
+                              onClick={() => setJapaneseLevel(level)}
+                              className={`flex-1 rounded py-1 text-xs font-bold transition-colors ${
+                                japaneseLevel === level
+                                  ? "bg-[var(--brand-primary)] text-white"
+                                  : "bg-[var(--brand-surface)] text-[var(--brand-text-muted)]"
+                              }`}
+                            >
+                              {level}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+
                   <label className="grid gap-1 text-sm lg:col-span-2">
                     <span className="text-[var(--brand-text-muted)]">{tx("概要", "Description")}</span>
                     <textarea
