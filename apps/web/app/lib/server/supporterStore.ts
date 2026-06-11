@@ -23,7 +23,12 @@ function getDb() {
 
 let _schemaReady: Promise<void> | null = null;
 function ensureSchema() {
-  if (!_schemaReady) _schemaReady = initSchema();
+  if (!_schemaReady) {
+    _schemaReady = initSchema().catch((err) => {
+      _schemaReady = null;
+      throw err;
+    });
+  }
   return _schemaReady;
 }
 

@@ -296,7 +296,10 @@ let _schemaReady: Promise<void> | null = null;
 
 function ensureSchema(): Promise<void> {
   if (!_schemaReady) {
-    _schemaReady = initSchema();
+    _schemaReady = initSchema().catch((err) => {
+      _schemaReady = null; // retry next call
+      throw err;
+    });
   }
   return _schemaReady;
 }
