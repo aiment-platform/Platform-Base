@@ -19,6 +19,9 @@ export type ScheduleEvent = {
   durationMin: number;
   status: BookingStatus;
   category: SessionCategory;
+  japaneseLevel?: number;
+  slotsLeft?: number;
+  slotsTotal?: number;
 };
 
 export type TimeSlot = {

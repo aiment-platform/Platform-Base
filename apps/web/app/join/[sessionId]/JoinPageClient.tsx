@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ChevronDownIcon, MicrophoneIcon } from "@heroicons/react/24/solid";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { formatSessionStartTime, getAjlInfo } from "../../lib/ajl";
 import { useI18n } from "../../lib/i18n";
 import { participationLabel } from "../../lib/labels";
 import { getStreamSession } from "../../lib/streamSessions";
@@ -22,6 +23,10 @@ type SessionMeta = {
   title: string;
   description: string;
   duration: string;
+  startsAt: string;
+  japaneseLevel?: number;
+  speakerSlotsLeft: number;
+  speakerSlotsTotal: number;
   participationType: string;
   thumbnail: string;
 };
@@ -346,7 +351,14 @@ export function JoinPageClient() {
         vtuber: dynamicSession.hostName,
         title: dynamicSession.title,
         description: dynamicSession.description,
-        duration: dynamicSession.status === "live" ? tx("配信中", "Live now") : tx("約60分", "About 60 min"),
+        duration:
+          dynamicSession.status === "live"
+            ? tx("配信中", "Live now")
+            : tx(`約${dynamicSession.plannedDurationMin ?? 60}分`, `About ${dynamicSession.plannedDurationMin ?? 60} min`),
+        startsAt: dynamicSession.startsAt,
+        japaneseLevel: dynamicSession.japaneseLevel,
+        speakerSlotsLeft: dynamicSession.speakerSlotsLeft,
+        speakerSlotsTotal: dynamicSession.speakerSlotsTotal,
         participationType: participationLabel(dynamicSession.participationType, tx),
         thumbnail: dynamicSession.thumbnail,
       };
@@ -357,10 +369,15 @@ export function JoinPageClient() {
       title: tx("配信枠を読み込んでいます", "Loading session"),
       description: "",
       duration: "",
+      startsAt: "",
+      speakerSlotsLeft: 0,
+      speakerSlotsTotal: 0,
       participationType: participationLabel("First-come", tx),
       thumbnail: "",
     };
   }, [dynamicSession, sessionId, tx]);
+
+  const ajl = getAjlInfo(session.japaneseLevel);
 
   if (!sessionLoading && !dynamicSession) {
     return (
@@ -395,7 +412,13 @@ export function JoinPageClient() {
                 <div className="h-full w-full bg-[var(--brand-surface)]" />
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-bg-900)]/75 via-[var(--brand-bg-900)]/20 to-transparent" />
-              <div className="absolute left-3 top-3 rounded-md bg-black/60 px-2 py-1 text-[11px] font-semibold">{tx("配信企画", "Live Event")}</div>
+              <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
+                <span className="rounded-md bg-black/60 px-2 py-1 text-[11px] font-semibold">{tx("配信企画", "Live Event")}</span>
+                {session.startsAt ? (
+                  <span className="rounded-md bg-black/60 px-2 py-1 text-[11px] font-semibold text-[var(--brand-secondary)]">{formatSessionStartTime(session.startsAt)}</span>
+                ) : null}
+                <span className="rounded-md bg-[var(--brand-secondary)] px-2 py-1 text-[11px] font-black text-black">AJL {ajl.level}</span>
+              </div>
               <div className="absolute bottom-4 left-4 right-4">
                 <h1 className="line-clamp-2 text-2xl font-bold leading-tight text-[var(--brand-text)] lg:text-3xl">{session.title}</h1>
                 <p className="mt-2 text-sm text-[var(--brand-text-muted)]">{session.vtuber}</p>
@@ -408,12 +431,25 @@ export function JoinPageClient() {
             <p className="mb-4 text-sm leading-relaxed text-[var(--brand-text)]">{session.description}</p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="rounded-lg bg-[var(--brand-bg-900)] px-3 py-2">
+                <p className="text-xs text-[var(--brand-text-muted)]">{tx("開始時刻", "Start time")}</p>
+                <p className="text-sm font-semibold text-[var(--brand-text)]">{session.startsAt ? formatSessionStartTime(session.startsAt) : "-"}</p>
+              </div>
+              <div className="rounded-lg bg-[var(--brand-bg-900)] px-3 py-2">
                 <p className="text-xs text-[var(--brand-text-muted)]">{tx("配信時間", "Duration")}</p>
                 <p className="text-sm font-semibold text-[var(--brand-text)]">{session.duration}</p>
               </div>
               <div className="rounded-lg bg-[var(--brand-bg-900)] px-3 py-2">
                 <p className="text-xs text-[var(--brand-text-muted)]">{tx("参加方式", "Entry Type")}</p>
                 <p className="text-sm font-semibold text-[var(--brand-text)]">{session.participationType}</p>
+              </div>
+              <div className="rounded-lg bg-[var(--brand-bg-900)] px-3 py-2">
+                <p className="text-xs text-[var(--brand-text-muted)]">AJL</p>
+                <p className="text-sm font-semibold text-[var(--brand-text)]">AJL {ajl.level} / JF {ajl.jfStandard}</p>
+                <p className="mt-1 text-[11px] text-[var(--brand-text-muted)]">{ajl.label}</p>
+              </div>
+              <div className="rounded-lg bg-[var(--brand-bg-900)] px-3 py-2">
+                <p className="text-xs text-[var(--brand-text-muted)]">{tx("参加者枠", "Participant spots")}</p>
+                <p className="text-sm font-semibold text-[var(--brand-text)]">{session.speakerSlotsLeft}/{session.speakerSlotsTotal}</p>
               </div>
             </div>
           </div>

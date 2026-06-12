@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { TopNav } from "../../components/home/TopNav";
+import { getAjlInfo } from "../../lib/ajl";
 import { useI18n } from "../../lib/i18n";
 import { categoryLabel, participationLabel } from "../../lib/labels";
 import type { StreamSession } from "../../lib/streamSessions";
@@ -50,6 +51,9 @@ function SessionCard({
     participation: string;
   };
 }) {
+  const ajl = getAjlInfo(session.japaneseLevel);
+  const spotsLeft = session.speakerSlotsLeft ?? session.slotsLeft;
+  const spotsTotal = session.speakerSlotsTotal ?? session.slotsTotal;
   return (
     <article className="overflow-hidden rounded-xl bg-[var(--brand-surface)] shadow-lg shadow-black/20">
       <div className="aspect-video overflow-hidden">
@@ -58,10 +62,14 @@ function SessionCard({
       </div>
       <div className="space-y-2 p-3">
         <h3 className="line-clamp-2 text-sm font-bold text-[var(--brand-text)]">{session.title}</h3>
-        <p className="text-xs text-[var(--brand-text-muted)]">{formatDate(session.startsAt)}</p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <p className="rounded-lg bg-[var(--brand-bg-900)] px-2 py-1 text-[10px] font-bold text-[var(--brand-text)]">{formatDate(session.startsAt)}</p>
+          <p className="rounded-lg bg-[var(--brand-secondary)]/20 px-2 py-1 text-[10px] font-black text-[var(--brand-secondary)]">AJL {ajl.level}</p>
+          <p className="rounded-lg bg-[var(--brand-bg-900)] px-2 py-1 text-[10px] font-bold text-[var(--brand-text-muted)]">{spotsLeft}/{spotsTotal}</p>
+        </div>
         <div className="flex items-center justify-between">
           <p className="text-[11px] text-[var(--brand-text-muted)]">
-            {labels.category} / {labels.participation}
+            JF {ajl.jfStandard} / {labels.participation}
           </p>
           <Link
             href={href}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRightIcon } from "@heroicons/react/24/solid";
+import { formatSessionStartTime, getAjlInfo } from "../../lib/ajl";
 import { useI18n } from "../../lib/i18n";
 import { deleteStreamSession, listMyStreamSessions, type StreamSession } from "../../lib/streamSessions";
 import { Button, buttonClassName } from "../ui/Button";
@@ -97,7 +98,9 @@ export function MySessionsManager({ title, description, showCreateButton = true,
         </div>
       ) : (
         <div className="space-y-3">
-          {sessions.map((session) => (
+          {sessions.map((session) => {
+            const ajl = getAjlInfo(session.japaneseLevel);
+            return (
             <Card key={session.sessionId} tone="subtle" className="flex items-center gap-4 p-4">
               <img src={session.thumbnail} alt={session.title} className="h-16 w-28 flex-shrink-0 rounded-lg object-cover" />
 
@@ -106,11 +109,18 @@ export function MySessionsManager({ title, description, showCreateButton = true,
                   <span className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${STATUS_COLOR[session.status]}`}>
                     {tx(STATUS_LABEL[session.status].jp, STATUS_LABEL[session.status].en)}
                   </span>
+                  <span className="rounded-md bg-[var(--brand-bg-900)] px-2 py-0.5 text-[10px] font-bold text-[var(--brand-text)]">
+                    {formatSessionStartTime(session.startsAt)}
+                  </span>
+                  <span className="rounded-md bg-[var(--brand-secondary)]/20 px-2 py-0.5 text-[10px] font-black text-[var(--brand-secondary)]">
+                    AJL {ajl.level}
+                  </span>
                   <span className="text-[10px] text-[var(--brand-text-muted)]">{session.category}</span>
                 </div>
                 <p className="truncate font-semibold">{session.title}</p>
                 <p className="text-xs text-[var(--brand-text-muted)]">
-                  {tx("参加枠", "Slots")}: {session.slotsLeft}/{session.slotsTotal} &nbsp;·&nbsp;
+                  {tx("参加枠", "Spots")}: {session.speakerSlotsLeft}/{session.speakerSlotsTotal} &nbsp;·&nbsp;
+                  JF {ajl.jfStandard} &nbsp;·&nbsp;
                   {new Date(session.createdAt).toLocaleDateString("ja-JP")}
                 </p>
               </div>
@@ -152,7 +162,8 @@ export function MySessionsManager({ title, description, showCreateButton = true,
                 )}
               </div>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>

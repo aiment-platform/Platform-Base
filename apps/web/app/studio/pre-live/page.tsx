@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { TopNav } from "../../components/home/TopNav";
 import { StudioProgress } from "../../components/ui/StudioProgress";
 import { DateTimePicker } from "../../components/ui/DateTimePicker";
+import { AJL_LEVELS, getAjlInfo } from "../../lib/ajl";
+import type { SubscriptionPlan } from "../../lib/apiTypes";
 import { useI18n } from "../../lib/i18n";
 import { createStreamSession } from "../../lib/streamSessions";
 import { useUserSession } from "../../lib/userSession";
@@ -38,8 +40,8 @@ export default function StudioPreLivePage() {
   const [thumbnail, setThumbnail] = useState(DEFAULT_THUMBNAIL);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [speakerSlotsTotal, setSpeakerSlotsTotal] = useState(5);
-  const [speakerRequiredPlan, setSpeakerRequiredPlan] = useState<SubscriptionPlan>("free");
+  const [participantSlotsTotal, setParticipantSlotsTotal] = useState(5);
+  const [speakerRequiredPlan] = useState<SubscriptionPlan>("free");
   const [plannedDurationMin, setPlannedDurationMin] = useState(60);
   const [japaneseLevel, setJapaneseLevel] = useState(3);
   const [chatInput, setChatInput] = useState("");
@@ -103,8 +105,8 @@ export default function StudioPreLivePage() {
         ? new Date(scheduledAt).toISOString()
         : new Date().toISOString();
 
-    const durationNum = parseInt(plannedDurationMin, 10);
-    const plannedDuration = Number.isNaN(durationNum) || durationNum < 1 ? 60 : durationNum;
+    const plannedDuration = Number.isNaN(plannedDurationMin) || plannedDurationMin < 1 ? 60 : plannedDurationMin;
+    const participantSlots = Number.isNaN(participantSlotsTotal) || participantSlotsTotal < 1 ? 5 : Math.floor(participantSlotsTotal);
 
     try {
       const created = await createStreamSession({
@@ -114,13 +116,11 @@ export default function StudioPreLivePage() {
         thumbnail,
         startsAt,
         participationType: "First-come",
-        slotsTotal: 50,
-        speakerSlotsTotal,
+        slotsTotal: participantSlots,
+        speakerSlotsTotal: participantSlots,
         speakerRequiredPlan,
-        plannedDurationMin,
+        plannedDurationMin: plannedDuration,
         japaneseLevel,
-        preferredVideoDeviceId: selectedVideoDeviceId || undefined,
-        preferredVideoLabel: selectedVideoLabel || undefined,
       });
 
       if (publishMode === "go_live_now") {
@@ -277,48 +277,23 @@ export default function StudioPreLivePage() {
                     </div>
                   )}
 
-                  {/* 配信予定時間（自由入力）+ 日本語レベル（星選択） */}
-                  <div className="grid gap-3 lg:col-span-2 lg:grid-cols-2">
-                    {/* 配信予定時間 */}
-                    <label className="grid gap-1 text-sm">
-                      <span className="text-[var(--brand-text-muted)]">{tx("配信予定時間（分）", "Planned duration (min)")}</span>
-                      <div className="flex items-center gap-2 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2">
-                        <input
-                          type="number"
-                          min={1}
-                          max={480}
-                          value={plannedDurationMin}
-                          onChange={(e) => setPlannedDurationMin(e.target.value)}
-                          className="w-full bg-transparent text-[var(--brand-text)] outline-none"
-                          placeholder="60"
-                        />
-                        <span className="shrink-0 text-xs text-[var(--brand-text-muted)]">{tx("分", "min")}</span>
-                      </div>
-                    </label>
-
-                    {/* 日本語レベル */}
-                    <div className="grid gap-1 text-sm">
-                      <span className="text-[var(--brand-text-muted)]">{tx("難易度", "Difficulty")}</span>
-                      <div className="flex gap-1 rounded-lg bg-[var(--brand-bg-900)] px-2 py-2">
-                        {([1, 2, 3, 4, 5] as const).map((level) => (
-                          <button
-                            key={level}
-                            type="button"
-                            onClick={() => setJapaneseLevel(level)}
-                            className="flex flex-1 items-center justify-center rounded-lg py-1.5 transition-colors hover:bg-[var(--brand-surface)]"
-                          >
-                            <span className={`text-xl leading-none ${level <= japaneseLevel ? "text-[var(--brand-primary)]" : "text-[var(--brand-text-muted)]/30"}`}>
-                              ★
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
                   <div className="rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 lg:col-span-2">
                     <p className="mb-2 text-[11px] font-semibold text-[var(--brand-text-muted)]">{tx("配信詳細設定", "Session Details")}</p>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <label className="grid gap-1 text-xs">
+                        <span className="text-[var(--brand-text-muted)]">{tx("参加者枠数", "Participant spots")}</span>
+                        <div className="flex items-center gap-2 rounded-lg bg-[var(--brand-surface)] px-2 py-1.5">
+                          <input
+                            type="number"
+                            min={1}
+                            max={30}
+                            value={participantSlotsTotal}
+                            onChange={(e) => setParticipantSlotsTotal(Number(e.target.value))}
+                            className="w-full bg-transparent text-[var(--brand-text)] outline-none"
+                          />
+                          <span className="shrink-0 text-[10px] text-[var(--brand-text-muted)]">{tx("枠", "spots")}</span>
+                        </div>
+                      </label>
                       <label className="grid gap-1 text-xs">
                         <span className="text-[var(--brand-text-muted)]">{tx("配信予定時間", "Planned duration")}</span>
                         <select
@@ -333,24 +308,28 @@ export default function StudioPreLivePage() {
                           <option value={120}>120 {tx("分", "min")} — ₱400</option>
                         </select>
                       </label>
-                      <div className="grid gap-1 text-xs">
-                        <span className="text-[var(--brand-text-muted)]">{tx("日本語レベル（想定）", "Japanese level (expected)")}</span>
-                        <div className="flex gap-1">
-                          {[1, 2, 3, 4, 5].map((level) => (
+                      <div className="grid gap-1 text-xs sm:col-span-2">
+                        <span className="text-[var(--brand-text-muted)]">AJL - aiment Japanese Level</span>
+                        <div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-3">
+                          {AJL_LEVELS.map((level) => (
                             <button
-                              key={level}
+                              key={level.level}
                               type="button"
-                              onClick={() => setJapaneseLevel(level)}
-                              className={`flex-1 rounded py-1 text-xs font-bold transition-colors ${
-                                japaneseLevel === level
+                              onClick={() => setJapaneseLevel(level.level)}
+                              className={`rounded-lg px-2 py-2 text-left transition-colors ${
+                                japaneseLevel === level.level
                                   ? "bg-[var(--brand-primary)] text-white"
-                                  : "bg-[var(--brand-surface)] text-[var(--brand-text-muted)]"
+                                  : "bg-[var(--brand-surface)] text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
                               }`}
                             >
-                              {level}
+                              <span className="block text-xs font-black">AJL {level.level}</span>
+                              <span className="mt-0.5 block text-[10px] font-semibold">JF {level.jfStandard} / {level.label}</span>
                             </button>
                           ))}
                         </div>
+                        <p className="rounded-lg bg-[var(--brand-surface)] px-2 py-1.5 text-[10px] leading-relaxed text-[var(--brand-text-muted)]">
+                          {getAjlInfo(japaneseLevel).description}
+                        </p>
                       </div>
                     </div>
                   </div>
