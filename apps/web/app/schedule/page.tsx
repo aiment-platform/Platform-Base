@@ -87,8 +87,11 @@ export default function SchedulePage() {
         title: session.title,
         start: toLocalHm(session.startsAt),
         durationMin: 60,
-        status: session.participationType === "Lottery" ? "lottery" : session.slotsLeft > 0 ? "available" : "booked",
+        status: session.participationType === "Lottery" ? "lottery" : session.speakerSlotsLeft > 0 ? "available" : "booked",
         category: toSessionCategory(session.category),
+        japaneseLevel: session.japaneseLevel,
+        slotsLeft: session.speakerSlotsLeft,
+        slotsTotal: session.speakerSlotsTotal,
       })),
     [sessions],
   );

@@ -138,7 +138,7 @@ export default function ChannelSchedulePage() {
           const status =
             session.participationType === "Lottery"
               ? "lottery"
-              : session.slotsLeft > 0
+              : session.speakerSlotsLeft > 0
                 ? "available"
                 : "booked";
           return {
@@ -149,6 +149,9 @@ export default function ChannelSchedulePage() {
             title: session.title,
             category: session.category,
             status,
+            japaneseLevel: session.japaneseLevel,
+            slotsLeft: session.speakerSlotsLeft,
+            slotsTotal: session.speakerSlotsTotal,
             href:
               session.status === "live"
                 ? `/room/${encodeURIComponent(session.sessionId)}?role=listener`

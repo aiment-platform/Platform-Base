@@ -2,8 +2,9 @@
 
 import { LiveSession } from "../types";
 import { getTypeInfo } from "../utils";
+import { formatSessionStartTime, getAjlInfo } from "../../../lib/ajl";
 import { useI18n } from "../../../lib/i18n";
-import { EyeIcon, UsersIcon } from "@heroicons/react/24/outline";
+import { ClockIcon, LanguageIcon, UsersIcon } from "@heroicons/react/24/outline";
 
 type NowLiveSectionProps = {
  sessions: LiveSession[];
@@ -36,6 +37,7 @@ export function NowLiveSection({ sessions, onOpenSession, onOpenChannel }: NowLi
           {sessions.map((session) => {
             const typeInfo = getTypeInfo(session.participationType, tx);
             const slotsAvailable = session.slotsLeft > 0;
+            const ajl = getAjlInfo(session.japaneseLevel);
 
             return (
               <div
@@ -56,8 +58,15 @@ export function NowLiveSection({ sessions, onOpenSession, onOpenChannel }: NowLi
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--brand-accent)]" />
                       <span>LIVE</span>
                     </div>
+                    <div className="inline-flex items-center gap-1 rounded-lg bg-[var(--brand-bg-900)]/70 px-2 py-1 text-[10px] font-bold text-[var(--brand-text)]">
+                      <ClockIcon className="h-3 w-3" aria-hidden />
+                      {formatSessionStartTime(session.startsAt)}
+                    </div>
                     <div className="rounded-lg bg-[var(--brand-bg-900)]/70 px-2 py-1 text-[10px] font-bold text-[var(--brand-text)]">
                       VIEW {session.viewers.toLocaleString()}
+                    </div>
+                    <div className="rounded-lg bg-[var(--brand-secondary)]/20 px-2 py-1 text-[10px] font-black text-[var(--brand-secondary)]">
+                      AJL {ajl.level}
                     </div>
                     <div className={`flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold ${typeInfo.bg}`}>
                       <span>{typeInfo.icon}</span>
@@ -110,8 +119,8 @@ export function NowLiveSection({ sessions, onOpenSession, onOpenChannel }: NowLi
 
                   <div className="flex items-center justify-between text-[11px] text-[var(--brand-text-muted)]">
                     <span className="inline-flex items-center gap-1">
-                      <EyeIcon className="h-3.5 w-3.5" aria-hidden />
-                      {session.viewers.toLocaleString()}
+                      <LanguageIcon className="h-3.5 w-3.5" aria-hidden />
+                      JF {ajl.jfStandard} / {ajl.label}
                     </span>
                     <span className="inline-flex items-center gap-1">
                       <UsersIcon className="h-3.5 w-3.5" aria-hidden />

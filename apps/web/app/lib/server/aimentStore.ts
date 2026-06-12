@@ -17,6 +17,7 @@ import type {
   SubscriptionPlan,
   UpdateStreamSessionInput,
 } from "../apiTypes";
+import { DEFAULT_AJL_LEVEL, normalizeAjlLevel } from "../ajl";
 import { canAccessPlan, getEffectivePlanForUser } from "./billingStore";
 
 type StoredUser = SessionUser & {
@@ -79,6 +80,12 @@ function normalizePlanValue(value: unknown): SubscriptionPlan {
   return value === "aimer" || value === "premium" || value === "supporter" ? "aimer" : "free";
 }
 
+function normalizePositiveInteger(value: unknown, fallback: number) {
+  const numeric = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.max(1, Math.floor(numeric));
+}
+
 function normalizeReservation(entry: Partial<Reservation>): Reservation | null {
   if (
     typeof entry.reservationId !== "string" ||
@@ -123,16 +130,12 @@ function normalizeStreamSession(entry: Partial<StreamSession>): StreamSession | 
   const status: StreamSessionStatus =
     entry.status === "live" || entry.status === "ended" ? entry.status : "prelive";
   const participationType = entry.participationType === "Lottery" ? "Lottery" : "First-come";
-  const slotsTotal =
-    typeof entry.slotsTotal === "number" && entry.slotsTotal > 0 ? entry.slotsTotal : 10;
+  const slotsTotal = normalizePositiveInteger(entry.slotsTotal, 5);
   const slotsLeft =
     typeof entry.slotsLeft === "number" && entry.slotsLeft >= 0
       ? Math.min(entry.slotsLeft, slotsTotal)
       : slotsTotal;
-  const speakerSlotsTotal =
-    typeof entry.speakerSlotsTotal === "number" && entry.speakerSlotsTotal > 0
-      ? entry.speakerSlotsTotal
-      : 5;
+  const speakerSlotsTotal = normalizePositiveInteger(entry.speakerSlotsTotal, 5);
   const speakerSlotsLeft =
     typeof entry.speakerSlotsLeft === "number" && entry.speakerSlotsLeft >= 0
       ? Math.min(entry.speakerSlotsLeft, speakerSlotsTotal)
@@ -169,7 +172,7 @@ function normalizeStreamSession(entry: Partial<StreamSession>): StreamSession | 
     streamKey: typeof entry.streamKey === "string" ? entry.streamKey : undefined,
     rtmpUrl: typeof entry.rtmpUrl === "string" ? entry.rtmpUrl : undefined,
     plannedDurationMin: typeof entry.plannedDurationMin === "number" ? entry.plannedDurationMin : undefined,
-    japaneseLevel: typeof entry.japaneseLevel === "number" ? entry.japaneseLevel : undefined,
+    japaneseLevel: normalizeAjlLevel(entry.japaneseLevel, DEFAULT_AJL_LEVEL),
   };
 }
 
@@ -351,8 +354,8 @@ async function initSchema() {
       participation_type TEXT NOT NULL DEFAULT 'First-come',
       required_plan TEXT NOT NULL DEFAULT 'free',
       reservation_required BOOLEAN NOT NULL DEFAULT FALSE,
-      slots_total INTEGER NOT NULL DEFAULT 10,
-      slots_left INTEGER NOT NULL DEFAULT 10,
+      slots_total INTEGER NOT NULL DEFAULT 5,
+      slots_left INTEGER NOT NULL DEFAULT 5,
       speaker_slots_total INTEGER NOT NULL DEFAULT 5,
       speaker_slots_left INTEGER NOT NULL DEFAULT 5,
       speaker_required_plan TEXT NOT NULL DEFAULT 'free',
@@ -376,13 +379,15 @@ async function initSchema() {
   await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS participation_type TEXT NOT NULL DEFAULT 'First-come'`;
   await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS required_plan TEXT NOT NULL DEFAULT 'free'`;
   await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS reservation_required BOOLEAN NOT NULL DEFAULT FALSE`;
-  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS slots_total INTEGER NOT NULL DEFAULT 10`;
-  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS slots_left INTEGER NOT NULL DEFAULT 10`;
+  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS slots_total INTEGER NOT NULL DEFAULT 5`;
+  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS slots_left INTEGER NOT NULL DEFAULT 5`;
   await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS speaker_slots_total INTEGER NOT NULL DEFAULT 5`;
   await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS speaker_slots_left INTEGER NOT NULL DEFAULT 5`;
   await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS speaker_required_plan TEXT NOT NULL DEFAULT 'free'`;
   await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS preferred_video_device_id TEXT`;
   await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS preferred_video_label TEXT`;
+  await db`ALTER TABLE stream_sessions ALTER COLUMN slots_total SET DEFAULT 5`;
+  await db`ALTER TABLE stream_sessions ALTER COLUMN slots_left SET DEFAULT 5`;
   await db`
     CREATE TABLE IF NOT EXISTS reservations (
       reservation_id TEXT PRIMARY KEY,
@@ -448,10 +453,10 @@ function rowToStreamSession(row: any): StreamSession {
     participationType: row.participation_type as "First-come" | "Lottery",
     requiredPlan: normalizePlanValue(row.required_plan),
     reservationRequired: Boolean(row.reservation_required),
-    slotsTotal: Number(row.slots_total),
-    slotsLeft: Number(row.slots_left),
-    speakerSlotsTotal: Number(row.speaker_slots_total),
-    speakerSlotsLeft: Number(row.speaker_slots_left),
+    slotsTotal: normalizePositiveInteger(row.slots_total, 5),
+    slotsLeft: Math.max(0, Number(row.slots_left ?? 5)),
+    speakerSlotsTotal: normalizePositiveInteger(row.speaker_slots_total, 5),
+    speakerSlotsLeft: Math.max(0, Number(row.speaker_slots_left ?? 5)),
     speakerRequiredPlan: normalizePlanValue(row.speaker_required_plan),
     preferredVideoDeviceId: row.preferred_video_device_id ?? undefined,
     preferredVideoLabel: row.preferred_video_label ?? undefined,
@@ -459,7 +464,7 @@ function rowToStreamSession(row: any): StreamSession {
     streamKey: row.stream_key ?? undefined,
     rtmpUrl: row.rtmp_url ?? undefined,
     plannedDurationMin: row.planned_duration_min != null ? Number(row.planned_duration_min) : undefined,
-    japaneseLevel: row.japanese_level != null ? Number(row.japanese_level) : undefined,
+    japaneseLevel: normalizeAjlLevel(row.japanese_level, DEFAULT_AJL_LEVEL),
   };
 }
 
@@ -1154,9 +1159,10 @@ export async function confirmPhoneVerification(userId: string, code: string) {
 // Detail endpoints use getStreamSessionById which returns all columns.
 const LIST_COLUMNS = `
   s.session_id, s.host_user_id, s.host_name, s.title, s.status, s.created_at,
-  s.starts_at, s.category, s.thumbnail, s.participation_type, s.required_plan,
+  s.starts_at, s.description, s.category, s.thumbnail, s.participation_type, s.required_plan,
   s.reservation_required, s.slots_total, s.slots_left,
   s.speaker_slots_total, s.speaker_slots_left, s.speaker_required_plan,
+  s.planned_duration_min, s.japanese_level,
   u.avatar_url AS host_avatar_url, u.channel_name AS host_channel_name
 `;
 
@@ -1347,8 +1353,9 @@ export async function createStreamSession(
     await ensureSchema();
     const db = getDb();
     const now = new Date().toISOString();
-    const slotsTotal = input.slotsTotal ?? 10;
-    const speakerSlotsTotal = input.speakerSlotsTotal ?? 5;
+    const slotsTotal = normalizePositiveInteger(input.slotsTotal, 5);
+    const speakerSlotsTotal = normalizePositiveInteger(input.speakerSlotsTotal, slotsTotal);
+    const japaneseLevel = normalizeAjlLevel(input.japaneseLevel, DEFAULT_AJL_LEVEL);
     const sessionId = makeSessionId();
 
     await db`
@@ -1367,7 +1374,7 @@ export async function createStreamSession(
         ${input.reservationRequired === true}, ${slotsTotal}, ${slotsTotal},
         ${speakerSlotsTotal}, ${speakerSlotsTotal}, ${input.speakerRequiredPlan ?? "free"},
         ${input.preferredVideoDeviceId ?? null}, ${input.preferredVideoLabel ?? null},
-        ${input.plannedDurationMin ?? null}, ${input.japaneseLevel ?? null}
+        ${input.plannedDurationMin ?? null}, ${japaneseLevel}
       )
     `;
 
@@ -1377,8 +1384,9 @@ export async function createStreamSession(
 
   const created = await mutateStore((store) => {
     const now = new Date().toISOString();
-    const slotsTotal = input.slotsTotal ?? 10;
-    const speakerSlotsTotal = input.speakerSlotsTotal ?? 5;
+    const slotsTotal = normalizePositiveInteger(input.slotsTotal, 5);
+    const speakerSlotsTotal = normalizePositiveInteger(input.speakerSlotsTotal, slotsTotal);
+    const japaneseLevel = normalizeAjlLevel(input.japaneseLevel, DEFAULT_AJL_LEVEL);
 
     const next: StreamSession = {
       sessionId: makeSessionId(),
@@ -1402,7 +1410,7 @@ export async function createStreamSession(
       preferredVideoDeviceId: input.preferredVideoDeviceId,
       preferredVideoLabel: input.preferredVideoLabel,
       plannedDurationMin: input.plannedDurationMin,
-      japaneseLevel: input.japaneseLevel,
+      japaneseLevel,
     };
 
     store.streamSessions.unshift(next);
@@ -1438,8 +1446,9 @@ export async function updateStreamSession(
     const listenerReservedCount = Number(listenerCountRows[0].cnt);
     const speakerReservedCount = Number(speakerCountRows[0].cnt);
 
-    const nextSlotsTotal = patch.slotsTotal ?? current.slotsTotal;
-    const nextSpeakerSlotsTotal = patch.speakerSlotsTotal ?? current.speakerSlotsTotal;
+    const nextSlotsTotal = patch.slotsTotal == null ? current.slotsTotal : normalizePositiveInteger(patch.slotsTotal, current.slotsTotal);
+    const nextSpeakerSlotsTotal =
+      patch.speakerSlotsTotal == null ? current.speakerSlotsTotal : normalizePositiveInteger(patch.speakerSlotsTotal, current.speakerSlotsTotal);
     const nextParticipationType = patch.participationType ?? current.participationType;
     const nextReservationRequired = patch.reservationRequired ?? current.reservationRequired;
     const nextRequiredPlan = patch.requiredPlan ?? current.requiredPlan;
@@ -1457,6 +1466,7 @@ export async function updateStreamSession(
     const nextStartsAt = patch.startsAt ? normalizeStartsAt(patch.startsAt) : current.startsAt;
     const nextSlotsLeft = Math.max(0, nextSlotsTotal - listenerReservedCount);
     const nextSpeakerSlotsLeft = Math.max(0, nextSpeakerSlotsTotal - speakerReservedCount);
+    const nextJapaneseLevel = patch.japaneseLevel == null ? current.japaneseLevel : normalizeAjlLevel(patch.japaneseLevel, DEFAULT_AJL_LEVEL);
 
     await db`
       UPDATE stream_sessions SET
@@ -1473,7 +1483,11 @@ export async function updateStreamSession(
         speaker_slots_total = ${nextSpeakerSlotsTotal},
         speaker_slots_left = ${nextSpeakerSlotsLeft},
         speaker_required_plan = ${nextSpeakerRequiredPlan},
-        thumbnail = ${patch.thumbnail ?? current.thumbnail}
+        thumbnail = ${patch.thumbnail ?? current.thumbnail},
+        preferred_video_device_id = ${patch.preferredVideoDeviceId ?? current.preferredVideoDeviceId ?? null},
+        preferred_video_label = ${patch.preferredVideoLabel ?? current.preferredVideoLabel ?? null},
+        planned_duration_min = ${patch.plannedDurationMin ?? current.plannedDurationMin ?? null},
+        japanese_level = ${nextJapaneseLevel}
       WHERE session_id = ${sessionId}
     `;
 
@@ -1492,8 +1506,9 @@ export async function updateStreamSession(
 
     const listenerReservedCount = countActiveReservations(store, sessionId, "listener");
     const speakerReservedCount = countActiveReservations(store, sessionId, "speaker");
-    const nextSlotsTotal = patch.slotsTotal ?? current.slotsTotal;
-    const nextSpeakerSlotsTotal = patch.speakerSlotsTotal ?? current.speakerSlotsTotal;
+    const nextSlotsTotal = patch.slotsTotal == null ? current.slotsTotal : normalizePositiveInteger(patch.slotsTotal, current.slotsTotal);
+    const nextSpeakerSlotsTotal =
+      patch.speakerSlotsTotal == null ? current.speakerSlotsTotal : normalizePositiveInteger(patch.speakerSlotsTotal, current.speakerSlotsTotal);
     const nextParticipationType = patch.participationType ?? current.participationType;
     const nextReservationRequired = patch.reservationRequired ?? current.reservationRequired;
     const nextRequiredPlan = patch.requiredPlan ?? current.requiredPlan;
@@ -1525,6 +1540,7 @@ export async function updateStreamSession(
       speakerSlotsTotal: nextSpeakerSlotsTotal,
       speakerSlotsLeft: Math.max(0, nextSpeakerSlotsTotal - speakerReservedCount),
       speakerRequiredPlan: nextSpeakerRequiredPlan,
+      japaneseLevel: patch.japaneseLevel == null ? current.japaneseLevel : normalizeAjlLevel(patch.japaneseLevel, DEFAULT_AJL_LEVEL),
     };
 
     if (next.slotsTotal < 1) throw new Error("slotsTotal must be at least 1");

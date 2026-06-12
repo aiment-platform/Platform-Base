@@ -3,6 +3,7 @@
 import { SlotBar } from "../SlotBar";
 import { StartingSoonSession } from "../types";
 import { formatCountdown, getTypeInfo } from "../utils";
+import { formatSessionStartTime, getAjlInfo } from "../../../lib/ajl";
 import { useI18n } from "../../../lib/i18n";
 import { ClockIcon, UsersIcon } from "@heroicons/react/24/outline";
 
@@ -39,6 +40,7 @@ export function StartingSoonSection({
           {sessions.map((session) => {
             const seconds = countdown[session.id] ?? session.startsInSeconds;
             const typeInfo = getTypeInfo(session.participationType, tx);
+            const ajl = getAjlInfo(session.japaneseLevel);
             const urgent = seconds < 20 * 60;
             return (
               <div
@@ -55,12 +57,19 @@ export function StartingSoonSection({
 
                 <div className="p-3.5">
                   <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                    <div className="inline-flex items-center gap-1 rounded-lg bg-[var(--brand-bg-900)]/80 px-2 py-1 text-[10px] font-bold text-[var(--brand-text)]">
+                      <ClockIcon className="h-3 w-3" aria-hidden />
+                      {formatSessionStartTime(session.startsAt)}
+                    </div>
                     <div
                       className={`rounded-lg px-2 py-1 text-[10px] font-bold ${
                         urgent ? "bg-[var(--brand-accent)]/20 text-[var(--brand-accent)]" : "bg-[var(--brand-primary)]/20 text-[var(--brand-primary)]"
                       }`}
                     >
                       {formatCountdown(seconds, tx)}
+                    </div>
+                    <div className="rounded-lg bg-[var(--brand-secondary)]/20 px-2 py-1 text-[10px] font-black text-[var(--brand-secondary)]">
+                      AJL {ajl.level}
                     </div>
                     <div className={`flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold ${typeInfo.bg}`}>
                       <span>{typeInfo.icon}</span>
@@ -101,7 +110,7 @@ export function StartingSoonSection({
                   <div className="flex items-center justify-between text-[11px] text-[var(--brand-text-muted)]">
                     <span className="inline-flex items-center gap-1">
                       <ClockIcon className="h-3.5 w-3.5" aria-hidden />
-                      {tx("開始前", "Before live")}
+                      JF {ajl.jfStandard} / {ajl.label}
                     </span>
                     <span className="inline-flex items-center gap-1">
                       <UsersIcon className="h-3.5 w-3.5" aria-hidden />

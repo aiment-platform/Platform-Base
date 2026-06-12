@@ -90,7 +90,7 @@ export type StreamSession = {
   preferredVideoLabel?: string;
   /** Planned duration in minutes (used for speaker fee tier) */
   plannedDurationMin?: number;
-  /** Required Japanese level 1–5 */
+  /** Required aiment Japanese Level 1–6 */
   japaneseLevel?: number;
   /** OBS stream key info — only returned to the session host */
   ingressId?: string;

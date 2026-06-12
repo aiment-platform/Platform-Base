@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeftIcon } from "@heroicons/react/24/solid";
 import { TopNav } from "../../../../components/home/TopNav";
+import { AJL_LEVELS, getAjlInfo } from "../../../../lib/ajl";
 import type { Reservation, SubscriptionPlan } from "../../../../lib/apiTypes";
 import { useI18n } from "../../../../lib/i18n";
 import { useUserSession } from "../../../../lib/userSession";
@@ -39,8 +40,9 @@ export default function SessionEditPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<string>("雑談");
-  const [slotsTotal, setSlotsTotal] = useState(50);
+  const [slotsTotal, setSlotsTotal] = useState(5);
   const [speakerSlotsTotal, setSpeakerSlotsTotal] = useState(5);
+  const [japaneseLevel, setJapaneseLevel] = useState(3);
   const [speakerRequiredPlan, setSpeakerRequiredPlan] = useState<SubscriptionPlan>("free");
   const [requiredPlan, setRequiredPlan] = useState<SubscriptionPlan>("free");
   const [reservationRequired, setReservationRequired] = useState(false);
@@ -67,6 +69,7 @@ export default function SessionEditPage() {
     setCategory(data.category ?? "雑談");
     setSlotsTotal(data.slotsTotal);
     setSpeakerSlotsTotal(data.speakerSlotsTotal);
+    setJapaneseLevel(data.japaneseLevel ?? 3);
     setSpeakerRequiredPlan(data.speakerRequiredPlan ?? "free");
     setRequiredPlan(data.requiredPlan ?? "free");
     setReservationRequired(data.reservationRequired ?? false);
@@ -123,6 +126,7 @@ export default function SessionEditPage() {
       category,
       slotsTotal,
       speakerSlotsTotal,
+      japaneseLevel,
       speakerRequiredPlan,
       requiredPlan,
       reservationRequired,
@@ -226,11 +230,11 @@ export default function SessionEditPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <label className="grid gap-1.5 text-sm">
-                <span className="text-[var(--brand-text-muted)]">{tx("リスナー枠数", "Listener Slots")}</span>
+                <span className="text-[var(--brand-text-muted)]">{tx("参加者枠数", "Participant spots")}</span>
                 <input
                   type="number"
                   min={1}
-                  max={500}
+                  max={30}
                   value={slotsTotal}
                   onChange={(e) => setSlotsTotal(Math.max(1, Number(e.target.value)))}
                   className="rounded-xl bg-[var(--brand-surface)] px-4 py-2.5 text-[var(--brand-text)] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
@@ -252,11 +256,11 @@ export default function SessionEditPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <label className="grid gap-1.5 text-sm">
-                <span className="text-[var(--brand-text-muted)]">{tx("スピーカー枠数", "Speaker Slots")}</span>
+                <span className="text-[var(--brand-text-muted)]">{tx("スピーカー枠数", "Speaker spots")}</span>
                 <input
                   type="number"
                   min={1}
-                  max={10}
+                  max={30}
                   value={speakerSlotsTotal}
                   onChange={(e) => setSpeakerSlotsTotal(Math.max(1, Number(e.target.value)))}
                   className="rounded-xl bg-[var(--brand-surface)] px-4 py-2.5 text-[var(--brand-text)] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
@@ -274,6 +278,30 @@ export default function SessionEditPage() {
                   <option value="aimer">Aimer</option>
                 </select>
               </label>
+            </div>
+
+            <div className="grid gap-2 rounded-xl bg-[var(--brand-surface)] p-4 text-sm">
+              <div>
+                <p className="text-[var(--brand-text-muted)]">AJL - aiment Japanese Level</p>
+                <p className="mt-1 text-xs text-[var(--brand-text-muted)]">{getAjlInfo(japaneseLevel).description}</p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {AJL_LEVELS.map((level) => (
+                  <button
+                    key={level.level}
+                    type="button"
+                    onClick={() => setJapaneseLevel(level.level)}
+                    className={`rounded-lg px-3 py-2 text-left transition-colors ${
+                      japaneseLevel === level.level
+                        ? "bg-[var(--brand-primary)] text-white"
+                        : "bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+                    }`}
+                  >
+                    <span className="block text-xs font-black">AJL {level.level}</span>
+                    <span className="mt-0.5 block text-[10px] font-semibold">JF {level.jfStandard} / {level.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <label className="flex cursor-pointer items-center gap-3 rounded-xl bg-[var(--brand-surface)] px-4 py-3 text-sm">

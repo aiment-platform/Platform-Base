@@ -11,9 +11,11 @@ export type StartingSoonSession = {
   vtuber: string;
   title: string;
   thumbnail: string;
+  startsAt: string;
   startsInSeconds: number;
   slotsTotal: number;
   slotsLeft: number;
+  japaneseLevel?: number;
   participationType: ParticipationType;
   requiredPlan?: SubscriptionPlan;
   reservationRequired?: boolean;
@@ -32,9 +34,11 @@ export type LiveSession = {
   vtuber: string;
   title: string;
   thumbnail: string;
+  startsAt: string;
   viewers: number;
   slotsTotal: number;
   slotsLeft: number;
+  japaneseLevel?: number;
   participationType: "First-come" | "Lottery";
   requiredPlan?: SubscriptionPlan;
   reservationRequired?: boolean;
@@ -54,7 +58,10 @@ export type ModalSession = {
   title: string;
   thumbnail: string;
   startsIn: string;
+  startsAt?: string;
   slotsLeft: number;
+  slotsTotal?: number;
+  japaneseLevel?: number;
   description: string;
   duration: string;
   participationType: "First-come" | "Lottery";

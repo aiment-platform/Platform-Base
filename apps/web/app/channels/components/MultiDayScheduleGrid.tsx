@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { statusDot, statusLabel, statusStyle, toMinutes } from "../../components/schedule/utils";
+import { getAjlInfo } from "../../lib/ajl";
 import { categoryLabel } from "../../lib/labels";
 import { useI18n } from "../../lib/i18n";
 
@@ -16,6 +17,9 @@ export type MultiDayEvent = {
   category: string;
   status: MultiDayBookingStatus;
   href: string;
+  japaneseLevel?: number;
+  slotsLeft?: number;
+  slotsTotal?: number;
 };
 
 type EventLayout = {
@@ -232,6 +236,7 @@ export function MultiDayScheduleGrid({
                 )}
 
                 {layouts.map(({ event, lane, laneCount, startMin, endMin }) => {
+                  const ajl = getAjlInfo(event.japaneseLevel);
                   const clampedStart = Math.max(startMin, rangeStart);
                   const clampedEnd = Math.min(endMin, rangeEnd);
                   if (clampedEnd <= clampedStart) return null;
@@ -259,6 +264,14 @@ export function MultiDayScheduleGrid({
                       <p className="mb-1 text-[10px] text-[var(--brand-text-muted)]">
                         {formatTime(clampedStart)} - {formatTime(clampedEnd)}
                       </p>
+                      <div className="mb-1 flex flex-wrap gap-1">
+                        <span className="rounded bg-[var(--brand-secondary)]/20 px-1.5 py-0.5 text-[9px] font-black text-[var(--brand-secondary)]">AJL {ajl.level}</span>
+                        {event.slotsLeft != null && event.slotsTotal != null ? (
+                          <span className="rounded bg-[var(--brand-surface)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--brand-text-muted)]">
+                            {event.slotsLeft}/{event.slotsTotal}
+                          </span>
+                        ) : null}
+                      </div>
                       <div className="flex items-center justify-between">
                         <span className="truncate text-[10px] text-[var(--brand-text-muted)]">
                           {categoryLabel(event.category, tx)}

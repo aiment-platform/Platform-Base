@@ -1,6 +1,7 @@
 "use client";
 
 import { StartingSoonSession } from "./types";
+import { formatSessionStartTime } from "../../lib/ajl";
 import { useI18n } from "../../lib/i18n";
 
 type UpcomingTickerProps = {
@@ -43,6 +44,7 @@ export function UpcomingTicker({ sessions, onParticipate }: UpcomingTickerProps)
  <span>{s.vtuber}</span>
  </span>
  <span className="max-w-[120px] truncate text-[9px] leading-tight text-[var(--brand-text-muted)]">{s.title}</span>
+ <span className="text-[9px] font-semibold leading-tight text-[var(--brand-secondary)]">{formatSessionStartTime(s.startsAt)}</span>
  </div>
  <div className="rounded bg-[var(--brand-accent)]/20 px-1.5 py-0.5 text-[9px] font-bold text-[var(--brand-accent)]">
  {tx("参加受付中", "Join Open")}
