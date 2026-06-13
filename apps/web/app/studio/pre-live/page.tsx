@@ -9,6 +9,7 @@ import { AJL_LEVELS, getAjlInfo } from "../../lib/ajl";
 import type { SubscriptionPlan } from "../../lib/apiTypes";
 import { useI18n } from "../../lib/i18n";
 import { createStreamSession } from "../../lib/streamSessions";
+import { uploadImageToR2 } from "../../lib/uploadImage";
 import { useUserSession } from "../../lib/userSession";
 
 const PRESET_THUMBNAILS = [1, 2, 3, 4, 5].map((n) => `/image/thumbnail/thumbnail_${n}.png`);
@@ -38,6 +39,7 @@ export default function StudioPreLivePage() {
   const [scheduledAt, setScheduledAt] = useState(localNow30min);
   const [startWarnings, setStartWarnings] = useState<string[]>([]);
   const [thumbnail, setThumbnail] = useState(DEFAULT_THUMBNAIL);
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [participantSlotsTotal, setParticipantSlotsTotal] = useState(5);
@@ -52,8 +54,9 @@ export default function StudioPreLivePage() {
     if (!isVtuber) router.replace("/");
   }, [hydrated, isVtuber, router]);
 
-  const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    if (fileInputRef.current) fileInputRef.current.value = "";
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       setStartWarnings([tx("画像ファイルを選択してください。", "Please select an image file.")]);
@@ -63,16 +66,16 @@ export default function StudioPreLivePage() {
       setStartWarnings([tx("画像サイズは4MB以下にしてください。", "Image size must be 4MB or less.")]);
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
-      if (result) setThumbnail(result);
-    };
-    reader.onerror = () => {
-      setStartWarnings([tx("画像の読み込みに失敗しました。", "Failed to load image.")]);
-    };
-    reader.readAsDataURL(file);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    setUploadingThumbnail(true);
+    setStartWarnings([]);
+    try {
+      const url = await uploadImageToR2(file, "thumbnails");
+      setThumbnail(url);
+    } catch {
+      setStartWarnings([tx("画像のアップロードに失敗しました。", "Failed to upload image.")]);
+    } finally {
+      setUploadingThumbnail(false);
+    }
   };
 
   const sendNotice = () => {
@@ -85,6 +88,7 @@ export default function StudioPreLivePage() {
   const startBroadcastFlow = async () => {
     setShowPublishMenu(false);
     const warnings: string[] = [];
+    if (uploadingThumbnail) warnings.push(tx("画像のアップロード完了をお待ちください。", "Please wait for the image upload to finish."));
     if (title.trim().length < 2) warnings.push(tx("タイトルを入力してください。", "Please enter a title."));
     if (publishMode === "scheduled") {
       const parsed = new Date(scheduledAt);
@@ -165,10 +169,12 @@ export default function StudioPreLivePage() {
             <div className="relative flex items-center">
               <button
                 onClick={() => void startBroadcastFlow()}
-                disabled={creating}
+                disabled={creating || uploadingThumbnail}
                 className="rounded-l-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-extrabold text-white shadow-[0_10px_26px_rgba(124,106,230,0.45)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {creating
+                {uploadingThumbnail
+                  ? tx("画像アップロード中...", "Uploading image...")
+                  : creating
                   ? tx("作成中...", "Creating...")
                   : publishMode === "go_live_now"
                     ? tx("作成して開始", "Create & Start")

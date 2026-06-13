@@ -9,6 +9,7 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { FieldLabel, TextArea, TextInput } from "../components/ui/Field";
 import { useI18n } from "../lib/i18n";
+import { uploadImageToR2 } from "../lib/uploadImage";
 import { useUserSession } from "../lib/userSession";
 
 type ChannelView = "profile" | "sessions";
@@ -53,6 +54,7 @@ export default function ChannelPage() {
   const [activeView, setActiveView] = useState<ChannelView>("profile");
   const [draft, setDraft] = useState<ProfileDraft>({ name: "", channelName: "", bio: "", avatarUrl: "", headerUrl: "" });
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -132,7 +134,7 @@ export default function ChannelPage() {
 
   if (!hydrated || !isVtuber || !user) return null;
 
-  function handleAvatarFileChange(file: File | null) {
+  async function handleAvatarFileChange(file: File | null) {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       setError(tx("画像ファイルを選択してください。", "Please choose an image file."));
@@ -143,21 +145,20 @@ export default function ChannelPage() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
-      if (!result) return;
-      setDraft((prev) => ({ ...prev, avatarUrl: result }));
-      setMessage(null);
-      setError(null);
-    };
-    reader.onerror = () => {
-      setError(tx("画像の読み込みに失敗しました。", "Failed to read image file."));
-    };
-    reader.readAsDataURL(file);
+    setUploadingImage(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const url = await uploadImageToR2(file, "avatars");
+      setDraft((prev) => ({ ...prev, avatarUrl: url }));
+    } catch {
+      setError(tx("画像のアップロードに失敗しました。", "Failed to upload image."));
+    } finally {
+      setUploadingImage(false);
+    }
   }
 
-  function handleHeaderFileChange(file: File | null) {
+  async function handleHeaderFileChange(file: File | null) {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       setError(tx("画像ファイルを選択してください。", "Please choose an image file."));
@@ -168,18 +169,17 @@ export default function ChannelPage() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
-      if (!result) return;
-      setDraft((prev) => ({ ...prev, headerUrl: result }));
-      setMessage(null);
-      setError(null);
-    };
-    reader.onerror = () => {
-      setError(tx("画像の読み込みに失敗しました。", "Failed to read image file."));
-    };
-    reader.readAsDataURL(file);
+    setUploadingImage(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const url = await uploadImageToR2(file, "headers");
+      setDraft((prev) => ({ ...prev, headerUrl: url }));
+    } catch {
+      setError(tx("画像のアップロードに失敗しました。", "Failed to upload image."));
+    } finally {
+      setUploadingImage(false);
+    }
   }
 
   return (
@@ -254,8 +254,8 @@ export default function ChannelPage() {
                     </Card>
 
                     <div className="flex flex-wrap items-center gap-2">
-                      <Button type="submit" disabled={saving} variant="primary" size="md">
-                        {saving ? tx("保存中...", "Saving...") : tx("保存", "Save")}
+                      <Button type="submit" disabled={saving || uploadingImage} variant="primary" size="md">
+                        {uploadingImage ? tx("画像アップロード中...", "Uploading image...") : saving ? tx("保存中...", "Saving...") : tx("保存", "Save")}
                       </Button>
                       <Button type="button" onClick={resetProfile} variant="ghost" size="md">
                         {tx("リセット", "Reset")}
@@ -306,7 +306,7 @@ export default function ChannelPage() {
                             type="file"
                             accept="image/*"
                             className="hidden"
-                            onChange={(e) => handleHeaderFileChange(e.target.files?.[0] ?? null)}
+                            onChange={(e) => void handleHeaderFileChange(e.target.files?.[0] ?? null)}
                           />
                         </label>
                         <Button type="button" variant="ghost" size="sm" onClick={() => setDraft((prev) => ({ ...prev, headerUrl: "" }))}>
@@ -325,7 +325,7 @@ export default function ChannelPage() {
                             type="file"
                             accept="image/*"
                             className="hidden"
-                            onChange={(e) => handleAvatarFileChange(e.target.files?.[0] ?? null)}
+                            onChange={(e) => void handleAvatarFileChange(e.target.files?.[0] ?? null)}
                           />
                         </label>
                         <Button type="button" variant="ghost" size="sm" onClick={() => setDraft((prev) => ({ ...prev, avatarUrl: "" }))}>
