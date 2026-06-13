@@ -1,8 +1,16 @@
 "use client";
 
-import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ComponentType, type FormEvent, type SVGProps, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
+import {
+  ArrowRightIcon,
+  CalendarDaysIcon,
+  ClockIcon,
+  LanguageIcon,
+  QuestionMarkCircleIcon,
+  UserGroupIcon,
+} from "@heroicons/react/24/outline";
 import { ChevronDownIcon, MicrophoneIcon } from "@heroicons/react/24/solid";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -114,6 +122,62 @@ function PaymentForm({
         キャンセル
       </button>
     </form>
+  );
+}
+
+function InfoPill({
+  icon: Icon,
+  label,
+  value,
+  help,
+  tone = "surface",
+}: {
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
+  label: string;
+  value: string;
+  help?: string;
+  tone?: "surface" | "accent";
+}) {
+  return (
+    <div
+      className={`flex min-w-0 items-center gap-3 rounded-2xl border px-4 py-3 ${
+        tone === "accent"
+          ? "border-[var(--brand-primary)]/35 bg-[var(--brand-primary)]/14"
+          : "border-white/8 bg-[var(--brand-bg-800)]/82"
+      }`}
+    >
+      <span
+        className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
+          tone === "accent" ? "bg-[var(--brand-primary)] text-white" : "bg-[var(--brand-surface)] text-[var(--brand-secondary)]"
+        }`}
+      >
+        <Icon className="h-5 w-5" aria-hidden />
+      </span>
+      <div className="min-w-0">
+        <p className="flex items-center gap-1.5 text-xs font-semibold text-[var(--brand-text-muted)]">
+          <span>{label}</span>
+          {help ? <HelpTooltip label={label} body={help} /> : null}
+        </p>
+        <p className="truncate text-sm font-extrabold text-[var(--brand-text)]">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function HelpTooltip({ label, body }: { label: string; body: string }) {
+  return (
+    <span className="group relative inline-flex">
+      <button
+        type="button"
+        aria-label={`${label} help`}
+        className="grid h-4 w-4 place-items-center rounded-full bg-white/10 text-[var(--brand-text-muted)] transition-colors hover:bg-[var(--brand-primary)] hover:text-white focus:bg-[var(--brand-primary)] focus:text-white focus:outline-none"
+      >
+        <QuestionMarkCircleIcon className="h-3.5 w-3.5" aria-hidden />
+      </button>
+      <span className="pointer-events-none absolute left-1/2 top-6 z-30 hidden w-64 -translate-x-1/2 rounded-xl border border-white/10 bg-[var(--brand-surface)] px-3 py-2 text-left text-xs font-medium leading-5 text-[var(--brand-text)] shadow-xl shadow-black/35 group-hover:block group-focus-within:block">
+        {body}
+      </span>
+    </span>
   );
 }
 
@@ -344,6 +408,10 @@ export function JoinPageClient() {
     router.push(`/room/${roomId}?${query}`);
   };
 
+  const watchNow = () => {
+    router.push(`/room/${encodeURIComponent(session.id)}?role=listener`);
+  };
+
   const session = useMemo<SessionMeta>(() => {
     if (dynamicSession) {
       return {
@@ -402,99 +470,151 @@ export function JoinPageClient() {
         </div>
       </header>
 
-      <main className="mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-4 px-4 py-4 lg:grid-cols-[1fr_420px] lg:px-8">
-        <section className="min-w-0 space-y-4">
-          <div className="overflow-hidden rounded-2xl bg-[var(--brand-bg-900)] shadow-xl">
-            <div className="relative" style={{ aspectRatio: "16/9" }}>
+      <main className="mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-5 px-4 pb-8 pt-3 lg:grid-cols-[minmax(0,1fr)_420px] lg:px-8">
+        <section className="min-w-0 space-y-5">
+          <div className="overflow-hidden rounded-[28px] border border-white/8 bg-[var(--brand-bg-800)] shadow-2xl shadow-black/30">
+            <div className="relative min-h-[520px] lg:min-h-[620px]" style={{ aspectRatio: "16/9" }}>
               {session.thumbnail ? (
                 <img src={session.thumbnail} alt={session.vtuber} className="h-full w-full object-cover" />
               ) : (
-                <div className="h-full w-full bg-[var(--brand-surface)]" />
+                <div className="h-full w-full bg-[radial-gradient(circle_at_30%_20%,rgba(124,106,230,0.35),transparent_32%),var(--brand-surface)]" />
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-bg-900)]/75 via-[var(--brand-bg-900)]/20 to-transparent" />
-              <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
-                <span className="rounded-md bg-black/60 px-2 py-1 text-[11px] font-semibold">{tx("配信企画", "Live Event")}</span>
-                {session.startsAt ? (
-                  <span className="rounded-md bg-black/60 px-2 py-1 text-[11px] font-semibold text-[var(--brand-secondary)]">{formatSessionStartTime(session.startsAt)}</span>
-                ) : null}
-                <span className="rounded-md bg-[var(--brand-secondary)] px-2 py-1 text-[11px] font-black text-black">AJL {ajl.level}</span>
+              <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-bg-900)] via-[var(--brand-bg-900)]/42 to-[var(--brand-bg-900)]/10" />
+              <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+                <span className="rounded-full bg-black/62 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-md">{tx("共有用レッスンページ", "Shareable lesson page")}</span>
+                <span className="rounded-full bg-[var(--brand-secondary)] px-3 py-1.5 text-xs font-black text-black">AJL {ajl.level}</span>
               </div>
-              <div className="absolute bottom-4 left-4 right-4">
-                <h1 className="line-clamp-2 text-2xl font-bold leading-tight text-[var(--brand-text)] lg:text-3xl">{session.title}</h1>
-                <p className="mt-2 text-sm text-[var(--brand-text-muted)]">{session.vtuber}</p>
+              <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-7 lg:p-8">
+                <div className="max-w-4xl">
+                  <p className="mb-3 text-sm font-bold text-[var(--brand-secondary)]">{tx(`${session.vtuber} のライブレッスン`, `${session.vtuber}'s live lesson`)}</p>
+                  <h1 className="text-3xl font-black leading-tight text-white sm:text-4xl lg:text-5xl">{session.title}</h1>
+                  {session.description ? (
+                    <p className="mt-4 max-w-3xl text-base leading-8 text-white/82 sm:text-lg">{session.description}</p>
+                  ) : null}
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <InfoPill
+                      icon={CalendarDaysIcon}
+                      label={tx("開始", "Starts")}
+                      value={session.startsAt ? formatSessionStartTime(session.startsAt) : tx("未定", "TBD")}
+                      help={tx("レッスンの開始予定時刻です。時間は端末の表示設定に合わせて表示されます。", "Scheduled lesson start time. It follows your device display settings.")}
+                    />
+                    <InfoPill
+                      icon={ClockIcon}
+                      label={tx("時間", "Duration")}
+                      value={session.duration || "-"}
+                      help={tx("配信枠の予定時間です。進行により前後する場合があります。", "Planned session length. The actual ending time may vary.")}
+                    />
+                    <InfoPill
+                      icon={LanguageIcon}
+                      label={tx("目安レベル", "Level")}
+                      value={`AJL ${ajl.level} / JF ${ajl.jfStandard}`}
+                      help={tx(
+                        `AJLはaiment Japanese Levelの略です。この枠はAJL ${ajl.level}（${ajl.label}）で、${ajl.description} が目安です。`,
+                        `AJL means aiment Japanese Level. This session is AJL ${ajl.level} (${ajl.label}); recommended ability: ${ajl.description}.`,
+                      )}
+                      tone="accent"
+                    />
+                    <InfoPill
+                      icon={UserGroupIcon}
+                      label={tx("スピーカー枠", "Speaker spots")}
+                      value={`${session.speakerSlotsLeft}/${session.speakerSlotsTotal}`}
+                      help={tx("声で会話に参加できるスピーカー枠の残数です。視聴だけの場合はこの枠を使いません。", "Remaining speaker slots for people joining by voice. Watching does not use these slots.")}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="rounded-2xl bg-[var(--brand-bg-800)] p-5">
-            <h2 className="mb-3 text-sm font-semibold tracking-wide text-[var(--brand-text-muted)]">{tx("企画の概要", "Overview")}</h2>
-            <p className="mb-4 text-sm leading-relaxed text-[var(--brand-text)]">{session.description}</p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="rounded-lg bg-[var(--brand-bg-900)] px-3 py-2">
-                <p className="text-xs text-[var(--brand-text-muted)]">{tx("開始時刻", "Start time")}</p>
-                <p className="text-sm font-semibold text-[var(--brand-text)]">{session.startsAt ? formatSessionStartTime(session.startsAt) : "-"}</p>
-              </div>
-              <div className="rounded-lg bg-[var(--brand-bg-900)] px-3 py-2">
-                <p className="text-xs text-[var(--brand-text-muted)]">{tx("配信時間", "Duration")}</p>
-                <p className="text-sm font-semibold text-[var(--brand-text)]">{session.duration}</p>
-              </div>
-              <div className="rounded-lg bg-[var(--brand-bg-900)] px-3 py-2">
-                <p className="text-xs text-[var(--brand-text-muted)]">{tx("参加方式", "Entry Type")}</p>
-                <p className="text-sm font-semibold text-[var(--brand-text)]">{session.participationType}</p>
-              </div>
-              <div className="rounded-lg bg-[var(--brand-bg-900)] px-3 py-2">
-                <p className="text-xs text-[var(--brand-text-muted)]">AJL</p>
-                <p className="text-sm font-semibold text-[var(--brand-text)]">AJL {ajl.level} / JF {ajl.jfStandard}</p>
-                <p className="mt-1 text-[11px] text-[var(--brand-text-muted)]">{ajl.label}</p>
-              </div>
-              <div className="rounded-lg bg-[var(--brand-bg-900)] px-3 py-2">
-                <p className="text-xs text-[var(--brand-text-muted)]">{tx("参加者枠", "Participant spots")}</p>
-                <p className="text-sm font-semibold text-[var(--brand-text)]">{session.speakerSlotsLeft}/{session.speakerSlotsTotal}</p>
-              </div>
-            </div>
-          </div>
+          <section className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/8 bg-[var(--brand-bg-800)] px-4 py-3 shadow-lg shadow-black/12">
+            <p className="text-sm font-bold text-[var(--brand-text)]">{tx("aimentライブレッスン", "aiment live lesson")}</p>
+            <HelpTooltip
+              label={tx("aimentとは", "What is aiment?")}
+              body={tx(
+                "aimentは、配信を見ながら日本語で会話に参加できるライブレッスンです。視聴だけでも、スピーカーとして声で参加しても大丈夫です。",
+                "aiment is a live lesson where you can watch a stream and join the conversation in Japanese. You can watch quietly or join by voice as a speaker.",
+              )}
+            />
+            <span className="text-sm text-[var(--brand-text-muted)]">
+              {tx("見るだけでも、話して参加してもOK。", "Watch quietly, or join the conversation.")}
+            </span>
+          </section>
 
-          <div className="rounded-2xl bg-[var(--brand-bg-800)] p-5">
-            <h2 className="mb-3 text-sm font-semibold tracking-wide text-[var(--brand-text-muted)]">{tx("選べる参加方法", "Choose how to join")}</h2>
+          <section className="rounded-2xl border border-white/8 bg-[var(--brand-bg-800)] p-5 shadow-lg shadow-black/12">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-text-muted)]">{tx("Join Guide", "Join Guide")}</p>
+                <h2 className="mt-1 flex items-center gap-2 text-xl font-black text-[var(--brand-text)]">
+                  <span>{tx("参加方法を選ぶ", "Choose how to join")}</span>
+                  <HelpTooltip
+                    label={tx("参加方法", "Join options")}
+                    body={tx(
+                      "視聴はログイン不要です。スピーカー参加はログイン、枠予約、支払い、マイク確認が必要です。",
+                      "Watching does not require login. Speaker participation requires login, a slot reservation, payment, and a microphone check.",
+                    )}
+                  />
+                </h2>
+              </div>
+              <span className="rounded-full bg-[var(--brand-surface)] px-3 py-1 text-xs font-bold text-[var(--brand-text-muted)]">
+                {session.participationType}
+              </span>
+            </div>
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="rounded-xl bg-[var(--brand-bg-900)] p-4">
-                <p className="text-sm font-semibold text-[var(--brand-text)]">{tx("視聴者", "Viewer")}</p>
-                <ul className="mt-3 space-y-2 text-xs leading-relaxed text-[var(--brand-text-muted)]">
-                  <li>{tx("ログインなしで入れます。", "You can enter without logging in.")}</li>
-                  <li>{tx("マイクやカメラの許可は不要です。", "No mic or camera permission is needed.")}</li>
-                  <li>{tx("まず雰囲気を見たい人向けです。", "Best if you want to check the vibe first.")}</li>
-                </ul>
-              </div>
-              <div className="rounded-xl bg-[var(--brand-bg-900)] p-4">
-                <p className="text-sm font-semibold text-[var(--brand-text)]">{tx("スピーカー", "Speaker")}</p>
-                <ul className="mt-3 space-y-2 text-xs leading-relaxed text-[var(--brand-text-muted)]">
-                  <li>{tx("ログイン後に申し込みが必要です。", "You need to log in and apply first.")}</li>
-                  <li>{tx("参加前に表示名とマイク状態を確認できます。", "You can confirm your display name and mic before joining.")}</li>
-                  <li>{tx("会話に参加したい人向けです。", "Best if you want to speak in the session.")}</li>
-                </ul>
-              </div>
+              <button
+                type="button"
+                onClick={watchNow}
+                className="group rounded-2xl border border-white/8 bg-[var(--brand-bg-900)] p-5 text-left transition-colors hover:border-[var(--brand-primary)]/45 hover:bg-[var(--brand-primary)]/10"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-lg font-black text-[var(--brand-text)]">{tx("視聴する", "Watch")}</p>
+                  <ArrowRightIcon className="h-5 w-5 text-[var(--brand-text-muted)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-primary)]" aria-hidden />
+                </div>
+                <p className="mt-3 text-sm leading-7 text-[var(--brand-text-muted)]">
+                  {tx(
+                    "ログイン不要。まず雰囲気を見る人向けです。",
+                    "No login needed. Good for checking the vibe first.",
+                  )}
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedPath("speaker")}
+                className={`group rounded-2xl border p-5 text-left transition-colors ${
+                  selectedPath === "speaker"
+                    ? "border-[var(--brand-primary)]/55 bg-[var(--brand-primary)]/15"
+                    : "border-white/8 bg-[var(--brand-bg-900)] hover:border-[var(--brand-primary)]/45 hover:bg-[var(--brand-primary)]/10"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-lg font-black text-[var(--brand-text)]">{tx("スピーカーとして参加", "Join as speaker")}</p>
+                  <ArrowRightIcon className="h-5 w-5 text-[var(--brand-text-muted)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-primary)]" aria-hidden />
+                </div>
+                <p className="mt-3 text-sm leading-7 text-[var(--brand-text-muted)]">
+                  {tx(
+                    "ログインして枠を予約。会話に参加する人向けです。",
+                    "Log in and reserve a slot. Best if you want to speak.",
+                  )}
+                </p>
+              </button>
             </div>
-          </div>
+          </section>
         </section>
 
-        <aside className="rounded-2xl bg-[var(--brand-bg-800)] p-5">
-          <div className="rounded-xl bg-[var(--brand-bg-900)] p-4">
-            <p className="text-sm font-semibold text-[var(--brand-text)]">{tx("どうしますか？", "What would you like to do?")}</p>
-            <p className="mt-2 text-xs text-[var(--brand-text-muted)]">
-              {tx("視聴はすぐ始められます。会話参加はログイン後に申し込みへ進みます。", "Watching starts right away. Speaking continues to application after login.")}
+        <aside className="self-start rounded-2xl border border-white/8 bg-[var(--brand-bg-800)] p-5 shadow-xl shadow-black/20 lg:sticky lg:top-5">
+          <div className="rounded-2xl bg-[var(--brand-bg-900)] p-4">
+            <p className="text-base font-black text-[var(--brand-text)]">{tx("参加の準備", "Get ready to join")}</p>
+            <p className="mt-2 text-sm leading-6 text-[var(--brand-text-muted)]">
+              {tx("見るだけならすぐ入れます。話す場合はスピーカー枠の申し込みへ進んでください。", "You can watch right away. To speak, continue to the speaker application flow.")}
             </p>
             <div className="mt-4 grid gap-2">
-              <div className="relative">
-                <button
-                  disabled
-                  className="w-full cursor-not-allowed rounded-xl bg-[var(--brand-surface)] px-4 py-3 text-sm font-bold text-[var(--brand-text-muted)] opacity-50"
-                >
-                  {tx("視聴する（準備中）", "Watch now (coming soon)")}
-                </button>
-                <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-[var(--brand-surface-soft)] px-2 py-0.5 text-[10px] text-[var(--brand-text-muted)]">
-                  {tx("一時的に利用不可", "Temporarily unavailable")}
-                </span>
-              </div>
+              <button
+                type="button"
+                onClick={watchNow}
+                className="w-full rounded-xl bg-[var(--brand-secondary)] px-4 py-3 text-sm font-extrabold text-black transition-transform hover:-translate-y-0.5"
+              >
+                {tx("視聴で入る", "Enter as viewer")}
+              </button>
               <button
                 onClick={() => setSelectedPath("speaker")}
                 className={`w-full rounded-xl px-4 py-3 text-sm font-bold transition-colors ${
@@ -509,10 +629,13 @@ export function JoinPageClient() {
           </div>
 
           {selectedPath !== "speaker" && (
-            <div className="mt-4 rounded-xl bg-[var(--brand-bg-900)] p-4">
-              <p className="text-sm font-semibold text-[var(--brand-text)]">{tx("視聴について", "About watching")}</p>
-              <p className="mt-2 text-xs leading-relaxed text-[var(--brand-text-muted)]">
-                {tx("配信を見るだけならログイン不要です。あとで話したくなったら、このページに戻ってスピーカー参加へ進めます。", "If you only want to watch, no login is needed. You can come back here later to continue as a speaker.")}
+            <div className="mt-4 rounded-2xl bg-[var(--brand-bg-900)] p-4">
+              <p className="text-sm font-bold text-[var(--brand-text)]">{tx("初めての方へ", "For first-time visitors")}</p>
+              <p className="mt-2 text-sm leading-7 text-[var(--brand-text-muted)]">
+                {tx(
+                  "共有リンクから来た場合は、まず日時とAJLを確認してください。迷ったら視聴で入って、雰囲気を見てから次回スピーカー参加でも大丈夫です。",
+                  "If you arrived from a shared link, first check the time and AJL level. If unsure, start as a viewer and join as a speaker another time.",
+                )}
               </p>
             </div>
           )}
