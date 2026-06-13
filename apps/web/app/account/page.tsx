@@ -25,6 +25,7 @@ import {
 import { getMonitoringSummary } from "../lib/monitoring";
 import { createUserReport, listReports } from "../lib/reports";
 import { useI18n } from "../lib/i18n";
+import { uploadImageToR2 } from "../lib/uploadImage";
 import { useUserSession } from "../lib/userSession";
 import type {
   BillingSubscription,
@@ -169,6 +170,7 @@ export default function AccountPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [subscriptions, setSubscriptions] = useState<BillingSubscription[]>([]);
   const [ticketPurchases, setTicketPurchases] = useState<TicketPurchase[]>([]);
@@ -391,7 +393,7 @@ export default function AccountPage() {
   const isAimerPlan = draft.plan === "aimer";
   const subscriptionRenewsAt = draft.subscriptionRenewsAt ?? currentSubscription?.currentPeriodEnd;
 
-  const handleAvatarFileChange = (file: File | null) => {
+  const handleAvatarFileChange = async (file: File | null) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       setError(tx("画像ファイルを選択してください。", "Please select an image file."));
@@ -401,20 +403,20 @@ export default function AccountPage() {
       setError(tx("画像サイズは2MB以下にしてください。", "Image size must be 2MB or less."));
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
-      if (!result) return;
-      setDraft((prev) => (prev ? { ...prev, avatarUrl: result } : prev));
+    setUploadingImage(true);
+    setError(null);
+    try {
+      const url = await uploadImageToR2(file, "avatars");
+      setDraft((prev) => (prev ? { ...prev, avatarUrl: url } : prev));
       markChanged();
-    };
-    reader.onerror = () => {
-      setError(tx("画像の読み込みに失敗しました。", "Failed to load image."));
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      setError(tx("画像のアップロードに失敗しました。", "Failed to upload image."));
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
-  const handleHeaderFileChange = (file: File | null) => {
+  const handleHeaderFileChange = async (file: File | null) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       setError(tx("画像ファイルを選択してください。", "Please select an image file."));
@@ -424,17 +426,17 @@ export default function AccountPage() {
       setError(tx("画像サイズは4MB以下にしてください。", "Image size must be 4MB or less."));
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
-      if (!result) return;
-      setDraft((prev) => (prev ? { ...prev, headerUrl: result } : prev));
+    setUploadingImage(true);
+    setError(null);
+    try {
+      const url = await uploadImageToR2(file, "headers");
+      setDraft((prev) => (prev ? { ...prev, headerUrl: url } : prev));
       markChanged();
-    };
-    reader.onerror = () => {
-      setError(tx("画像の読み込みに失敗しました。", "Failed to load image."));
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      setError(tx("画像のアップロードに失敗しました。", "Failed to upload image."));
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   return (
@@ -496,8 +498,10 @@ export default function AccountPage() {
                 {tx("プロフィール、認証、通知、課金、サポートへの連絡を管理できます。", "Manage your profile, verification, notifications, billing, and support requests.")}
               </p>
               <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-[var(--brand-text-muted)]">
-                <span className={`rounded-full px-3 py-1 ${saving ? "bg-[var(--brand-secondary)]/15 text-[var(--brand-secondary)]" : "bg-[var(--brand-surface)]"}`}>
-                  {saving
+                <span className={`rounded-full px-3 py-1 ${saving || uploadingImage ? "bg-[var(--brand-secondary)]/15 text-[var(--brand-secondary)]" : "bg-[var(--brand-surface)]"}`}>
+                  {uploadingImage
+                    ? tx("画像アップロード中...", "Uploading image...")
+                    : saving
                     ? tx("自動保存中...", "Auto-saving...")
                     : hasChanges
                       ? tx("まもなく自動保存されます", "Auto-save pending")
@@ -551,7 +555,7 @@ export default function AccountPage() {
                               type="file"
                               accept="image/*"
                               className="hidden"
-                              onChange={(e) => handleHeaderFileChange(e.target.files?.[0] ?? null)}
+                              onChange={(e) => void handleHeaderFileChange(e.target.files?.[0] ?? null)}
                             />
                           </label>
                           <button
@@ -575,7 +579,7 @@ export default function AccountPage() {
                               type="file"
                               accept="image/*"
                               className="hidden"
-                              onChange={(e) => handleAvatarFileChange(e.target.files?.[0] ?? null)}
+                              onChange={(e) => void handleAvatarFileChange(e.target.files?.[0] ?? null)}
                             />
                           </label>
                           <button
