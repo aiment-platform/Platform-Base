@@ -35,7 +35,7 @@ export function getTypeInfo(type: ParticipationType | "First-come" | "Lottery", 
 export function matchesFilter(
   item: { vtuber: string; title: string; tags: string[] },
   searchQuery: string,
-  activeTags: string[],
+  activeTags: string[] = [],
 ): boolean {
   if (searchQuery && !item.vtuber.includes(searchQuery) && !item.title.toLowerCase().includes(searchQuery.toLowerCase())) {
     return false;

@@ -1,11 +1,8 @@
 "use client";
 
-import { SlotBar } from "../SlotBar";
 import { StartingSoonSession } from "../types";
-import { formatCountdown, getTypeInfo } from "../utils";
-import { formatSessionStartTime, getAjlInfo } from "../../../lib/ajl";
+import { StreamSessionCard } from "../StreamSessionCard";
 import { useI18n } from "../../../lib/i18n";
-import { ClockIcon, UsersIcon } from "@heroicons/react/24/outline";
 
 type StartingSoonSectionProps = {
  sessions: StartingSoonSession[];
@@ -16,9 +13,7 @@ type StartingSoonSectionProps = {
 
 export function StartingSoonSection({
  sessions,
- countdown,
   onOpenSession,
-  onOpenChannel,
 }: StartingSoonSectionProps) {
   const { tx } = useI18n();
   return (
@@ -36,99 +31,21 @@ export function StartingSoonSection({
       {sessions.length === 0 ? (
         <div className="py-16 text-center text-sm text-[var(--brand-text-muted)]">{tx("該当する配信が見つかりませんでした", "No matching streams found")}</div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {sessions.map((session) => {
-            const seconds = countdown[session.id] ?? session.startsInSeconds;
-            const typeInfo = getTypeInfo(session.participationType, tx);
-            const ajl = getAjlInfo(session.japaneseLevel);
-            const urgent = seconds < 20 * 60;
-            return (
-              <div
-                key={session.id}
-                className="group overflow-hidden rounded-xl bg-[var(--brand-surface)] shadow-lg shadow-black/25 transition-all hover:-translate-y-0.5 hover:shadow-xl"
-              >
-                <div className="aspect-video overflow-hidden">
-                  <img
-                    src={session.thumbnail}
-                    alt={session.vtuber}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                  />
-                </div>
-
-                <div className="p-3.5">
-                  <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                    <div className="inline-flex items-center gap-1 rounded-lg bg-[var(--brand-bg-900)]/80 px-2 py-1 text-[10px] font-bold text-[var(--brand-text)]">
-                      <ClockIcon className="h-3 w-3" aria-hidden />
-                      {formatSessionStartTime(session.startsAt)}
-                    </div>
-                    <div
-                      className={`rounded-lg px-2 py-1 text-[10px] font-bold ${
-                        urgent ? "bg-[var(--brand-accent)]/20 text-[var(--brand-accent)]" : "bg-[var(--brand-primary)]/20 text-[var(--brand-primary)]"
-                      }`}
-                    >
-                      {formatCountdown(seconds, tx)}
-                    </div>
-                    <div className="rounded-lg bg-[var(--brand-secondary)]/20 px-2 py-1 text-[10px] font-black text-[var(--brand-secondary)]">
-                      AJL {ajl.level}
-                    </div>
-                    <div className={`flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold ${typeInfo.bg}`}>
-                      <span>{typeInfo.icon}</span>
-                      <span>{typeInfo.label}</span>
-                    </div>
-                  </div>
-
-                  <p className="mb-0.5 line-clamp-2 text-sm font-bold leading-tight text-[var(--brand-text)]">{session.title}</p>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      if (!session.hostUserId) return;
-                      event.stopPropagation();
-                      onOpenChannel(session.hostUserId);
-                    }}
-                    className={`mb-3 inline-flex items-center gap-2 rounded-full px-1 py-0.5 ${
-                      session.hostUserId ? "hover:bg-[var(--brand-bg-900)]" : ""
-                    }`}
-                  >
-                    <span className="h-6 w-6 overflow-hidden rounded-full bg-[var(--brand-bg-900)] ring-1 ring-white/10">
-                      {session.hostAvatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={session.hostAvatarUrl} alt={session.vtuber} className="h-full w-full object-cover" />
-                      ) : (
-                        <span className="grid h-full w-full place-items-center text-[10px] font-bold text-[var(--brand-primary)]">
-                          {(session.hostChannelName || session.vtuber || "A").slice(0, 1).toUpperCase()}
-                        </span>
-                      )}
-                    </span>
-                    <span className="text-xs text-[var(--brand-text-muted)]">
-                      {session.hostChannelName || session.vtuber}
-                    </span>
-                  </button>
-
-                  <div className="mb-2">
-                    <SlotBar left={session.slotsLeft} total={session.slotsTotal} size="sm" />
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] text-[var(--brand-text-muted)]">
-                    <span className="inline-flex items-center gap-1">
-                      <ClockIcon className="h-3.5 w-3.5" aria-hidden />
-                      JF {ajl.jfStandard} / {ajl.label}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <UsersIcon className="h-3.5 w-3.5" aria-hidden />
-                      {session.slotsLeft}/{session.slotsTotal}
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => onOpenSession(session.id)}
-                    className="mt-3 w-full rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-primary-light)]"
-                  >
-                    {tx("詳細を見る", "View details")}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+        <div className="grid grid-cols-1 gap-x-6 gap-y-10 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          {sessions.map((session) => (
+            <StreamSessionCard
+              key={session.id}
+              title={session.title}
+              channelName={session.hostChannelName || session.vtuber}
+              thumbnail={session.thumbnail}
+              startsAt={session.startsAt}
+              slotsLeft={session.slotsLeft}
+              slotsTotal={session.slotsTotal}
+              japaneseLevel={session.japaneseLevel}
+              hostAvatarUrl={session.hostAvatarUrl}
+              onOpen={() => onOpenSession(session.id)}
+            />
+          ))}
         </div>
       )}
     </section>

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { requireSessionUser } from "@/app/lib/server/auth";
 
 export const runtime = "nodejs";
@@ -7,6 +6,20 @@ export const dynamic = "force-dynamic";
 
 const MAX_SIZE = 4 * 1024 * 1024; // 4MB
 const ALLOWED_FOLDERS = new Set(["thumbnails", "avatars", "headers"]);
+
+type S3Module = {
+  S3Client: new (config: unknown) => { send: (command: unknown) => Promise<unknown> };
+  PutObjectCommand: new (input: unknown) => unknown;
+};
+
+async function loadS3Module(): Promise<S3Module> {
+  try {
+    const importer = new Function("specifier", "return import(specifier)") as (specifier: string) => Promise<S3Module>;
+    return await importer("@aws-sdk/client-s3");
+  } catch {
+    throw new Error("S3 upload support is not installed. Install @aws-sdk/client-s3 to enable uploads.");
+  }
+}
 
 // 実体(マジックバイト)から画像種別を判定する。クライアント申告のMIMEは信用しない。
 function sniffImageType(bytes: Uint8Array): { mime: string; ext: string } | null {
@@ -35,18 +48,20 @@ function sniffImageType(bytes: Uint8Array): { mime: string; ext: string } | null
   return null;
 }
 
-function getR2Client() {
+async function getR2Client() {
   const accountId = process.env.R2_ACCOUNT_ID;
   const accessKeyId = process.env.R2_ACCESS_KEY_ID;
   const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
   if (!accountId || !accessKeyId || !secretAccessKey) {
     throw new Error("R2 environment variables are not configured");
   }
-  return new S3Client({
+  const { S3Client, PutObjectCommand } = await loadS3Module();
+  const client = new S3Client({
     region: "auto",
     endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
     credentials: { accessKeyId, secretAccessKey },
   });
+  return { client, PutObjectCommand };
 }
 
 export async function POST(request: Request) {
@@ -85,7 +100,7 @@ export async function POST(request: Request) {
 
     const key = `${folder}/${crypto.randomUUID()}.${sniffed.ext}`;
 
-    const client = getR2Client();
+    const { client, PutObjectCommand } = await getR2Client();
     await client.send(
       new PutObjectCommand({
         Bucket: bucket,
