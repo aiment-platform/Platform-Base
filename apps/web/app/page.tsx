@@ -3,9 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Footer } from "./components/home/Footer";
-import { SearchFilterBar } from "./components/home/SearchFilterBar";
 import { TopNav } from "./components/home/TopNav";
-import { TAGS } from "./components/home/data";
 import { NowLiveSection } from "./components/home/sections/NowLiveSection";
 import { StartingSoonSection } from "./components/home/sections/StartingSoonSection";
 import { UpcomingTicker } from "./components/home/UpcomingTicker";
@@ -24,7 +22,6 @@ export default function HomePage() {
   const { tx } = useI18n();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTags, setActiveTags] = useState<string[]>([]);
   const [dynamicSessions, setDynamicSessions] = useState<StreamSession[]>(() => getCachedActiveSessions() ?? []);
   const [countdown, setCountdown] = useState<Record<string, number>>({});
 
@@ -126,18 +123,14 @@ export default function HomePage() {
   }, [allStartingSoon, countdown]);
 
   const filteredStartingSoon = useMemo(
-    () => allStartingSoon.filter((session) => matchesFilter(session, searchQuery, activeTags)),
-    [allStartingSoon, searchQuery, activeTags],
+    () => allStartingSoon.filter((session) => matchesFilter(session, searchQuery)),
+    [allStartingSoon, searchQuery],
   );
 
   const filteredLive = useMemo(
-    () => allLive.filter((session) => matchesFilter(session, searchQuery, activeTags)),
-    [allLive, searchQuery, activeTags],
+    () => allLive.filter((session) => matchesFilter(session, searchQuery)),
+    [allLive, searchQuery],
   );
-
-  const handleToggleTag = (tag: string) => {
-    setActiveTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
-  };
 
   const goPreJoin = (sessionId: string) => {
     router.push(`/join/${encodeURIComponent(sessionId)}`);
@@ -149,16 +142,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-[var(--brand-bg-900)] pb-20 md:pb-0">
-      <TopNav />
-
-      <SearchFilterBar
-        tags={TAGS}
-        searchQuery={searchQuery}
-        activeTags={activeTags}
-        onSearchChange={setSearchQuery}
-        onToggleTag={handleToggleTag}
-        onClearTags={() => setActiveTags([])}
-      />
+      <TopNav searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
       <UpcomingTicker sessions={filteredStartingSoon} onParticipate={goPreJoin} />
 

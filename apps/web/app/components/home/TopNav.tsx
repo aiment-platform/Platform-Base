@@ -9,6 +9,7 @@ import { AuthProfileControl } from "../auth/AuthProfileControl";
 import { useI18n } from "../../lib/i18n";
 import { useUserSession } from "../../lib/userSession";
 import { buttonClassName } from "../ui/Button";
+import { HomeSearchInput } from "./HomeSearchInput";
 
 type NavItem = {
   labelJp: string;
@@ -25,14 +26,17 @@ const BASE_NAV_ITEMS: NavItem[] = [
 
 type TopNavProps = {
   mode?: "default" | "studio";
+  searchQuery?: string;
+  onSearchChange?: (value: string) => void;
 };
 
-export function TopNav({ mode = "default" }: TopNavProps) {
+export function TopNav({ mode = "default", searchQuery, onSearchChange }: TopNavProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { locale, setLocale, tx } = useI18n();
   const { isVtuber } = useUserSession();
   const isStudioMode = mode === "studio";
+  const showSearch = !isStudioMode && searchQuery !== undefined && onSearchChange !== undefined;
   const navItems: NavItem[] = isVtuber
     ? [
         ...BASE_NAV_ITEMS,
@@ -57,8 +61,8 @@ export function TopNav({ mode = "default" }: TopNavProps) {
             </Link>
 
             {!isStudioMode && (
-            <div className="hidden min-w-0 flex-1 items-center justify-center overflow-x-auto md:flex">
-              <div className="flex items-center gap-2 rounded-xl bg-[var(--brand-bg-900)] p-1">
+            <div className="hidden min-w-0 flex-1 items-center justify-center gap-3 md:flex">
+              <div className="flex shrink-0 items-center gap-2 rounded-xl bg-[var(--brand-bg-900)] p-1">
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = item.href ? pathname === item.href : false;
@@ -86,6 +90,13 @@ export function TopNav({ mode = "default" }: TopNavProps) {
                   );
                 })}
               </div>
+              {showSearch && (
+                <HomeSearchInput
+                  searchQuery={searchQuery}
+                  onSearchChange={onSearchChange}
+                  className="w-full max-w-[360px]"
+                />
+              )}
             </div>
             )}
 
@@ -137,6 +148,13 @@ export function TopNav({ mode = "default" }: TopNavProps) {
               </div>
             </div>
           </div>
+          {showSearch && (
+            <HomeSearchInput
+              searchQuery={searchQuery}
+              onSearchChange={onSearchChange}
+              className="mt-2 md:hidden"
+            />
+          )}
         </div>
       </nav>
 
