@@ -8,6 +8,22 @@ const stripeCsp = [
   "https://m.stripe.com",
 ].join(" ");
 
+// R2 の公開画像配信元を img-src に許可する。
+// R2_PUBLIC_BASE_URL の origin を厳密に使い、未設定時のみ r2.dev を広く許可する。
+function resolveR2ImgSrc() {
+  const base = process.env.R2_PUBLIC_BASE_URL;
+  if (base) {
+    try {
+      return new URL(base).origin;
+    } catch {
+      // 不正な値が入っていた場合はフォールバックする
+    }
+  }
+  return "https://*.r2.dev";
+}
+
+const r2ImgSrc = resolveR2ImgSrc();
+
 const nextConfig: NextConfig = {
   async headers() {
     return [
@@ -20,7 +36,7 @@ const nextConfig: NextConfig = {
               `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${stripeCsp} https://pay.google.com https://accounts.google.com`,
               `frame-src 'self' ${stripeCsp} https://pay.google.com`,
               `connect-src 'self' ${stripeCsp} https://api.stripe.com https://api.frankfurter.app https://*.livekit.cloud wss://*.livekit.cloud`,
-              `img-src 'self' data: blob: https://*.stripe.com`,
+              `img-src 'self' data: blob: https://*.stripe.com ${r2ImgSrc}`,
             ].join("; "),
           },
           { key: "X-Frame-Options", value: "DENY" },
