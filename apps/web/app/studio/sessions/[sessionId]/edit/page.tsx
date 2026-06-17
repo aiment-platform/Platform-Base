@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeftIcon } from "@heroicons/react/24/solid";
@@ -9,7 +9,13 @@ import { AJL_LEVELS, getAjlInfo } from "../../../../lib/ajl";
 import type { Reservation, SubscriptionPlan } from "../../../../lib/apiTypes";
 import { useI18n } from "../../../../lib/i18n";
 import { useUserSession } from "../../../../lib/userSession";
-import { getStreamSession, updateStreamSession, type StreamSession } from "../../../../lib/streamSessions";
+import { uploadImageToR2 } from "../../../../lib/uploadImage";
+import {
+  deleteStreamSession,
+  getStreamSession,
+  updateStreamSession,
+  type StreamSession,
+} from "../../../../lib/streamSessions";
 
 const CATEGORY_OPTIONS = ["雑談", "ゲーム", "歌枠", "英語"] as const;
 
@@ -21,6 +27,14 @@ function pad(n: number) {
 function formatDate(iso: string) {
   const d = new Date(iso);
   return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// ISO文字列を datetime-local 入力用のローカル時刻文字列(YYYY-MM-DDTHH:mm)に変換する。
+function toLocalInput(iso: string) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 export default function SessionEditPage() {
@@ -39,6 +53,11 @@ export default function SessionEditPage() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [thumbnail, setThumbnail] = useState("");
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+  const [startsAt, setStartsAt] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [category, setCategory] = useState<string>("雑談");
   const [slotsTotal, setSlotsTotal] = useState(5);
   const [speakerSlotsTotal, setSpeakerSlotsTotal] = useState(5);
@@ -66,6 +85,8 @@ export default function SessionEditPage() {
     setSession(data);
     setTitle(data.title);
     setDescription(data.description ?? "");
+    setThumbnail(data.thumbnail ?? "");
+    setStartsAt(toLocalInput(data.startsAt ?? ""));
     setCategory(data.category ?? "雑談");
     setSlotsTotal(data.slotsTotal);
     setSpeakerSlotsTotal(data.speakerSlotsTotal);
@@ -108,6 +129,46 @@ export default function SessionEditPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, session]);
 
+  async function handleThumbnailUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError(tx("画像ファイルを選択してください。", "Please select an image file."));
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      setError(tx("画像サイズは4MB以下にしてください。", "Image size must be 4MB or less."));
+      return;
+    }
+    setUploadingThumbnail(true);
+    setError(null);
+    try {
+      const url = await uploadImageToR2(file, "thumbnails");
+      setThumbnail(url);
+    } catch {
+      setError(tx("画像のアップロードに失敗しました。", "Failed to upload image."));
+    } finally {
+      setUploadingThumbnail(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!session) return;
+    if (!window.confirm(tx("この配信枠を削除しますか？この操作は取り消せません。", "Delete this session? This cannot be undone."))) {
+      return;
+    }
+    setDeleting(true);
+    setError(null);
+    const ok = await deleteStreamSession(sessionId);
+    if (!ok) {
+      setDeleting(false);
+      setError(tx("削除に失敗しました。", "Failed to delete."));
+      return;
+    }
+    router.replace("/studio/sessions");
+  }
+
   async function handleSave(event: React.FormEvent) {
     event.preventDefault();
     if (!session) return;
@@ -118,11 +179,17 @@ export default function SessionEditPage() {
       setError(tx("タイトルを入力してください。", "Please enter a title."));
       return;
     }
+    if (uploadingThumbnail) {
+      setError(tx("画像のアップロード完了をお待ちください。", "Please wait for the image upload to finish."));
+      return;
+    }
 
     setSaving(true);
     const updated = await updateStreamSession(sessionId, {
       title: title.trim(),
       description: description.trim(),
+      thumbnail,
+      startsAt: startsAt ? new Date(startsAt).toISOString() : session.startsAt,
       category,
       slotsTotal,
       speakerSlotsTotal,
@@ -196,11 +263,52 @@ export default function SessionEditPage() {
               <div className="rounded-xl bg-green-500/15 px-4 py-3 text-sm text-green-400">{tx("保存しました。", "Saved.")}</div>
             )}
 
+            <div className="grid gap-1.5 text-sm">
+              <span className="text-[var(--brand-text-muted)]">{tx("サムネイル", "Thumbnail")}</span>
+              <div className="flex items-center gap-4">
+                <div className="h-20 w-32 shrink-0 overflow-hidden rounded-xl bg-[var(--brand-surface)]">
+                  {thumbnail ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={thumbnail} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-xs text-[var(--brand-text-muted)]">
+                      {tx("画像なし", "No image")}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingThumbnail}
+                  className="rounded-xl bg-[var(--brand-surface)] px-4 py-2 text-sm font-semibold text-[var(--brand-text)] transition-colors hover:brightness-110 disabled:opacity-50"
+                >
+                  {uploadingThumbnail ? tx("アップロード中...", "Uploading...") : tx("画像を変更", "Change image")}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) => void handleThumbnailUpload(e)}
+                />
+              </div>
+            </div>
+
             <label className="grid gap-1.5 text-sm">
               <span className="text-[var(--brand-text-muted)]">{tx("タイトル", "Title")}</span>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                className="rounded-xl bg-[var(--brand-surface)] px-4 py-2.5 text-[var(--brand-text)] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
+              />
+            </label>
+
+            <label className="grid gap-1.5 text-sm">
+              <span className="text-[var(--brand-text-muted)]">{tx("配信予定日時", "Scheduled time")}</span>
+              <input
+                type="datetime-local"
+                value={startsAt}
+                onChange={(e) => setStartsAt(e.target.value)}
                 className="rounded-xl bg-[var(--brand-surface)] px-4 py-2.5 text-[var(--brand-text)] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
               />
             </label>
@@ -323,10 +431,24 @@ export default function SessionEditPage() {
               </Link>
               <button
                 type="submit"
-                disabled={saving}
+                disabled={saving || uploadingThumbnail}
                 className="rounded-xl bg-[var(--brand-primary)] px-6 py-2.5 text-sm font-bold text-white shadow-[0_6px_20px_rgba(124,106,230,0.4)] transition-all hover:brightness-110 disabled:opacity-50"
               >
                 {saving ? tx("保存中...", "Saving...") : tx("保存する", "Save")}
+              </button>
+            </div>
+
+            <div className="mt-8 border-t border-[var(--brand-surface)] pt-6">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--brand-text-muted)]">
+                {tx("危険な操作", "Danger zone")}
+              </p>
+              <button
+                type="button"
+                onClick={() => void handleDelete()}
+                disabled={deleting}
+                className="rounded-xl border border-[var(--brand-accent)] px-5 py-2.5 text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:bg-[var(--brand-accent)]/10 disabled:opacity-50"
+              >
+                {deleting ? tx("削除中...", "Deleting...") : tx("この配信枠を削除", "Delete this session")}
               </button>
             </div>
           </form>
