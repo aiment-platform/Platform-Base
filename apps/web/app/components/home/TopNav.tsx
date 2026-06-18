@@ -10,6 +10,7 @@ import { useI18n } from "../../lib/i18n";
 import { useUserSession } from "../../lib/userSession";
 import { buttonClassName } from "../ui/Button";
 import { HomeSearchInput } from "./HomeSearchInput";
+import { ThemeToggle } from "./ThemeToggle";
 
 type NavItem = {
   labelJp: string;
@@ -55,7 +56,7 @@ export function TopNav({ mode = "default", searchQuery, onSearchChange }: TopNav
                 alt="aiment"
                 width={150}
                 height={50}
-                className="h-10 w-auto object-contain brightness-0 invert"
+                className="h-10 w-auto object-contain"
                 priority
               />
             </Link>
@@ -101,6 +102,7 @@ export function TopNav({ mode = "default", searchQuery, onSearchChange }: TopNav
             )}
 
             <div className="flex items-center gap-2">
+              <ThemeToggle />
               <div className="flex items-center rounded-lg bg-[var(--brand-bg-900)] p-1">
                 <button
                   onClick={() => setLocale("jp")}

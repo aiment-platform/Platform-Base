@@ -14,6 +14,8 @@ export type MultiDayEvent = {
   start: string; // HH:mm
   durationMin: number;
   title: string;
+  talentName?: string;
+  talentAvatar?: string;
   category: string;
   status: MultiDayBookingStatus;
   href: string;
@@ -54,7 +56,7 @@ function formatTime(minutes: number) {
 function formatDateLabel(ymd: string) {
   const date = new Date(`${ymd}T00:00:00`);
   if (Number.isNaN(date.getTime())) return ymd;
-  return new Intl.DateTimeFormat(undefined, { month: "2-digit", day: "2-digit", weekday: "short" }).format(date);
+  return new Intl.DateTimeFormat("ja-JP", { month: "2-digit", day: "2-digit", weekday: "short" }).format(date);
 }
 
 function getTodayKeyLocal() {
@@ -261,6 +263,21 @@ export function MultiDayScheduleGrid({
                         <span className={`h-2 w-2 rounded-full ${statusDot(event.status)}`} />
                         <p className="truncate text-[11px] font-semibold text-[var(--brand-text)]">{event.title}</p>
                       </div>
+                      {event.talentName ? (
+                        <div className="mb-1 flex min-w-0 items-center gap-1.5">
+                          {event.talentAvatar ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={event.talentAvatar}
+                              alt=""
+                              className="h-4 w-4 shrink-0 rounded-full object-cover"
+                            />
+                          ) : null}
+                          <p className="truncate text-[10px] font-semibold text-[var(--brand-text)]/85">
+                            {event.talentName}
+                          </p>
+                        </div>
+                      ) : null}
                       <p className="mb-1 text-[10px] text-[var(--brand-text-muted)]">
                         {formatTime(clampedStart)} - {formatTime(clampedEnd)}
                       </p>

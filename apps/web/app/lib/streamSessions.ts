@@ -172,7 +172,7 @@ export async function setStreamSessionStatus(sessionId: string, status: StreamSe
   }
 }
 
-export function subscribeStreamSessions(onUpdate: () => void, intervalMs = 10000): () => void {
+export function subscribeStreamSessions(onUpdate: () => void, intervalMs = 10000, checkImmediately = true): () => void {
   if (!isBrowser()) return () => undefined;
 
   let lastCount = -1;
@@ -197,7 +197,7 @@ export function subscribeStreamSessions(onUpdate: () => void, intervalMs = 10000
     onUpdate();
   };
 
-  void checkCount();
+  if (checkImmediately) void checkCount();
   const timer = window.setInterval(() => void checkCount(), intervalMs);
   window.addEventListener(UPDATE_EVENT, onLocalUpdate);
 
