@@ -13,6 +13,7 @@ type StreamSessionCardProps = {
   japaneseLevel?: number;
   hostAvatarUrl?: string;
   onOpen: () => void;
+  onOpenChannel?: () => void;
 };
 
 function formatCardStartTime(value: string) {
@@ -31,49 +32,55 @@ export function StreamSessionCard({
   japaneseLevel,
   hostAvatarUrl,
   onOpen,
+  onOpenChannel,
 }: StreamSessionCardProps) {
   const ajl = getAjlInfo(japaneseLevel);
   const progress = `${Math.min(100, Math.max(12, ajl.level * 11))}%`;
   const initial = (channelName || title || "A").slice(0, 1).toUpperCase();
 
   return (
-    <button
-      type="button"
-      onClick={onOpen}
+    <div
       className="aiment-session-card group text-left"
       style={{ "--ajl-progress": progress } as CSSProperties & Record<"--ajl-progress", string>}
     >
-      <span className="aiment-session-card__media-shell">
-        <span className="aiment-session-card__frame" aria-hidden />
-        <span className="aiment-session-card__level">{ajl.level}</span>
-        <span className="aiment-session-card__progress" aria-hidden>
-          <span className="aiment-session-card__progress-fill" />
+      <button type="button" onClick={onOpen} className="aiment-session-card__hitbox">
+        <span className="aiment-session-card__media-shell">
+          <span className="aiment-session-card__frame" aria-hidden />
+          <span className="aiment-session-card__level">{ajl.level}</span>
+          <span className="aiment-session-card__progress" aria-hidden>
+            <span className="aiment-session-card__progress-fill" />
+          </span>
+          <span className="aiment-session-card__hover-meta">
+            <span className="aiment-session-card__ajl-label">{ajl.label}</span>
+            <span className="aiment-session-card__spots">{slotsLeft}/{slotsTotal} left</span>
+          </span>
+          <span className="aiment-session-card__detail">detail</span>
+          <span className="aiment-session-card__image">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={thumbnail} alt={title} />
+            <span className="aiment-session-card__time">{formatCardStartTime(startsAt)}</span>
+          </span>
         </span>
-        <span className="aiment-session-card__hover-meta">
-          <span className="aiment-session-card__ajl-label">{ajl.label}</span>
-          <span className="aiment-session-card__spots">{slotsLeft}/{slotsTotal} left</span>
-        </span>
-        <span className="aiment-session-card__detail">detail</span>
-        <span className="aiment-session-card__image">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={thumbnail} alt={title} />
-          <span className="aiment-session-card__time">{formatCardStartTime(startsAt)}</span>
-        </span>
-      </span>
+      </button>
       <span className="aiment-session-card__body">
-        <span className="aiment-session-card__avatar">
+        <button
+          type="button"
+          onClick={onOpenChannel ?? onOpen}
+          className="aiment-session-card__avatar"
+          aria-label={`${channelName} channel`}
+        >
           {hostAvatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={hostAvatarUrl} alt={channelName} />
           ) : (
             initial
           )}
-        </span>
-        <span className="min-w-0">
+        </button>
+        <button type="button" onClick={onOpen} className="min-w-0 text-left">
           <span className="aiment-session-card__title">{title}</span>
           <span className="aiment-session-card__channel">{channelName}</span>
-        </span>
+        </button>
       </span>
-    </button>
+    </div>
   );
 }

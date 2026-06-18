@@ -8,6 +8,7 @@ import { NowLiveSection } from "./components/home/sections/NowLiveSection";
 import { StartingSoonSection } from "./components/home/sections/StartingSoonSection";
 import { UpcomingTicker } from "./components/home/UpcomingTicker";
 import { LiveSession, StartingSoonSession } from "./components/home/types";
+import { SlowLoadingScreen } from "./components/ui/SlowLoadingScreen";
 import { matchesFilter } from "./components/home/utils";
 import { useI18n } from "./lib/i18n";
 import { getCachedActiveSessions, listActiveStreamSessions, subscribeStreamSessions, type StreamSession } from "./lib/streamSessions";
@@ -23,6 +24,8 @@ export default function HomePage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [dynamicSessions, setDynamicSessions] = useState<StreamSession[]>(() => getCachedActiveSessions() ?? []);
+  const [initialLoading, setInitialLoading] = useState(() => getCachedActiveSessions() === null);
+  const [showSlowLoading, setShowSlowLoading] = useState(false);
   const [countdown, setCountdown] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -33,15 +36,26 @@ export default function HomePage() {
         if (!cancelled) setDynamicSessions(sessions);
       } catch {
         if (!cancelled) setDynamicSessions([]);
+      } finally {
+        if (!cancelled) setInitialLoading(false);
       }
     };
     void sync();
-    const unsubscribe = subscribeStreamSessions(sync);
+    const unsubscribe = subscribeStreamSessions(sync, 10000, false);
     return () => {
       cancelled = true;
       unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!initialLoading) {
+      setShowSlowLoading(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setShowSlowLoading(true), 450);
+    return () => window.clearTimeout(timer);
+  }, [initialLoading]);
 
   const dynamicStartingSoon = useMemo<StartingSoonSession[]>(
     () =>
@@ -147,18 +161,31 @@ export default function HomePage() {
       <UpcomingTicker sessions={filteredStartingSoon} onParticipate={goPreJoin} />
 
       <div className="mx-auto max-w-[1400px] px-8">
-        <StartingSoonSection
-          sessions={filteredStartingSoon}
-          countdown={mergedCountdown}
-          onOpenSession={goPreJoin}
-          onOpenChannel={goChannel}
-        />
+        {initialLoading ? (
+          showSlowLoading ? (
+            <SlowLoadingScreen
+              title={tx("配信枠を読み込んでいます", "Loading streams")}
+              description={tx("最新の配信予定を確認しています。少しだけお待ちください。", "Checking the latest stream schedule. Please wait a moment.")}
+            />
+          ) : (
+            <div className="min-h-[360px]" aria-hidden />
+          )
+        ) : (
+          <>
+            <StartingSoonSection
+              sessions={filteredStartingSoon}
+              countdown={mergedCountdown}
+              onOpenSession={goPreJoin}
+              onOpenChannel={goChannel}
+            />
 
-        <NowLiveSection
-          sessions={filteredLive}
-          onOpenSession={goPreJoin}
-          onOpenChannel={goChannel}
-        />
+            <NowLiveSection
+              sessions={filteredLive}
+              onOpenSession={goPreJoin}
+              onOpenChannel={goChannel}
+            />
+          </>
+        )}
       </div>
 
       <Footer />

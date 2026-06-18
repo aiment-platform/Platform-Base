@@ -10,7 +10,7 @@ type NowLiveSectionProps = {
  onOpenChannel: (hostUserId: string) => void;
 };
 
-export function NowLiveSection({ sessions, onOpenSession }: NowLiveSectionProps) {
+export function NowLiveSection({ sessions, onOpenSession, onOpenChannel }: NowLiveSectionProps) {
   const { tx } = useI18n();
   return (
     <section className="py-10">
@@ -31,7 +31,7 @@ export function NowLiveSection({ sessions, onOpenSession }: NowLiveSectionProps)
       {sessions.length === 0 ? (
         <div className="py-12 text-center text-sm text-[var(--brand-text-muted)]">{tx("現在ライブ配信はありません", "No live streams right now")}</div>
       ) : (
-        <div className="grid grid-cols-1 gap-x-6 gap-y-10 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        <div className="aiment-session-card-grid">
           {sessions.map((session) => (
             <StreamSessionCard
               key={session.id}
@@ -44,6 +44,7 @@ export function NowLiveSection({ sessions, onOpenSession }: NowLiveSectionProps)
               japaneseLevel={session.japaneseLevel}
               hostAvatarUrl={session.hostAvatarUrl}
               onOpen={() => onOpenSession(session.id)}
+              onOpenChannel={session.hostUserId ? () => onOpenChannel(session.hostUserId as string) : undefined}
             />
           ))}
         </div>

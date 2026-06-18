@@ -14,6 +14,7 @@ type StartingSoonSectionProps = {
 export function StartingSoonSection({
  sessions,
   onOpenSession,
+  onOpenChannel,
 }: StartingSoonSectionProps) {
   const { tx } = useI18n();
   return (
@@ -31,7 +32,7 @@ export function StartingSoonSection({
       {sessions.length === 0 ? (
         <div className="py-16 text-center text-sm text-[var(--brand-text-muted)]">{tx("該当する配信が見つかりませんでした", "No matching streams found")}</div>
       ) : (
-        <div className="grid grid-cols-1 gap-x-6 gap-y-10 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        <div className="aiment-session-card-grid">
           {sessions.map((session) => (
             <StreamSessionCard
               key={session.id}
@@ -44,6 +45,7 @@ export function StartingSoonSection({
               japaneseLevel={session.japaneseLevel}
               hostAvatarUrl={session.hostAvatarUrl}
               onOpen={() => onOpenSession(session.id)}
+              onOpenChannel={session.hostUserId ? () => onOpenChannel(session.hostUserId as string) : undefined}
             />
           ))}
         </div>

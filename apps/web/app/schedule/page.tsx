@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Footer } from "../components/home/Footer";
 import { TopNav } from "../components/home/TopNav";
+import { MultiDayScheduleGrid } from "../channels/components/MultiDayScheduleGrid";
 import { ScheduleFilters } from "../components/schedule/ScheduleFilters";
-import { ScheduleGrid } from "../components/schedule/ScheduleGrid";
 import { ScheduleEvent, SessionCategory, Talent } from "../components/schedule/types";
+import { SlowLoadingScreen } from "../components/ui/SlowLoadingScreen";
 import { useI18n } from "../lib/i18n";
 import { getCachedActiveSessions, listActiveStreamSessions, subscribeStreamSessions, type StreamSession } from "../lib/streamSessions";
 
@@ -33,15 +33,29 @@ function toLocalHm(value: string) {
   return `${h}:${m}`;
 }
 
+function addDaysYmd(value: string, days: number) {
+  const date = new Date(`${value}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function dateRange(startDate: string, count: number) {
+  return Array.from({ length: count }, (_, index) => addDaysYmd(startDate, index));
+}
+
 function toSessionCategory(value: string): SessionCategory {
   if (value === "雑談" || value === "ゲーム" || value === "歌枠" || value === "英語") return value;
   return "雑談";
 }
 
 export default function SchedulePage() {
-  const router = useRouter();
   const { tx } = useI18n();
   const [sessions, setSessions] = useState<StreamSession[]>(() => getCachedActiveSessions() ?? []);
+  const [initialLoading, setInitialLoading] = useState(() => getCachedActiveSessions() === null);
+  const [showSlowLoading, setShowSlowLoading] = useState(false);
   const todayDate = todayYmd();
 
   useEffect(() => {
@@ -52,15 +66,26 @@ export default function SchedulePage() {
         if (!cancelled) setSessions(next);
       } catch {
         if (!cancelled) setSessions([]);
+      } finally {
+        if (!cancelled) setInitialLoading(false);
       }
     };
     void sync();
-    const unsubscribe = subscribeStreamSessions(sync);
+    const unsubscribe = subscribeStreamSessions(sync, 10000, false);
     return () => {
       cancelled = true;
       unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!initialLoading) {
+      setShowSlowLoading(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setShowSlowLoading(true), 450);
+    return () => window.clearTimeout(timer);
+  }, [initialLoading]);
 
   const talents = useMemo<Talent[]>(() => {
     const map = new Map<string, Talent>();
@@ -97,16 +122,20 @@ export default function SchedulePage() {
   );
 
   const dateOptions = useMemo(
-    () => Array.from(new Set([todayDate, ...scheduleEvents.map((event) => event.date)])).sort(),
+    () => Array.from(new Set([...dateRange(todayDate, 14), ...scheduleEvents.map((event) => event.date)])).sort(),
     [scheduleEvents, todayDate],
   );
 
   const [selectedDate, setSelectedDate] = useState(dateOptions.includes(todayDate) ? todayDate : dateOptions[0]);
+  const [visibleDayCount, setVisibleDayCount] = useState(3);
   const [talentQuery, setTalentQuery] = useState("");
   const [startHour, setStartHour] = useState(10);
   const [endHour, setEndHour] = useState(16);
   const [onlyAvailable, setOnlyAvailable] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<SessionCategory[]>([]);
+
+  const visibleDates = useMemo(() => dateRange(selectedDate, visibleDayCount), [selectedDate, visibleDayCount]);
+  const visibleDateSet = useMemo(() => new Set(visibleDates), [visibleDates]);
 
   const filteredEvents = useMemo(() => {
     const query = talentQuery.trim().toLowerCase();
@@ -118,13 +147,13 @@ export default function SchedulePage() {
           );
 
     return scheduleEvents.filter((event) => {
-      if (event.date !== selectedDate) return false;
+      if (!visibleDateSet.has(event.date)) return false;
       if (matchedTalentIds && !matchedTalentIds.has(event.talentId)) return false;
       if (selectedCategories.length > 0 && !selectedCategories.includes(event.category)) return false;
       if (onlyAvailable && event.status !== "available") return false;
       return true;
     });
-  }, [selectedDate, talentQuery, talents, scheduleEvents, selectedCategories, onlyAvailable]);
+  }, [visibleDateSet, talentQuery, talents, scheduleEvents, selectedCategories, onlyAvailable]);
 
   const handleToggleCategory = (category: SessionCategory) => {
     setSelectedCategories((prev) =>
@@ -142,10 +171,6 @@ export default function SchedulePage() {
     if (value <= startHour) setStartHour(Math.max(0, value - 1));
   };
 
-  const handleReserve = (sessionId: string) => {
-    router.push(`/join/${encodeURIComponent(sessionId)}`);
-  };
-
   return (
     <div className="min-h-screen bg-[var(--bg)] pb-20 text-[var(--text)] md:pb-0">
       <TopNav />
@@ -156,26 +181,58 @@ export default function SchedulePage() {
           <p className="mt-1 text-sm text-[var(--text-sub)]">{tx("時間帯とタレントを比較して、予約可能な枠をすばやく選べます。", "Compare time slots and talents to quickly find bookable streams.")}</p>
         </div>
 
-        <div className="space-y-5">
-          <ScheduleFilters
-            dates={dateOptions}
-            selectedDate={selectedDate}
-            talentQuery={talentQuery}
-            startHour={startHour}
-            endHour={endHour}
-            onlyAvailable={onlyAvailable}
-            selectedCategories={selectedCategories}
-            onDateChange={setSelectedDate}
-            onTalentQueryChange={setTalentQuery}
-            onStartHourChange={handleStartHourChange}
-            onEndHourChange={handleEndHourChange}
-            onOnlyAvailableChange={setOnlyAvailable}
-            onToggleCategory={handleToggleCategory}
-            onBackToToday={() => setSelectedDate(todayDate)}
-          />
+        {initialLoading ? (
+          showSlowLoading ? (
+            <SlowLoadingScreen
+              title={tx("スケジュールを読み込んでいます", "Loading schedule")}
+              description={tx("VTuberの配信予定を整理しています。少しだけお待ちください。", "Organizing VTuber schedules. Please wait a moment.")}
+            />
+          ) : (
+            <div className="min-h-[360px]" aria-hidden />
+          )
+        ) : (
+          <div className="space-y-5">
+            <ScheduleFilters
+              dates={dateOptions}
+              selectedDate={selectedDate}
+              visibleDayCount={visibleDayCount}
+              talentQuery={talentQuery}
+              startHour={startHour}
+              endHour={endHour}
+              onlyAvailable={onlyAvailable}
+              selectedCategories={selectedCategories}
+              onDateChange={setSelectedDate}
+              onVisibleDayCountChange={setVisibleDayCount}
+              onTalentQueryChange={setTalentQuery}
+              onStartHourChange={handleStartHourChange}
+              onEndHourChange={handleEndHourChange}
+              onOnlyAvailableChange={setOnlyAvailable}
+              onToggleCategory={handleToggleCategory}
+              onBackToToday={() => setSelectedDate(todayDate)}
+            />
 
-          <ScheduleGrid talents={talents} selectedDate={selectedDate} startHour={startHour} endHour={endHour} events={filteredEvents} onReserve={handleReserve} />
-        </div>
+            <MultiDayScheduleGrid
+              dates={visibleDates}
+              startHour={startHour}
+              endHour={endHour}
+              events={filteredEvents.map((event) => ({
+                id: event.id,
+                date: event.date,
+                start: event.start,
+                durationMin: event.durationMin,
+                title: event.title,
+                talentName: talents.find((talent) => talent.id === event.talentId)?.name,
+                talentAvatar: talents.find((talent) => talent.id === event.talentId)?.avatar,
+                category: event.category,
+                status: event.status,
+                href: `/join/${encodeURIComponent(event.sessionId)}`,
+                japaneseLevel: event.japaneseLevel,
+                slotsLeft: event.slotsLeft,
+                slotsTotal: event.slotsTotal,
+              }))}
+            />
+          </div>
+        )}
       </main>
 
       <Footer />

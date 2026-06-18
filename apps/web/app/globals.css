@@ -72,6 +72,7 @@
   --brand-accent: var(--accent);
   --brand-text: var(--text);
   --brand-text-muted: var(--text-sub);
+  --brand-logo-filter: none;
 
   /* UI foundation tokens */
   --ui-radius-sm: 10px;
@@ -81,6 +82,19 @@
   --ui-shadow-1: 0 8px 24px rgba(0, 0, 0, 0.2);
   --ui-shadow-2: 0 14px 36px rgba(0, 0, 0, 0.28);
   --ui-focus: 0 0 0 2px color-mix(in srgb, var(--brand-primary) 72%, transparent);
+}
+
+html[data-theme="light"] {
+  --bg: #f6f4f1;
+  --surface: #ffffff;
+  --primary: #6f5be8;
+  --primary-light: #917ff0;
+  --primary-dark: #5b45da;
+  --secondary: #0098ad;
+  --accent: #df3150;
+  --text: #252423;
+  --ui-shadow-1: 0 8px 24px rgba(37, 36, 35, 0.1);
+  --ui-shadow-2: 0 14px 36px rgba(37, 36, 35, 0.14);
 }
 
 @theme inline {
@@ -104,6 +118,7 @@ body {
   font-size: 16px;
   font-weight: var(--font-weight-semibold);
   line-height: 1.5;
+  transition: background-color 160ms ease, color 160ms ease;
 }
 
 html:lang(ja) {
@@ -131,12 +146,32 @@ textarea {
   position: relative;
   container-type: inline-size;
   display: block;
-  width: 90%;
+  width: 100%;
+  max-width: 320px;
   padding: 0;
   border: 0;
   appearance: none;
   background: transparent;
   color: var(--brand-text);
+  cursor: pointer;
+}
+
+.aiment-session-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 320px));
+  gap: 40px 24px;
+  justify-content: start;
+}
+
+.aiment-session-card__hitbox {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  appearance: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
   cursor: pointer;
 }
 
@@ -151,10 +186,9 @@ textarea {
   inset: 0;
   z-index: 2;
   display: block;
-  background-image: url("/svg/session_container.svg");
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
+  background: var(--card-surface);
+  mask: url("/svg/session_container.svg") center / 100% 100% no-repeat;
+  -webkit-mask: url("/svg/session_container.svg") center / 100% 100% no-repeat;
   pointer-events: none;
 }
 
@@ -198,7 +232,7 @@ textarea {
   max-width: none;
   overflow: hidden;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--card-bg) 82%, black 18%);
+  background: color-mix(in srgb, var(--card-surface) 28%, var(--card-bg) 72%);
   transition: opacity 150ms ease;
   transform: translateY(-50%);
 }
@@ -265,10 +299,9 @@ textarea {
   height: var(--card-bar-height);
   width: 26%;
   place-items: center;
-  background-image: url("/svg/session_detail.svg");
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
+  background: var(--brand-primary-dark);
+  mask: url("/svg/session_detail.svg") center / 100% 100% no-repeat;
+  -webkit-mask: url("/svg/session_detail.svg") center / 100% 100% no-repeat;
   color: var(--brand-text);
   font-size: clamp(12px, 4.3cqw, 17px);
   font-weight: 600;
@@ -340,13 +373,22 @@ textarea {
   display: grid;
   height: 40px;
   width: 40px;
+  padding: 0;
+  border: 0;
   place-items: center;
   overflow: hidden;
   border-radius: 999px;
-  background: #ddd;
+  appearance: none;
+  background: var(--brand-surface-soft);
   color: var(--card-bg);
   font-size: 16px;
   font-weight: 700;
+  transition: transform 150ms ease;
+}
+
+.aiment-session-card__avatar:hover,
+.aiment-session-card__avatar:focus-visible {
+  transform: scale(1.06);
 }
 
 .aiment-session-card__avatar img {
@@ -370,7 +412,7 @@ textarea {
   display: block;
   margin-top: 3px;
   overflow: hidden;
-  color: #999;
+  color: var(--brand-text-muted);
   font-size: 13px;
   font-weight: 400;
   line-height: 1.15;

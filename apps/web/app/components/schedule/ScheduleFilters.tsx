@@ -9,12 +9,14 @@ import { categoryLabel } from "../../lib/labels";
 type ScheduleFiltersProps = {
   dates: string[];
   selectedDate: string;
+  visibleDayCount: number;
   talentQuery: string;
   startHour: number;
   endHour: number;
   onlyAvailable: boolean;
   selectedCategories: SessionCategory[];
   onDateChange: (date: string) => void;
+  onVisibleDayCountChange: (count: number) => void;
   onTalentQueryChange: (value: string) => void;
   onStartHourChange: (value: number) => void;
   onEndHourChange: (value: number) => void;
@@ -24,6 +26,7 @@ type ScheduleFiltersProps = {
 };
 
 const CATEGORIES: SessionCategory[] = ["雑談", "ゲーム", "歌枠", "英語"];
+const VISIBLE_DAY_OPTIONS = [1, 3, 7];
 
 function formatDateLabel(date: string): string {
   const [year, month, day] = date.split("-");
@@ -33,12 +36,14 @@ function formatDateLabel(date: string): string {
 export function ScheduleFilters({
   dates,
   selectedDate,
+  visibleDayCount,
   talentQuery,
   startHour,
   endHour,
   onlyAvailable,
   selectedCategories,
   onDateChange,
+  onVisibleDayCountChange,
   onTalentQueryChange,
   onStartHourChange,
   onEndHourChange,
@@ -71,6 +76,26 @@ export function ScheduleFilters({
           <ArrowPathIcon className="h-3.5 w-3.5" aria-hidden />
           <span>{tx("本日に戻る", "Back to Today")}</span>
         </button>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-[var(--brand-text-muted)]">
+          {tx("表示日数", "Days")}
+        </span>
+        {VISIBLE_DAY_OPTIONS.map((count) => (
+          <button
+            key={count}
+            type="button"
+            onClick={() => onVisibleDayCountChange(count)}
+            className={`rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+              visibleDayCount === count
+                ? "bg-[var(--brand-primary)] text-white"
+                : "bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+            }`}
+          >
+            {tx(`${count}日`, `${count} day${count > 1 ? "s" : ""}`)}
+          </button>
+        ))}
       </div>
 
       <div className="space-y-3">
