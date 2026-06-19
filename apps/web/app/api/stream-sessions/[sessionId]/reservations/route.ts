@@ -7,7 +7,6 @@ import {
   hasPaidSpeakerReservation,
   listReservationsForSession,
 } from "@/app/lib/server/aimentStore";
-import { getStripeClient } from "@/app/lib/server/stripe";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -60,38 +59,18 @@ export async function GET(req: Request, ctx: RouteContext) {
 }
 
 /** POST /api/stream-sessions/[sessionId]/reservations
- *  Body: { type: "speaker", paymentIntentId: string }
- *  スピーカー予約はStripe支払い確認が必須。
+ *  Body: { type: "speaker" | "listener" }
+ *  予約はログインのみで可能（無料）。スピーカー参加費の支払いは配信24時間前から
+ *  /reservations/confirm-payment で行い、支払い完了後に入室できる。
  */
 export async function POST(req: Request, ctx: RouteContext) {
   try {
     const { sessionId } = await ctx.params;
     const actor = await requireSessionUser();
-    const body = (await req.json()) as { type?: string; paymentIntentId?: string };
+    const body = (await req.json()) as { type?: string };
     const type = body.type === "speaker" ? "speaker" : "listener";
 
-    if (type === "speaker") {
-      const paymentIntentId = typeof body.paymentIntentId === "string" ? body.paymentIntentId.trim() : "";
-      if (!paymentIntentId) {
-        return NextResponse.json({ error: "支払い情報が必要です" }, { status: 400 });
-      }
-
-      const stripe = await getStripeClient();
-      if (stripe) {
-        const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
-        if (pi.status !== "succeeded") {
-          return NextResponse.json({ error: "支払いが完了していません" }, { status: 402 });
-        }
-        const meta = pi.metadata as Record<string, string>;
-        if (meta.sessionId !== sessionId) {
-          return NextResponse.json({ error: "支払い情報がこの枠と一致しません" }, { status: 400 });
-        }
-        if (meta.userId !== actor.id) {
-          return NextResponse.json({ error: "支払い情報がアカウントと一致しません" }, { status: 400 });
-        }
-      }
-    }
-
+    // 枠の残数・必要プランなどの検証は createReservation 側で行う。
     const reservation = await createReservation(actor, { sessionId, type });
     return NextResponse.json({ reservation }, { status: 201 });
   } catch (error) {
