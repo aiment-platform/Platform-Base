@@ -563,16 +563,19 @@ export function JoinPageClient() {
               <button
                 type="button"
                 onClick={watchNow}
-                className="group rounded-2xl border border-white/8 bg-[var(--brand-bg-900)] p-5 text-left transition-colors hover:border-[var(--brand-primary)]/45 hover:bg-[var(--brand-primary)]/10"
+                disabled
+                className="group cursor-not-allowed rounded-2xl border border-white/8 bg-[var(--brand-bg-900)] p-5 text-left opacity-60"
               >
                 <div className="flex items-center justify-between gap-4">
                   <p className="text-lg font-black text-[var(--brand-text)]">{tx("視聴する", "Watch")}</p>
-                  <ArrowRightIcon className="h-5 w-5 text-[var(--brand-text-muted)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-primary)]" aria-hidden />
+                  <span className="rounded-full bg-[var(--brand-surface)] px-2.5 py-1 text-[11px] font-bold text-[var(--brand-text-muted)]">
+                    {tx("準備中", "Not available")}
+                  </span>
                 </div>
                 <p className="mt-3 text-sm leading-7 text-[var(--brand-text-muted)]">
                   {tx(
-                    "ログイン不要。まず雰囲気を見る人向けです。",
-                    "No login needed. Good for checking the vibe first.",
+                    "視聴機能は現在準備中です。まもなく利用できるようになります。",
+                    "Watching is not available yet. It will be enabled soon.",
                   )}
                 </p>
               </button>
@@ -605,15 +608,16 @@ export function JoinPageClient() {
           <div className="rounded-2xl bg-[var(--brand-bg-900)] p-4">
             <p className="text-base font-black text-[var(--brand-text)]">{tx("参加の準備", "Get ready to join")}</p>
             <p className="mt-2 text-sm leading-6 text-[var(--brand-text-muted)]">
-              {tx("見るだけならすぐ入れます。話す場合はスピーカー枠の申し込みへ進んでください。", "You can watch right away. To speak, continue to the speaker application flow.")}
+              {tx("視聴機能は現在準備中です。話す場合はスピーカー枠の申し込みへ進んでください。", "Watching is not available yet. To speak, continue to the speaker application flow.")}
             </p>
             <div className="mt-4 grid gap-2">
               <button
                 type="button"
                 onClick={watchNow}
-                className="w-full rounded-xl bg-[var(--brand-secondary)] px-4 py-3 text-sm font-extrabold text-black transition-transform hover:-translate-y-0.5"
+                disabled
+                className="w-full cursor-not-allowed rounded-xl bg-[var(--brand-surface)] px-4 py-3 text-sm font-extrabold text-[var(--brand-text-muted)] opacity-70"
               >
-                {tx("視聴で入る", "Enter as viewer")}
+                {tx("視聴は準備中", "Watching not available yet")}
               </button>
               <button
                 onClick={() => setSelectedPath("speaker")}
