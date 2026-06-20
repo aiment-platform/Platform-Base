@@ -199,7 +199,7 @@ export function JoinPageClient() {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
-  const { isAuthenticated, hydrated, user } = useUserSession();
+  const { isAuthenticated, hydrated, user, isAdmin } = useUserSession();
   const authStatus: AuthStatus = !hydrated ? "loading" : isAuthenticated ? "logged-in" : "guest";
 
   useEffect(() => {
@@ -664,8 +664,32 @@ export function JoinPageClient() {
             </div>
           )}
 
+          {/* 管理者: 予約・支払い・上限を無視して参加 */}
+          {selectedPath === "speaker" && authStatus === "logged-in" && isAdmin && (
+            <div className="mt-4 flex flex-col gap-4 rounded-xl border border-[var(--brand-primary)]/40 bg-[var(--brand-bg-900)] p-5">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--brand-primary)]">{tx("管理者", "Admin")}</p>
+                <h2 className="mt-2 text-base font-semibold text-[var(--brand-text)]">
+                  {tx("管理者として参加", "Join as admin")}
+                </h2>
+                <p className="mt-2 text-sm leading-relaxed text-[var(--brand-text-muted)]">
+                  {tx(
+                    "予約・支払い・枠の上限を無視して、スピーカーとして参加できます。",
+                    "Join as a speaker, ignoring reservation, payment, and slot limits.",
+                  )}
+                </p>
+              </div>
+              <button
+                onClick={() => router.push(`/room/${encodeURIComponent(session.id)}?role=speaker&mic=1`)}
+                className="w-full rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-bold text-white"
+              >
+                {tx("スピーカーとして入室", "Enter as speaker")}
+              </button>
+            </div>
+          )}
+
           {/* 未予約 → 予約ボタン */}
-          {selectedPath === "speaker" && authStatus === "logged-in" && (reservationStatus === "none" || reservationStatus === "reserving") && (
+          {selectedPath === "speaker" && authStatus === "logged-in" && !isAdmin && (reservationStatus === "none" || reservationStatus === "reserving") && (
             <div className="mt-4 flex flex-col gap-4 rounded-xl bg-[var(--brand-bg-900)] p-5">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--brand-text-muted)]">{tx("プロフィール確認", "Profile check")}</p>
@@ -699,7 +723,7 @@ export function JoinPageClient() {
           )}
 
           {/* 予約完了後 — 24h以内: 支払いオプション / 24h超: 案内 */}
-          {selectedPath === "speaker" && authStatus === "logged-in" && reservationStatus === "reserved" && !clientSecret && (
+          {selectedPath === "speaker" && authStatus === "logged-in" && !isAdmin && reservationStatus === "reserved" && !clientSecret && (
             <div className="mt-4 flex flex-col gap-4 rounded-xl bg-[var(--brand-bg-900)] p-5">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--brand-primary)]">{tx("予約完了", "Reserved")}</p>
@@ -743,7 +767,7 @@ export function JoinPageClient() {
           )}
 
           {/* 支払い Stripe フォーム（インライン） */}
-          {selectedPath === "speaker" && authStatus === "logged-in" && reservationStatus === "reserved" && clientSecret && (
+          {selectedPath === "speaker" && authStatus === "logged-in" && !isAdmin && reservationStatus === "reserved" && clientSecret && (
             <div className="mt-4 rounded-xl bg-[var(--brand-bg-900)] p-5">
               <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--brand-primary)]">{tx("参加費のお支払い", "Speaker Fee")}</p>
               <Elements
@@ -761,7 +785,7 @@ export function JoinPageClient() {
           )}
 
           {/* 支払い済み → マイクチェック → 入室 */}
-          {selectedPath === "speaker" && authStatus === "logged-in" && reservationStatus === "paid" && (
+          {selectedPath === "speaker" && authStatus === "logged-in" && !isAdmin && reservationStatus === "paid" && (
             <div className="mt-4 rounded-xl bg-[var(--brand-bg-900)] p-5">
               <div className="mb-4">
                 <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--brand-text-muted)]">{tx("参加前の確認", "Before you join")}</p>

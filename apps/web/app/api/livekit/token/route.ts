@@ -5,6 +5,7 @@ import {
   getStreamSessionById,
   hasActiveReservation,
   hasActiveSpeakerReservation,
+  isUserAdmin,
 } from "@/app/lib/server/aimentStore";
 import { canAccessPlan, getEffectivePlanForUser } from "@/app/lib/server/billingStore";
 
@@ -32,6 +33,8 @@ export async function POST(request: Request) {
     }
 
     const sessionUser = await resolveSessionUser();
+    // 管理者は予約・支払い・プラン・枠上限をすべて無視して任意の配信に参加できる。
+    const isAdmin = sessionUser ? isUserAdmin(sessionUser.id) : false;
 
     if (role === "vtuber") {
       if (!sessionUser) {
@@ -50,14 +53,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
-    if (role === "speaker") {
+    if (role === "speaker" && !isAdmin) {
       const reserved = await hasActiveSpeakerReservation(sessionUser!.id, sessionId);
       if (!reserved) {
         return NextResponse.json({ error: "Speaker reservation required" }, { status: 403 });
       }
     }
 
-    if (role === "listener" && (session.reservationRequired || session.requiredPlan !== "free")) {
+    if (role === "listener" && !isAdmin && (session.reservationRequired || session.requiredPlan !== "free")) {
       if (!sessionUser) {
         return NextResponse.json({ error: "Authentication required" }, { status: 401 });
       }
