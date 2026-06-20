@@ -37,6 +37,7 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
   const [copiedKey, setCopiedKey] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [confirmRegen, setConfirmRegen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -59,19 +60,28 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
 
   const createIngress = useCallback(async () => {
     setCreating(true);
+    setError(null);
     try {
       const res = await fetch("/api/livekit/ingress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId }),
       });
-      if (!res.ok || !mountedRef.current) return;
-      const data = (await res.json()) as { ingress: IngressInfo };
-      if (mountedRef.current) setIngress(data.ingress);
+      const data = (await res.json().catch(() => ({}))) as { ingress?: IngressInfo; error?: string };
+      if (!mountedRef.current) return;
+      if (!res.ok || !data.ingress) {
+        setError(data.error ?? tx("ストリームキーの発行に失敗しました。", "Failed to generate stream key."));
+        return;
+      }
+      setIngress(data.ingress);
+    } catch {
+      if (mountedRef.current) {
+        setError(tx("通信エラーが発生しました。時間をおいて再度お試しください。", "A network error occurred. Please try again later."));
+      }
     } finally {
       if (mountedRef.current) setCreating(false);
     }
-  }, [sessionId]);
+  }, [sessionId, tx]);
 
   const regenerateKey = useCallback(async () => {
     if (!confirmRegen) {
@@ -80,6 +90,7 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
     }
     setRegenerating(true);
     setConfirmRegen(false);
+    setError(null);
     try {
       await fetch(`/api/livekit/ingress?sessionId=${encodeURIComponent(sessionId)}`, {
         method: "DELETE",
@@ -89,16 +100,22 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId }),
       });
-      if (!res.ok || !mountedRef.current) return;
-      const data = (await res.json()) as { ingress: IngressInfo };
+      const data = (await res.json().catch(() => ({}))) as { ingress?: IngressInfo; error?: string };
+      if (!mountedRef.current) return;
+      if (!res.ok || !data.ingress) {
+        setError(data.error ?? tx("ストリームキーの再発行に失敗しました。", "Failed to regenerate stream key."));
+        return;
+      }
+      setIngress(data.ingress);
+      setShowKey(false);
+    } catch {
       if (mountedRef.current) {
-        setIngress(data.ingress);
-        setShowKey(false);
+        setError(tx("通信エラーが発生しました。時間をおいて再度お試しください。", "A network error occurred. Please try again later."));
       }
     } finally {
       if (mountedRef.current) setRegenerating(false);
     }
-  }, [sessionId, confirmRegen]);
+  }, [sessionId, confirmRegen, tx]);
 
   const checkStatus = useCallback(async () => {
     setChecking(true);
@@ -169,6 +186,12 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
             ? tx("発行中...", "Generating...")
             : tx("ストリームキーを発行", "Generate Stream Key")}
         </button>
+        {error && (
+          <div className="flex items-start gap-2 rounded-lg bg-[var(--brand-accent)]/10 px-3 py-2 text-xs text-[var(--brand-accent)]">
+            <ExclamationTriangleIcon className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
       </div>
     );
   }
@@ -308,6 +331,13 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
             {tx("OBS設定", "OBS Setup")}
           </button>
         </div>
+
+        {error && (
+          <div className="flex items-start gap-2 rounded-lg bg-[var(--brand-accent)]/10 px-3 py-2 text-xs text-[var(--brand-accent)]">
+            <ExclamationTriangleIcon className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
       </div>
 
       {/* OBSチュートリアルモーダル */}
