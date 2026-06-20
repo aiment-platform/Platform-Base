@@ -75,6 +75,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ingress: result }, { status: 201 });
   } catch (error) {
+    // 真因（LiveKit設定不足/Ingress API エラー等）をサーバーログに残す
+    console.error("[livekit/ingress] create failed:", error);
     const message = error instanceof Error ? error.message : "Failed to create ingress";
     return NextResponse.json({ error: message }, { status: 400 });
   }
