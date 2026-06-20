@@ -2,7 +2,8 @@
 import { NextResponse } from "next/server";
 import type { SubscriptionPlan, SubscriptionStatus } from "@/app/lib/apiTypes";
 import { activateTicketPurchase, logPaymentEvent, markSubscriptionStatusByProviderId } from "@/app/lib/server/billingStore";
-import { sendEarlyAccessNotification } from "@/app/lib/server/mailer";
+import { getStreamSessionById, getUserById } from "@/app/lib/server/aimentStore";
+import { sendEarlyAccessNotification, sendSpeakerPaymentNotification } from "@/app/lib/server/mailer";
 import { recordMonitoringEvent } from "@/app/lib/server/opsStore";
 import { getStripeClient } from "@/app/lib/server/stripe";
 
@@ -48,6 +49,29 @@ async function processEvent(event: { id: string; type: string; data: { object: R
         await sendEarlyAccessNotification({ participantName, participantEmail }).catch((err) =>
           console.error("[webhook] Failed to send early access notification:", err),
         );
+      }
+    } else if (typeof metadata.type === "string" && metadata.type === "speaker_session") {
+      // スピーカー参加費の支払い完了通知（参加者本人＋管理者）
+      const metaSessionId = typeof metadata.sessionId === "string" ? metadata.sessionId : "";
+      const metaUserId = typeof metadata.userId === "string" ? metadata.userId : "";
+      if (metaSessionId && metaUserId) {
+        try {
+          const [user, session] = await Promise.all([
+            getUserById(metaUserId),
+            getStreamSessionById(metaSessionId),
+          ]);
+          if (user?.email && session) {
+            await sendSpeakerPaymentNotification({
+              participantName: user.name,
+              participantEmail: user.email,
+              sessionTitle: session.title,
+              sessionId: metaSessionId,
+              startsAt: new Date(session.startsAt),
+            });
+          }
+        } catch (err) {
+          console.error("[webhook] Failed to send speaker payment notification:", err);
+        }
       }
     } else if (providerPaymentIntentId) {
       await activateTicketPurchase({ providerPaymentIntentId });
