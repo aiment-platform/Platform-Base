@@ -2,6 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  ChevronDownIcon,
+  MicrophoneIcon,
+  VideoCameraIcon,
+  VideoCameraSlashIcon,
+} from "@heroicons/react/24/solid";
 import { TopNav } from "../../components/home/TopNav";
 import { StudioProgress } from "../../components/ui/StudioProgress";
 import { DateTimePicker } from "../../components/ui/DateTimePicker";
@@ -48,11 +54,46 @@ export default function StudioPreLivePage() {
   const [japaneseLevel, setJapaneseLevel] = useState(3);
   const [chatInput, setChatInput] = useState("");
   const [notices, setNotices] = useState<NoticeItem[]>([]);
+  const [micOn, setMicOn] = useState(true);
+  const [camOn, setCamOn] = useState(true);
+  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedMicDeviceId, setSelectedMicDeviceId] = useState("");
+  const [selectedCamDeviceId, setSelectedCamDeviceId] = useState("");
+  const [showMicMenu, setShowMicMenu] = useState(false);
+  const [showCamMenu, setShowCamMenu] = useState(false);
 
   useEffect(() => {
     if (!hydrated) return;
     if (!isVtuber) router.replace("/");
   }, [hydrated, isVtuber, router]);
+
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.enumerateDevices) return;
+
+    let mounted = true;
+    const refreshDevices = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        if (!mounted) return;
+        const audios = devices.filter((device) => device.kind === "audioinput");
+        const videos = devices.filter((device) => device.kind === "videoinput");
+        setAudioDevices(audios);
+        setVideoDevices(videos);
+        setSelectedMicDeviceId((current) => current || audios[0]?.deviceId || "");
+        setSelectedCamDeviceId((current) => current || videos[0]?.deviceId || "");
+      } catch {
+        // Device labels can stay hidden until browser permission is granted.
+      }
+    };
+
+    void refreshDevices();
+    navigator.mediaDevices.addEventListener("devicechange", refreshDevices);
+    return () => {
+      mounted = false;
+      navigator.mediaDevices.removeEventListener("devicechange", refreshDevices);
+    };
+  }, []);
 
   const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -128,10 +169,23 @@ export default function StudioPreLivePage() {
       });
 
       if (publishMode === "go_live_now") {
-        router.push(`/studio/live/${encodeURIComponent(created.sessionId)}?autostart=1`);
+        const params = new URLSearchParams({
+          autostart: "1",
+          mic: micOn ? "1" : "0",
+          cam: camOn ? "1" : "0",
+        });
+        if (selectedMicDeviceId) params.set("micDeviceId", selectedMicDeviceId);
+        if (selectedCamDeviceId) params.set("camDeviceId", selectedCamDeviceId);
+        router.push(`/studio/live/${encodeURIComponent(created.sessionId)}?${params.toString()}`);
         return;
       }
-      router.push(`/studio/live/${encodeURIComponent(created.sessionId)}`);
+      const params = new URLSearchParams({
+        mic: micOn ? "1" : "0",
+        cam: camOn ? "1" : "0",
+      });
+      if (selectedMicDeviceId) params.set("micDeviceId", selectedMicDeviceId);
+      if (selectedCamDeviceId) params.set("camDeviceId", selectedCamDeviceId);
+      router.push(`/studio/live/${encodeURIComponent(created.sessionId)}?${params.toString()}`);
     } catch (caughtError) {
       const message = caughtError instanceof Error ? caughtError.message : "";
       if (message.includes("VTuber registration requires verified phone")) {
@@ -270,6 +324,121 @@ export default function StudioPreLivePage() {
                     <span className="text-[var(--brand-text-muted)]">{tx("タイトル", "Title")}</span>
                     <input value={title} onChange={(e) => setTitle(e.target.value)} className="rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-[var(--brand-text)] outline-none" />
                   </label>
+
+                  <div className="grid gap-2 text-sm">
+                    <span className="text-[var(--brand-text-muted)]">{tx("入力デバイス", "Input devices")}</span>
+                    <div className="flex flex-wrap gap-2">
+                      <div className="relative inline-flex items-center rounded-full bg-[var(--brand-surface)]">
+                        <button
+                          type="button"
+                          onClick={() => setMicOn((value) => !value)}
+                          className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors ${
+                            micOn ? "bg-[var(--brand-primary)] text-white" : "bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)]"
+                          }`}
+                          aria-label={tx("マイクのオンオフ", "Toggle microphone")}
+                        >
+                          <span className="relative flex h-5 w-5 items-center justify-center">
+                            <MicrophoneIcon className="h-5 w-5" aria-hidden />
+                            {!micOn ? (
+                              <>
+                                <span className="pointer-events-none absolute h-6 w-[5px] -rotate-45 rounded-full bg-black" aria-hidden />
+                                <span className="pointer-events-none absolute h-6 w-[2px] -rotate-45 rounded-full bg-current" aria-hidden />
+                              </>
+                            ) : null}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowMicMenu((value) => !value);
+                            setShowCamMenu(false);
+                          }}
+                          className="flex h-11 w-8 items-center justify-center rounded-r-full border-l border-black/20 text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+                          aria-label={tx("マイク入力を選択", "Select microphone input")}
+                        >
+                          <ChevronDownIcon className="h-4 w-4" aria-hidden />
+                        </button>
+                        {showMicMenu ? (
+                          <div className="absolute left-0 top-12 z-20 min-w-[240px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/35">
+                            {audioDevices.length === 0 ? (
+                              <p className="px-3 py-2 text-sm text-[var(--brand-text-muted)]">{tx("マイクが見つかりません", "No microphone found")}</p>
+                            ) : (
+                              audioDevices.map((device, index) => (
+                                <button
+                                  key={device.deviceId}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedMicDeviceId(device.deviceId);
+                                    setShowMicMenu(false);
+                                  }}
+                                  className={`block w-full rounded-lg px-3 py-2 text-left text-sm ${
+                                    selectedMicDeviceId === device.deviceId
+                                      ? "bg-[var(--brand-primary)] font-bold text-white"
+                                      : "text-[var(--brand-text)] hover:bg-[var(--brand-bg-900)]"
+                                  }`}
+                                >
+                                  {device.label || `Microphone ${index + 1}`}
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div className="relative inline-flex items-center rounded-full bg-[var(--brand-surface)]">
+                        <button
+                          type="button"
+                          onClick={() => setCamOn((value) => !value)}
+                          className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors ${
+                            camOn ? "bg-[var(--brand-primary)] text-white" : "bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)]"
+                          }`}
+                          aria-label={tx("カメラのオンオフ", "Toggle camera")}
+                        >
+                          {camOn ? (
+                            <VideoCameraIcon className="h-5 w-5" aria-hidden />
+                          ) : (
+                            <VideoCameraSlashIcon className="h-5 w-5" aria-hidden />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowCamMenu((value) => !value);
+                            setShowMicMenu(false);
+                          }}
+                          className="flex h-11 w-8 items-center justify-center rounded-r-full border-l border-black/20 text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+                          aria-label={tx("カメラ入力を選択", "Select camera input")}
+                        >
+                          <ChevronDownIcon className="h-4 w-4" aria-hidden />
+                        </button>
+                        {showCamMenu ? (
+                          <div className="absolute left-0 top-12 z-20 min-w-[240px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/35">
+                            {videoDevices.length === 0 ? (
+                              <p className="px-3 py-2 text-sm text-[var(--brand-text-muted)]">{tx("カメラが見つかりません", "No camera found")}</p>
+                            ) : (
+                              videoDevices.map((device, index) => (
+                                <button
+                                  key={device.deviceId}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedCamDeviceId(device.deviceId);
+                                    setShowCamMenu(false);
+                                  }}
+                                  className={`block w-full rounded-lg px-3 py-2 text-left text-sm ${
+                                    selectedCamDeviceId === device.deviceId
+                                      ? "bg-[var(--brand-primary)] font-bold text-white"
+                                      : "text-[var(--brand-text)] hover:bg-[var(--brand-bg-900)]"
+                                  }`}
+                                >
+                                  {device.label || `Camera ${index + 1}`}
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
 
                   {/* 開始日時（予約のときのみ） */}
                   {publishMode === "scheduled" && (
