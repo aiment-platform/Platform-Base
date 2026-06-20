@@ -23,6 +23,8 @@ import type { CueCategory, CueEvent } from "../../components/cue/CueMiniPanel";
 import { SmartPhraseAssist, type SmartPhraseSessionState } from "../../components/chat/SmartPhraseAssist";
 import { SpeakerTranslationAssistPanel } from "../../components/translation/TranslationAssistPanels";
 import {
+  isChatLanguage,
+  isChatSenderRole,
   parseChatDataPayload,
   primaryTextForMessage,
   secondaryTextForMessage,
@@ -67,8 +69,66 @@ declare global {
 }
 
 const MAX_CHAT_MESSAGES = 200;
+const CHAT_HISTORY_STORAGE_PREFIX = "aiment:chat-history";
 
 const INITIAL_CHAT: ChatMessage[] = [];
+
+function chatHistoryStorageKey(roomId: string) {
+  return `${CHAT_HISTORY_STORAGE_PREFIX}:${roomId}`;
+}
+
+function isStoredChatMessage(value: unknown): value is ChatMessage {
+  if (!value || typeof value !== "object") return false;
+  const message = value as Partial<ChatMessage>;
+  return (
+    typeof message.id === "string" &&
+    typeof message.sessionId === "string" &&
+    isChatSenderRole(message.senderRole) &&
+    typeof message.originalText === "string" &&
+    isChatLanguage(message.originalLang) &&
+    typeof message.createdAt === "string" &&
+    (message.translatedText === undefined || typeof message.translatedText === "string") &&
+    (message.translatedLang === undefined || isChatLanguage(message.translatedLang)) &&
+    (message.kind === undefined || message.kind === "chat" || message.kind === "cue")
+  );
+}
+
+function mergeChatMessages(...groups: ChatMessage[][]) {
+  const merged = new Map<string, ChatMessage>();
+  groups.flat().forEach((message) => {
+    merged.set(message.id, message);
+  });
+  return Array.from(merged.values())
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    .slice(-MAX_CHAT_MESSAGES);
+}
+
+function readStoredChatMessages(roomId: string): ChatMessage[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(chatHistoryStorageKey(roomId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(isStoredChatMessage).slice(-MAX_CHAT_MESSAGES);
+  } catch {
+    return [];
+  }
+}
+
+function writeStoredChatMessages(roomId: string, messages: ChatMessage[]) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(
+      chatHistoryStorageKey(roomId),
+      JSON.stringify(messages.slice(-MAX_CHAT_MESSAGES)),
+    );
+  } catch {
+    // If storage is unavailable or full, chat still works for the current page session.
+  }
+}
 
 const PREVIEW_SPEAKER_PARTICIPANTS: SpeakerParticipantItem[] = [
   {
@@ -375,7 +435,9 @@ export default function RoomPage() {
   const [suggestedSessions, setSuggestedSessions] = useState<StreamSession[]>([]);
   const [remoteConnected, setRemoteConnected] = useState(false);
   const [audioBlocked, setAudioBlocked] = useState(false);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_CHAT);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() =>
+    roomId ? mergeChatMessages(INITIAL_CHAT, readStoredChatMessages(roomId)) : INITIAL_CHAT,
+  );
   const [chatInput, setChatInput] = useState("");
   const [chatSendError, setChatSendError] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(true);
@@ -407,8 +469,15 @@ export default function RoomPage() {
   const chatInputRef = useRef<HTMLInputElement | null>(null);
   const shouldAutoScrollRef = useRef(true);
   const roomRef = useRef<Room | null>(null);
-  const seenChatIdsRef = useRef<Set<string>>(new Set(INITIAL_CHAT.map((m) => m.id)));
-  const seenCueIdsRef = useRef<Set<string>>(new Set());
+  const seenChatIdsRef = useRef<Set<string>>(new Set(chatMessages.map((m) => m.id)));
+  const seenCueIdsRef = useRef<Set<string>>(
+    new Set(
+      chatMessages
+        .filter((message) => message.kind === "cue")
+        .map((message) => message.id.replace(/^cue-/, "")),
+    ),
+  );
+  const chatHistoryHydratedRef = useRef(Boolean(roomId));
   const videoControlsTimerRef = useRef<number | null>(null);
   const activeSpeakerIdsRef = useRef<Set<string>>(new Set());
   const speakingLingerTimersRef = useRef<Map<string, number>>(new Map());
@@ -423,6 +492,11 @@ export default function RoomPage() {
     connected: status === "connected",
     isHost: requestedRole === "host",
   });
+
+  useEffect(() => {
+    if (!roomId || !chatHistoryHydratedRef.current) return;
+    writeStoredChatMessages(roomId, chatMessages);
+  }, [chatMessages, roomId]);
 
   const clearSpeakingTimer = useCallback((participantId: string) => {
     const timer = speakingLingerTimersRef.current.get(participantId);
@@ -1446,14 +1520,22 @@ export default function RoomPage() {
 
             <div className="inline-flex items-center rounded-full bg-[var(--brand-bg-900)]">
               <button
+                type="button"
                 onClick={() => {
                   setShowDevicePanel((v) => !v);
                   setShowMicMenu(false);
                   setShowCamMenu(false);
                 }}
-                className="flex h-12 w-12 items-center justify-center rounded-full text-[var(--brand-text-muted)] transition-colors hover:text-[var(--brand-text)]"
+                aria-pressed={showDevicePanel}
+                aria-label={tx("入力設定を開く", "Open input settings")}
+                className={`flex h-12 items-center justify-center gap-2 rounded-full px-3.5 text-sm font-bold transition-colors ${
+                  showDevicePanel
+                    ? "bg-[var(--brand-primary)] text-white"
+                    : "text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+                }`}
               >
                 <Cog6ToothIcon className="h-5 w-5" aria-hidden />
+                <span className="hidden sm:inline">{tx("入力", "Input")}</span>
               </button>
             </div>
 

@@ -8,6 +8,7 @@ import {
   ArrowDownCircleIcon,
   ArrowTopRightOnSquareIcon,
   ChatBubbleLeftRightIcon,
+  ChevronDownIcon,
   MicrophoneIcon,
   PaperAirplaneIcon,
   PlayIcon,
@@ -21,6 +22,8 @@ import { TopNav } from "../../../components/home/TopNav";
 import { VTuberTranslationAssistPanel } from "../../../components/translation/TranslationAssistPanels";
 import { StudioProgress } from "../../../components/ui/StudioProgress";
 import {
+  isChatLanguage,
+  isChatSenderRole,
   parseChatDataPayload,
   primaryTextForMessage,
   secondaryTextForMessage,
@@ -67,6 +70,64 @@ type ChatItem = BilingualChatMessage & {
 const INITIAL_CHAT: ChatItem[] = [];
 
 const MAX_CHAT_MESSAGES = 200;
+const STUDIO_CHAT_HISTORY_STORAGE_PREFIX = "aiment:studio-chat-history";
+
+function studioChatHistoryStorageKey(sessionId: string) {
+  return `${STUDIO_CHAT_HISTORY_STORAGE_PREFIX}:${sessionId}`;
+}
+
+function isStoredChatItem(value: unknown): value is ChatItem {
+  if (!value || typeof value !== "object") return false;
+  const message = value as Partial<ChatItem>;
+  return (
+    typeof message.id === "string" &&
+    typeof message.sessionId === "string" &&
+    isChatSenderRole(message.senderRole) &&
+    typeof message.originalText === "string" &&
+    isChatLanguage(message.originalLang) &&
+    typeof message.createdAt === "string" &&
+    (message.translatedText === undefined || typeof message.translatedText === "string") &&
+    (message.translatedLang === undefined || isChatLanguage(message.translatedLang)) &&
+    (message.mine === undefined || typeof message.mine === "boolean")
+  );
+}
+
+function mergeChatItems(...groups: ChatItem[][]) {
+  const merged = new Map<string, ChatItem>();
+  groups.flat().forEach((message) => {
+    merged.set(message.id, message);
+  });
+  return Array.from(merged.values())
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    .slice(-MAX_CHAT_MESSAGES);
+}
+
+function readStoredChatItems(sessionId: string): ChatItem[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(studioChatHistoryStorageKey(sessionId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(isStoredChatItem).slice(-MAX_CHAT_MESSAGES);
+  } catch {
+    return [];
+  }
+}
+
+function writeStoredChatItems(sessionId: string, messages: ChatItem[]) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(
+      studioChatHistoryStorageKey(sessionId),
+      JSON.stringify(messages.slice(-MAX_CHAT_MESSAGES)),
+    );
+  } catch {
+    // Keep the live chat usable even when local storage is unavailable.
+  }
+}
 
 type CircleControlProps = {
   label?: string;
@@ -334,11 +395,13 @@ export default function StudioLiveSessionPage() {
   const [session, setSession] = useState<StreamSession | null>(null);
   const [notFound, setNotFound] = useState(false);
 
-  const [micOn, setMicOn] = useState(true);
-  const [camOn, setCamOn] = useState(true);
+  const [micOn, setMicOn] = useState(searchParams.get("mic") !== "0");
+  const [camOn, setCamOn] = useState(searchParams.get("cam") !== "0");
   const [participants, setParticipants] = useState<ParticipantItem[]>([]);
   const [chatInput, setChatInput] = useState("");
-  const [chat, setChat] = useState<ChatItem[]>(INITIAL_CHAT);
+  const [chat, setChat] = useState<ChatItem[]>(() =>
+    sessionId ? mergeChatItems(INITIAL_CHAT, readStoredChatItems(sessionId)) : INITIAL_CHAT,
+  );
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("idle");
@@ -346,6 +409,12 @@ export default function StudioLiveSessionPage() {
   const [obsConnected, setObsConnected] = useState(false);
   const [speakerReservations, setSpeakerReservations] = useState<{ reservationId: string; userName: string }[]>([]);
   const [showStopConfirm, setShowStopConfirm] = useState(false);
+  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedMicDeviceId, setSelectedMicDeviceId] = useState(searchParams.get("micDeviceId") ?? "");
+  const [selectedCamDeviceId, setSelectedCamDeviceId] = useState(searchParams.get("camDeviceId") ?? "");
+  const [showMicMenu, setShowMicMenu] = useState(false);
+  const [showCamMenu, setShowCamMenu] = useState(false);
 
   const previewRef = useRef<HTMLVideoElement | null>(null);
   const remoteAudioContainerRef = useRef<HTMLDivElement | null>(null);
@@ -354,7 +423,8 @@ export default function StudioLiveSessionPage() {
   const roomRef = useRef<Room | null>(null);
   const autoStartDoneRef = useRef(false);
   const startBroadcastRef = useRef<(() => Promise<void>) | null>(null);
-  const seenChatIdsRef = useRef<Set<string>>(new Set(INITIAL_CHAT.map((m) => m.id)));
+  const seenChatIdsRef = useRef<Set<string>>(new Set(chat.map((m) => m.id)));
+  const chatHistoryHydratedRef = useRef(Boolean(sessionId));
   const activeSpeakerIdsRef = useRef<Set<string>>(new Set());
   const speakingLingerTimersRef = useRef<Map<string, number>>(new Map());
   const isLiveRef = useRef(false);
@@ -364,6 +434,38 @@ export default function StudioLiveSessionPage() {
     if (!sessionHydrated) return;
     if (!isVtuber) router.replace("/");
   }, [sessionHydrated, isVtuber, router]);
+
+  useEffect(() => {
+    if (!sessionId || !chatHistoryHydratedRef.current) return;
+    writeStoredChatItems(sessionId, chat);
+  }, [chat, sessionId]);
+
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.enumerateDevices) return;
+
+    let mounted = true;
+    const refreshDevices = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        if (!mounted) return;
+        const audios = devices.filter((device) => device.kind === "audioinput");
+        const videos = devices.filter((device) => device.kind === "videoinput");
+        setAudioDevices(audios);
+        setVideoDevices(videos);
+        setSelectedMicDeviceId((current) => current || audios[0]?.deviceId || "");
+        setSelectedCamDeviceId((current) => current || videos[0]?.deviceId || "");
+      } catch {
+        // Browser permissions may hide device labels until camera/mic access is granted.
+      }
+    };
+
+    void refreshDevices();
+    navigator.mediaDevices.addEventListener("devicechange", refreshDevices);
+    return () => {
+      mounted = false;
+      navigator.mediaDevices.removeEventListener("devicechange", refreshDevices);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -573,7 +675,10 @@ export default function StudioLiveSessionPage() {
     const next = !micOn;
     setMicOn(next);
     if (roomRef.current && connectionStatus === "live") {
-      void roomRef.current.localParticipant.setMicrophoneEnabled(next);
+      void roomRef.current.localParticipant.setMicrophoneEnabled(
+        next,
+        next && selectedMicDeviceId ? { deviceId: selectedMicDeviceId } : undefined,
+      );
     }
   };
 
@@ -581,7 +686,24 @@ export default function StudioLiveSessionPage() {
     const next = !camOn;
     setCamOn(next);
     if (roomRef.current && connectionStatus === "live") {
-      void roomRef.current.localParticipant.setCameraEnabled(next);
+      void roomRef.current.localParticipant.setCameraEnabled(
+        next,
+        next && selectedCamDeviceId ? { deviceId: selectedCamDeviceId } : undefined,
+      );
+    }
+  };
+
+  const handleMicDeviceChange = (deviceId: string) => {
+    setSelectedMicDeviceId(deviceId);
+    if (roomRef.current && connectionStatus === "live" && micOn) {
+      void roomRef.current.localParticipant.setMicrophoneEnabled(true, deviceId ? { deviceId } : undefined);
+    }
+  };
+
+  const handleCamDeviceChange = (deviceId: string) => {
+    setSelectedCamDeviceId(deviceId);
+    if (roomRef.current && connectionStatus === "live" && camOn) {
+      void roomRef.current.localParticipant.setCameraEnabled(true, deviceId ? { deviceId } : undefined);
     }
   };
 
@@ -789,8 +911,14 @@ export default function StudioLiveSessionPage() {
     }
 
     try {
-      await room.localParticipant.setCameraEnabled(camOn);
-      await room.localParticipant.setMicrophoneEnabled(micOn);
+      await room.localParticipant.setCameraEnabled(
+        camOn,
+        camOn && selectedCamDeviceId ? { deviceId: selectedCamDeviceId } : undefined,
+      );
+      await room.localParticipant.setMicrophoneEnabled(
+        micOn,
+        micOn && selectedMicDeviceId ? { deviceId: selectedMicDeviceId } : undefined,
+      );
     } catch (err) {
       setMediaError(err instanceof Error ? err.message : tx("カメラ/マイクにアクセスできません。", "Camera/mic access denied."));
     }
@@ -964,8 +1092,85 @@ export default function StudioLiveSessionPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center justify-center gap-2">
-                  <CircleControl label="MIC" icon={MicrophoneIcon} slashedWhenOff on={micOn} onToggle={handleMicToggle} />
-                  <CircleControl label="CAM" icon={VideoCameraIcon} offIcon={VideoCameraSlashIcon} on={camOn} onToggle={handleCamToggle} />
+                  <div className="relative inline-flex items-center rounded-full bg-[var(--brand-surface)]">
+                    <CircleControl label="MIC" icon={MicrophoneIcon} slashedWhenOff on={micOn} onToggle={handleMicToggle} />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMicMenu((value) => !value);
+                        setShowCamMenu(false);
+                      }}
+                      aria-label={tx("マイク入力を選択", "Select microphone input")}
+                      className="flex h-14 w-9 items-center justify-center rounded-r-full border-l border-black/20 text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+                    >
+                      <ChevronDownIcon className="h-4 w-4" aria-hidden />
+                    </button>
+                    {showMicMenu ? (
+                      <div className="absolute bottom-16 left-0 z-20 min-w-[240px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/35">
+                        {audioDevices.length === 0 ? (
+                          <p className="px-3 py-2 text-sm text-[var(--brand-text-muted)]">{tx("マイクが見つかりません", "No microphone found")}</p>
+                        ) : (
+                          audioDevices.map((device, index) => (
+                            <button
+                              key={device.deviceId}
+                              type="button"
+                              onClick={() => {
+                                handleMicDeviceChange(device.deviceId);
+                                setShowMicMenu(false);
+                              }}
+                              className={`block w-full rounded-lg px-3 py-2 text-left text-sm ${
+                                selectedMicDeviceId === device.deviceId
+                                  ? "bg-[var(--brand-primary)] font-bold text-white"
+                                  : "text-[var(--brand-text)] hover:bg-[var(--brand-bg-900)]"
+                              }`}
+                            >
+                              {device.label || `Microphone ${index + 1}`}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="relative inline-flex items-center rounded-full bg-[var(--brand-surface)]">
+                    <CircleControl label="CAM" icon={VideoCameraIcon} offIcon={VideoCameraSlashIcon} on={camOn} onToggle={handleCamToggle} />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCamMenu((value) => !value);
+                        setShowMicMenu(false);
+                      }}
+                      aria-label={tx("カメラ入力を選択", "Select camera input")}
+                      className="flex h-14 w-9 items-center justify-center rounded-r-full border-l border-black/20 text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+                    >
+                      <ChevronDownIcon className="h-4 w-4" aria-hidden />
+                    </button>
+                    {showCamMenu ? (
+                      <div className="absolute bottom-16 left-0 z-20 min-w-[240px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/35">
+                        {videoDevices.length === 0 ? (
+                          <p className="px-3 py-2 text-sm text-[var(--brand-text-muted)]">{tx("カメラが見つかりません", "No camera found")}</p>
+                        ) : (
+                          videoDevices.map((device, index) => (
+                            <button
+                              key={device.deviceId}
+                              type="button"
+                              onClick={() => {
+                                handleCamDeviceChange(device.deviceId);
+                                setShowCamMenu(false);
+                              }}
+                              className={`block w-full rounded-lg px-3 py-2 text-left text-sm ${
+                                selectedCamDeviceId === device.deviceId
+                                  ? "bg-[var(--brand-primary)] font-bold text-white"
+                                  : "text-[var(--brand-text)] hover:bg-[var(--brand-bg-900)]"
+                              }`}
+                            >
+                              {device.label || `Camera ${index + 1}`}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
 
                 <button
@@ -988,6 +1193,7 @@ export default function StudioLiveSessionPage() {
                   {isLive ? tx("配信終了", "Stop Stream") : tx("配信開始", "Start Stream")}
                 </button>
               </div>
+
             </div>
           </section>
 
