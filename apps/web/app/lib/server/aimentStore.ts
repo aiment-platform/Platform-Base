@@ -1252,6 +1252,11 @@ function isAdminUser(userId: string) {
   return ADMIN_IDS.length > 0 && ADMIN_IDS.includes(userId);
 }
 
+/** 管理者アカウントか判定する（ADMIN_USER_IDS に含まれるか）。 */
+export function isUserAdmin(userId: string): boolean {
+  return isAdminUser(userId);
+}
+
 /**
  * Returns sessions in `prelive` status whose `starts_at` falls within [windowStart, windowEnd],
  * along with all active speaker reservations for those sessions and their user emails.
