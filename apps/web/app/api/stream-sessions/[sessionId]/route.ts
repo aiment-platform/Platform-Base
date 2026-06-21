@@ -13,7 +13,10 @@ export async function GET(_request: Request, context: { params: Promise<{ sessio
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ session });
+  return NextResponse.json(
+    { session },
+    { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60" } },
+  );
 }
 
 export async function PATCH(request: Request, context: { params: Promise<{ sessionId: string }> }) {
