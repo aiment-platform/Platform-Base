@@ -240,7 +240,7 @@ textarea {
 .aiment-session-card__progress-fill {
   display: block;
   height: 100%;
-  width: var(--ajl-progress, 50%);
+  width: var(--slot-progress, 0%);
   background: var(--brand-primary-dark);
 }
 
