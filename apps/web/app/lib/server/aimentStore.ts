@@ -404,6 +404,13 @@ async function initSchema() {
   await db`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'listener'`;
   await db`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS cancelled_at TEXT`;
   await db`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS email TEXT`;
+
+  // 一覧/ホスト別/予約照会のフルスキャンを避けるためのインデックス（往復遅延の体感改善）
+  await db`CREATE INDEX IF NOT EXISTS idx_stream_sessions_status ON stream_sessions (status)`;
+  await db`CREATE INDEX IF NOT EXISTS idx_stream_sessions_host_user_id ON stream_sessions (host_user_id)`;
+  await db`CREATE INDEX IF NOT EXISTS idx_stream_sessions_starts_at ON stream_sessions (starts_at)`;
+  await db`CREATE INDEX IF NOT EXISTS idx_reservations_session_id ON reservations (session_id)`;
+  await db`CREATE INDEX IF NOT EXISTS idx_reservations_user_id ON reservations (user_id)`;
 }
 
 // Row → TypeScript type converters
