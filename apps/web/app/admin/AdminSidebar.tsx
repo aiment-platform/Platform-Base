@@ -8,7 +8,7 @@ const NAV_ITEMS = [
   { href: "/admin/sessions", label: "セッション管理", icon: "📡", soon: true },
   { href: "/admin/reservations", label: "予約確認", icon: "📋" },
   { href: "/admin/supporter-lottery", label: "サポーター抽選", icon: "🎲" },
-  { href: "/admin/tickets", label: "チケット管理", icon: "🎟", soon: true },
+  { href: "/admin/tickets", label: "チケット管理", icon: "🎟" },
   { href: "/admin/vtubers", label: "VTuber管理", icon: "🎭", soon: true },
   { href: "/admin/surveys", label: "アンケート", icon: "📝", soon: true },
   { href: "/admin/feedback", label: "フィードバック", icon: "💬", soon: true },
