@@ -37,6 +37,8 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
   const [copiedKey, setCopiedKey] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [confirmRegen, setConfirmRegen] = useState(false);
+  const [swapping, setSwapping] = useState(false);
+  const [confirmSwap, setConfirmSwap] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
 
@@ -116,6 +118,41 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
       if (mountedRef.current) setRegenerating(false);
     }
   }, [sessionId, confirmRegen, tx]);
+
+  // 回線切替(hot-swap): 配信中に回線が不調なとき、新しいingressを発行して差し替える。
+  // サーバー側で「新規作成→session更新→旧削除」を実行。VTuber/speakerは維持される。
+  const swapLine = useCallback(async () => {
+    if (!confirmSwap) {
+      setConfirmSwap(true);
+      return;
+    }
+    setSwapping(true);
+    setConfirmSwap(false);
+    setError(null);
+    try {
+      const res = await fetch("/api/livekit/ingress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, swap: true }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ingress?: IngressInfo; error?: string };
+      if (!mountedRef.current) return;
+      if (!res.ok || !data.ingress) {
+        setError(data.error ?? tx("回線の切り替えに失敗しました。", "Failed to switch the connection."));
+        return;
+      }
+      setIngress(data.ingress);
+      setShowKey(true);
+      setObsConnected(false);
+      onConnectionChange(false);
+    } catch {
+      if (mountedRef.current) {
+        setError(tx("通信エラーが発生しました。時間をおいて再度お試しください。", "A network error occurred. Please try again later."));
+      }
+    } finally {
+      if (mountedRef.current) setSwapping(false);
+    }
+  }, [sessionId, confirmSwap, tx, onConnectionChange]);
 
   const checkStatus = useCallback(async () => {
     setChecking(true);
@@ -330,6 +367,45 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
             <QuestionMarkCircleIcon className="h-4 w-4" />
             {tx("OBS設定", "OBS Setup")}
           </button>
+        </div>
+
+        {/* 回線切り替え（配信中に回線が不調なとき） */}
+        <div className="rounded-lg bg-[var(--brand-bg-900)] p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--brand-text-muted)]">
+            {tx("回線の切り替え", "Switch connection")}
+          </p>
+          <p className="mt-1 text-xs text-[var(--brand-text-muted)]">
+            {tx(
+              "配信中に映像が乱れる/途切れるときは、新しい回線に切り替えられます。新しいキーが発行されるので、OBSのストリームキーを更新してください。視聴者やスピーカーはそのまま、一瞬だけ映像が途切れる場合があります。",
+              "If your stream is unstable, switch to a new connection. A new key is issued — update OBS with it. Viewers and speakers stay connected; the video may blip briefly.",
+            )}
+          </p>
+          <div className="mt-2 flex gap-1">
+            <button
+              onClick={() => void swapLine()}
+              disabled={swapping}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+                confirmSwap
+                  ? "bg-[var(--brand-accent)] text-white"
+                  : "bg-[var(--brand-surface)] text-[var(--brand-text)] hover:brightness-110"
+              } disabled:opacity-60`}
+            >
+              <ArrowPathIcon className={`h-3.5 w-3.5 ${swapping ? "animate-spin" : ""}`} />
+              {swapping
+                ? tx("切り替え中...", "Switching...")
+                : confirmSwap
+                  ? tx("本当に切り替える", "Confirm switch")
+                  : tx("回線を切り替える", "Switch connection")}
+            </button>
+            {confirmSwap && (
+              <button
+                onClick={() => setConfirmSwap(false)}
+                className="rounded-lg bg-[var(--brand-surface)] px-3 py-2 text-xs text-[var(--brand-text-muted)]"
+              >
+                {tx("キャンセル", "Cancel")}
+              </button>
+            )}
+          </div>
         </div>
 
         {error && (

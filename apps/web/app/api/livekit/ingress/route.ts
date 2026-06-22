@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     if (actor.role !== "vtuber")
       return NextResponse.json({ error: "VTuber accounts only" }, { status: 403 });
 
-    const { sessionId } = (await request.json()) as { sessionId: string };
+    const { sessionId, swap } = (await request.json()) as { sessionId: string; swap?: boolean };
     if (!sessionId) return NextResponse.json({ error: "sessionId required" }, { status: 400 });
 
     const session = await getStreamSessionById(sessionId);
@@ -60,6 +60,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const { apiKey, apiSecret, host } = getLivekitConfig();
+
+    // 回線切替(hot-swap): 新しいingressを先に作成し、session を更新してから
+    // 古いingressを削除する。VTuber/speaker は別参加者のため接続は維持される。
+    // 「先に作る」順序により、作成失敗時も既存回線を壊さない（regenerateより安全）。
+    const previousIngressId = swap ? session.ingressId : undefined;
 
     const result = await createRtmpIngress({
       apiKey,
@@ -73,7 +78,16 @@ export async function POST(request: Request) {
 
     await setSessionIngress(sessionId, result.ingressId, result.streamKey, result.rtmpUrl);
 
-    return NextResponse.json({ ingress: result }, { status: 201 });
+    if (previousIngressId && previousIngressId !== result.ingressId) {
+      // 旧回線を後始末（失敗してもswap自体は成功扱い。残留は /admin/ingresses で掃除可能）。
+      try {
+        await deleteRtmpIngress({ apiKey, apiSecret, host, ingressId: previousIngressId });
+      } catch (err) {
+        console.error("[livekit/ingress] failed to delete previous ingress on swap:", err);
+      }
+    }
+
+    return NextResponse.json({ ingress: result, swapped: Boolean(previousIngressId) }, { status: 201 });
   } catch (error) {
     // 真因（LiveKit設定不足/Ingress API エラー等）をサーバーログに残す
     console.error("[livekit/ingress] create failed:", error);
