@@ -40,6 +40,7 @@ import {
 } from "../../../lib/streamSessions";
 import { useUserSession } from "../../../lib/userSession";
 import { ObsStreamPanel } from "./ObsStreamPanel";
+import { TroubleshootPanel, type Diagnostics } from "./TroubleshootPanel";
 
 type ParticipantItem = {
   id: string;
@@ -730,6 +731,41 @@ export default function StudioLiveSessionPage() {
     }
   };
 
+  // トラブルシューティング用の診断値とチェック結果を集める。
+  const collectDiagnostics = useCallback((): { diagnostics: Diagnostics; checks: { label: string; ok: boolean; hint?: string }[] } => {
+    const online = typeof navigator !== "undefined" ? navigator.onLine : true;
+    const roomConnected = connectionStatus === "live";
+    const quality = roomRef.current?.localParticipant.connectionQuality ?? "unknown";
+    const hasAudio = obsConnected || micOn;
+    const hasVideo = obsConnected || camOn;
+
+    const diagnostics: Diagnostics = {
+      online,
+      connectionStatus,
+      connectionQuality: String(quality),
+      obsConnected,
+      monitorActive,
+      micPublishing: micOn,
+      camPublishing: camOn,
+      participantCount: participants.length,
+      viewerCount: connectedViewers,
+      userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "n/a",
+    };
+
+    const checks = [
+      { label: tx("インターネット接続", "Internet connection"), ok: online, hint: tx("ネットワークを確認してください。", "Check your network.") },
+      { label: tx("配信ルームに接続", "Connected to room"), ok: roomConnected, hint: tx("配信を開始してください。", "Start the broadcast.") },
+      { label: tx("音声ソースあり（OBSまたはマイク）", "Audio source present (OBS or mic)"), ok: hasAudio, hint: tx("マイクをONにするかOBSを接続してください。", "Turn on mic or connect OBS.") },
+      { label: tx("映像ソースあり（OBSまたはカメラ）", "Video source present (OBS or camera)"), ok: hasVideo, hint: tx("カメラをONにするかOBSを接続してください。", "Turn on camera or connect OBS.") },
+      {
+        label: tx("OBS映像の受信（モニタ）", "Receiving OBS video (monitor)"),
+        ok: !obsConnected || monitorActive,
+        hint: tx("OBSは接続済みですが映像が届いていません。回線の切り替えを試してください。", "OBS connected but no video — try switching the connection."),
+      },
+    ];
+    return { diagnostics, checks };
+  }, [connectionStatus, obsConnected, monitorActive, micOn, camOn, participants.length, connectedViewers, tx]);
+
   const startBroadcast = async () => {
     if (!session) return;
 
@@ -1288,6 +1324,8 @@ export default function StudioLiveSessionPage() {
                   onConnectionChange={setObsConnected}
                 />
               </div>
+
+              <TroubleshootPanel sessionId={sessionId} collect={collectDiagnostics} />
             </div>
           </section>
         </section>
