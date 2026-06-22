@@ -407,6 +407,7 @@ export default function StudioLiveSessionPage() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("idle");
   const [connectedViewers, setConnectedViewers] = useState(0);
   const [obsConnected, setObsConnected] = useState(false);
+  const [monitorActive, setMonitorActive] = useState(false);
   const [speakerReservations, setSpeakerReservations] = useState<{ reservationId: string; userName: string }[]>([]);
   const [showStopConfirm, setShowStopConfirm] = useState(false);
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
@@ -417,6 +418,9 @@ export default function StudioLiveSessionPage() {
   const [showCamMenu, setShowCamMenu] = useState(false);
 
   const previewRef = useRef<HTMLVideoElement | null>(null);
+  const monitorRef = useRef<HTMLVideoElement | null>(null);
+  // OBS接続の false→true 遷移を検知して一度だけブラウザのマイク/カメラを止める。
+  const prevObsConnectedRef = useRef(false);
   const remoteAudioContainerRef = useRef<HTMLDivElement | null>(null);
   const chatListRef = useRef<HTMLDivElement | null>(null);
   const shouldAutoScrollRef = useRef(true);
@@ -693,6 +697,25 @@ export default function StudioLiveSessionPage() {
     }
   };
 
+  // 二重音声/映像対策: OBS(ingress)が接続されたら、配信のA/VソースをOBSに一本化する。
+  // ブラウザのマイク/カメラを止めることで「二重音声」と「映像/音声のズレ」を防ぐ。
+  // 接続の false→true 遷移時に一度だけ実行し、その後の手動トグルは尊重する。
+  useEffect(() => {
+    const wasConnected = prevObsConnectedRef.current;
+    prevObsConnectedRef.current = obsConnected;
+    if (!obsConnected || wasConnected) return;
+    if (connectionStatus !== "live") return;
+    // OBSが新たに接続された → ブラウザのマイク・カメラを停止
+    if (micOn) {
+      setMicOn(false);
+      void roomRef.current?.localParticipant.setMicrophoneEnabled(false);
+    }
+    if (camOn) {
+      setCamOn(false);
+      void roomRef.current?.localParticipant.setCameraEnabled(false);
+    }
+  }, [obsConnected, connectionStatus, micOn, camOn]);
+
   const handleMicDeviceChange = (deviceId: string) => {
     setSelectedMicDeviceId(deviceId);
     if (roomRef.current && connectionStatus === "live" && micOn) {
@@ -830,9 +853,21 @@ export default function StudioLiveSessionPage() {
     });
 
     room.on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
+      const isObs = participant.identity.startsWith("obs-") || participant.identity.startsWith("ingress-");
+      // 配信モニタ: OBS(ingress)の映像を「視聴者に見えている画」として表示する。
+      if (track.kind === Track.Kind.Video && isObs && monitorRef.current) {
+        track.attach(monitorRef.current);
+        monitorRef.current.muted = true;
+        void monitorRef.current.play().catch(() => {
+          // autoplay制限時は無視（映像のみ・音声なし）
+        });
+        setMonitorActive(true);
+        return;
+      }
       if (track.kind !== Track.Kind.Audio) return;
       if (participant.identity === room.localParticipant.identity) return;
-      if (participant.identity.startsWith("obs-") || participant.identity.startsWith("ingress-")) return;
+      // OBS音声はVTuber自身には流さない（遅延した自分の声によるエコー防止）。
+      if (isObs) return;
       upsertParticipant(participant, {
         muted: !participant.isMicrophoneEnabled,
         isSpeaking: participant.isSpeaking,
@@ -852,7 +887,13 @@ export default function StudioLiveSessionPage() {
       });
     });
 
-    room.on(RoomEvent.TrackUnsubscribed, (track) => {
+    room.on(RoomEvent.TrackUnsubscribed, (track, _pub, participant) => {
+      const isObs = participant.identity.startsWith("obs-") || participant.identity.startsWith("ingress-");
+      if (track.kind === Track.Kind.Video && isObs) {
+        track.detach();
+        setMonitorActive(false);
+        return;
+      }
       if (track.kind !== Track.Kind.Audio || !remoteAudioContainerRef.current) return;
       const audioEl = remoteAudioContainerRef.current.querySelector(
         `audio[data-lk-track-sid="${track.sid}"]`,
@@ -1071,11 +1112,40 @@ export default function StudioLiveSessionPage() {
           </div>
 
           <section className="rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/25">
-            <div className="mx-auto max-w-[640px] overflow-hidden rounded-xl bg-[var(--brand-bg-900)]" style={{ aspectRatio: "16/9" }}>
-              <video ref={previewRef} autoPlay playsInline muted className="h-full w-full object-cover" />
+            {/* 配信モニタ: OBS接続中は「視聴者に見えている映像」を主表示にする */}
+            <div className="relative mx-auto max-w-[640px] overflow-hidden rounded-xl bg-[var(--brand-bg-900)]" style={{ aspectRatio: "16/9" }}>
+              {/* OBSモニタ（視聴者の見え方）。音声はミュート（自分の遅延音エコー防止）。 */}
+              <video
+                ref={monitorRef}
+                autoPlay
+                playsInline
+                muted
+                className={`h-full w-full object-cover ${monitorActive ? "" : "hidden"}`}
+              />
+              {/* ブラウザカメラのプレビュー。OBSモニタ表示中は隠す。 */}
+              <video
+                ref={previewRef}
+                autoPlay
+                playsInline
+                muted
+                className={`h-full w-full object-cover ${monitorActive ? "hidden" : ""}`}
+              />
+              {monitorActive && (
+                <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-bold text-white">
+                  {tx("配信モニタ（視聴者の見え方）", "Monitor (what viewers see)")}
+                </span>
+              )}
               <div ref={remoteAudioContainerRef} className="hidden" aria-hidden />
             </div>
-            {!camOn && <p className="mt-2 text-xs text-[var(--brand-text-muted)]">{tx("カメラOFF", "Camera OFF")}</p>}
+            {obsConnected && (
+              <p className="mt-2 rounded-lg bg-[var(--brand-primary)]/12 px-3 py-2 text-xs text-[var(--brand-primary)]">
+                {tx(
+                  "OBS接続中: 二重音声・映像のズレ防止のため、ブラウザのマイク/カメラは停止しています。OBSの音声・映像がそのまま配信されます。",
+                  "OBS connected: browser mic/camera are stopped to prevent double audio and A/V drift. OBS audio/video is broadcast as-is.",
+                )}
+              </p>
+            )}
+            {!camOn && !obsConnected && <p className="mt-2 text-xs text-[var(--brand-text-muted)]">{tx("カメラOFF", "Camera OFF")}</p>}
             {mediaError && <p className="mt-2 text-xs text-[var(--brand-accent)]">{mediaError}</p>}
 
             <div className="mt-3 rounded-[24px] bg-[var(--brand-bg-900)] px-4 py-3">
