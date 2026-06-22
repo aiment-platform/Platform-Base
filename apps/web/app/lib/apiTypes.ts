@@ -160,6 +160,25 @@ export type CreateReservationInput = {
   type: ReservationType;
 };
 
+/** 参加チケット（支払いスキップ用）。1枚=1回使い切り。 */
+export type ParticipationTicketScope = "all" | "session";
+
+export type ParticipationTicket = {
+  ticketId: string;
+  userId: string;
+  /** "all": 全配信で使用可 / "session": 特定配信のみ */
+  scope: ParticipationTicketScope;
+  /** scope === "session" のとき対象の配信ID */
+  sessionId?: string;
+  status: "active" | "used";
+  /** 付与した管理者のユーザーID */
+  grantedBy: string;
+  createdAt: string;
+  usedAt?: string;
+  /** 実際に使用された配信ID */
+  usedSessionId?: string;
+};
+
 export type BillingSubscription = {
   subscriptionId: string;
   userId: string;
