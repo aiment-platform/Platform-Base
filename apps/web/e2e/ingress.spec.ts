@@ -35,14 +35,15 @@ test.describe("livekit ingress gating", () => {
     await otherApi.dispose();
   });
 
-  test("host reaches LiveKit step (config error when LIVEKIT env absent)", async ({ baseURL }) => {
+  test("host passes gating and reaches the LiveKit step (400, not 403)", async ({ baseURL }) => {
     const api = await request.newContext({ baseURL });
     await signup(api, { role: "vtuber" });
     const session = await createSession(api);
     const res = await api.post("/api/livekit/ingress", {
       data: { sessionId: session.sessionId, swap: true },
     });
-    // ホスト検証は通過し、LiveKit設定不足で400になる（権限403ではない）。
+    // ホスト/ロール検証は通過。LiveKit作成段階（ダミーURLへの接続）で失敗し 400。
+    // 重要なのは権限エラー(403)ではないこと＝ゲートを通過していること。
     expect(res.status()).toBe(400);
     await api.dispose();
   });

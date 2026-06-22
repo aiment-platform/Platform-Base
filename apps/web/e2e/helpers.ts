@@ -79,3 +79,28 @@ export async function createSession(
   const body = (await res.json()) as { session: Record<string, unknown> };
   return body.session;
 }
+
+/** 予約を作成する（speaker/listener）。レスポンス（status/body）をそのまま返す。 */
+export async function reserve(
+  api: APIRequestContext,
+  sessionId: string,
+  type: "speaker" | "listener",
+) {
+  return api.post(`/api/stream-sessions/${encodeURIComponent(sessionId)}/reservations`, {
+    data: { type },
+  });
+}
+
+/** 配信を開始する（vtuberホスト）。 */
+export async function startSession(api: APIRequestContext, sessionId: string) {
+  return api.post(`/api/stream-sessions/${encodeURIComponent(sessionId)}/start`);
+}
+
+/** LiveKitトークンをリクエストする。 */
+export async function requestToken(
+  api: APIRequestContext,
+  sessionId: string,
+  role: "vtuber" | "speaker" | "listener",
+) {
+  return api.post("/api/livekit/token", { data: { sessionId, role } });
+}

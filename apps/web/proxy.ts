@@ -89,6 +89,12 @@ export function proxy(request: NextRequest) {
     return applyCorsHeaders(new NextResponse(null, { status: 204 }), origin);
   }
 
+  // E2E（ローカルのファイルストア）では多数のリクエストを連続実行するため
+  // レート制限を無効化する。本番では E2E が未設定なので影響しない。
+  if (process.env.E2E === "1") {
+    return applyCorsHeaders(NextResponse.next(), origin);
+  }
+
   const result = checkRateLimit(request, config);
   if (!result.allowed) {
     const response = NextResponse.json(
