@@ -191,6 +191,8 @@ export function JoinPageClient() {
   const [sessionLoading, setSessionLoading] = useState(true);
   const [reservationStatus, setReservationStatus] = useState<ReservationStatus>("loading");
   const [paymentWindowOpen, setPaymentWindowOpen] = useState(false);
+  const [usableTicketCount, setUsableTicketCount] = useState(0);
+  const [redeemingTicket, setRedeemingTicket] = useState(false);
   const [selectedPath, setSelectedPath] = useState<"watch" | "speaker" | null>(null);
 
   // Payment flow
@@ -228,8 +230,10 @@ export function JoinPageClient() {
           hasSpeakerReservation?: boolean;
           hasPaidSpeakerReservation?: boolean;
           paymentWindowOpen?: boolean;
+          usableTicketCount?: number;
         };
         setPaymentWindowOpen(data.paymentWindowOpen ?? false);
+        setUsableTicketCount(data.usableTicketCount ?? 0);
         if (data.hasPaidSpeakerReservation) {
           setReservationStatus("paid");
         } else if (data.hasSpeakerReservation) {
@@ -277,6 +281,28 @@ export function JoinPageClient() {
     } catch {
       setReservationStatus("none");
       setPaymentError("予約の作成に失敗しました。");
+    }
+  };
+
+  // チケットで参加（支払いスキップ）
+  const handleRedeemTicket = async () => {
+    setRedeemingTicket(true);
+    setPaymentError(null);
+    try {
+      const res = await fetch(
+        `/api/stream-sessions/${encodeURIComponent(sessionId)}/reservations/redeem-ticket`,
+        { method: "POST" },
+      );
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setPaymentError(data.error ?? tx("チケットの使用に失敗しました。", "Failed to use the ticket."));
+        return;
+      }
+      await checkReservation(); // paid に更新される
+    } catch {
+      setPaymentError(tx("通信エラーが発生しました。", "A network error occurred."));
+    } finally {
+      setRedeemingTicket(false);
     }
   };
 
@@ -745,6 +771,25 @@ export function JoinPageClient() {
                 </p>
               </div>
               {paymentError && <p className="text-xs text-red-400">{paymentError}</p>}
+              {usableTicketCount > 0 && (
+                <div className="rounded-lg border border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 p-3">
+                  <p className="text-xs font-semibold text-[var(--brand-primary)]">
+                    {tx(`参加チケットを ${usableTicketCount} 枚お持ちです`, `You have ${usableTicketCount} participation ticket(s)`)}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--brand-text-muted)]">
+                    {tx("チケットを使うと支払い不要で参加を確定できます。", "Use a ticket to confirm without payment.")}
+                  </p>
+                  <button
+                    onClick={() => void handleRedeemTicket()}
+                    disabled={redeemingTicket}
+                    className="mt-2 w-full rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-bold text-white disabled:opacity-60"
+                  >
+                    {redeemingTicket
+                      ? tx("使用中...", "Using...")
+                      : tx("チケットで参加（支払いスキップ）", "Join with a ticket (skip payment)")}
+                  </button>
+                </div>
+              )}
               {paymentWindowOpen ? (
                 <button
                   onClick={() => void handleStartPayment()}
