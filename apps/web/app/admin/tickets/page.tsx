@@ -1,7 +1,7 @@
 "use client";
 
 // SOLID: S（参加チケットの付与に専念する管理ページ）
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type Ticket = {
   ticketId: string;
@@ -14,6 +14,15 @@ type Ticket = {
   usedSessionId?: string;
 };
 
+type UserOption = { id: string; name: string; email: string; role: string };
+type SessionOption = { sessionId: string; title: string; startsAt: string; status: string };
+
+function formatStart(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 export default function AdminTicketsPage() {
   const [userId, setUserId] = useState("");
   const [scope, setScope] = useState<"all" | "session">("all");
@@ -23,6 +32,8 @@ export default function AdminTicketsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tickets, setTickets] = useState<Ticket[] | null>(null);
+  const [users, setUsers] = useState<UserOption[]>([]);
+  const [sessions, setSessions] = useState<SessionOption[]>([]);
 
   const loadTickets = useCallback(async (uid: string) => {
     if (!uid.trim()) return;
@@ -35,6 +46,28 @@ export default function AdminTicketsPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load tickets");
     }
+  }, []);
+
+  // ユーザー一覧・予定枠一覧を取得（選択式の選択肢）
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch("/api/admin/users");
+        const data = (await res.json()) as { users?: UserOption[]; error?: string };
+        if (res.ok && data.users) setUsers(data.users);
+      } catch {
+        // ignore
+      }
+    })();
+    void (async () => {
+      try {
+        const res = await fetch("/api/stream-sessions?status=prelive,live");
+        const data = (await res.json()) as { sessions?: SessionOption[] };
+        if (res.ok && data.sessions) setSessions(data.sessions);
+      } catch {
+        // ignore
+      }
+    })();
   }, []);
 
   const grant = async () => {
@@ -75,17 +108,23 @@ export default function AdminTicketsPage() {
 
         <div className="mt-6 space-y-4 rounded-2xl bg-white/5 p-6">
           <label className="block">
-            <span className="text-sm text-white/60">対象ユーザーID</span>
-            <input
+            <span className="text-sm text-white/60">対象ユーザー</span>
+            <select
               value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-              onBlur={() => void loadTickets(userId)}
-              placeholder="vtuber-... / listener-..."
+              onChange={(e) => {
+                setUserId(e.target.value);
+                if (e.target.value) void loadTickets(e.target.value);
+                else setTickets(null);
+              }}
               className="mt-1 w-full rounded-lg bg-black/30 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-purple-500"
-            />
-            <span className="mt-1 block text-xs text-white/30">
-              ユーザー管理ページのIDを貼り付けてください。
-            </span>
+            >
+              <option value="">— ユーザーを選択 —</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}（{u.email}）/ {u.role}
+                </option>
+              ))}
+            </select>
           </label>
 
           <div>
@@ -110,13 +149,22 @@ export default function AdminTicketsPage() {
 
           {scope === "session" && (
             <label className="block">
-              <span className="text-sm text-white/60">対象の配信ID</span>
-              <input
+              <span className="text-sm text-white/60">対象の配信</span>
+              <select
                 value={sessionId}
                 onChange={(e) => setSessionId(e.target.value)}
-                placeholder="session-..."
                 className="mt-1 w-full rounded-lg bg-black/30 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-purple-500"
-              />
+              >
+                <option value="">— 配信を選択 —</option>
+                {sessions.map((s) => (
+                  <option key={s.sessionId} value={s.sessionId}>
+                    {s.title}（{formatStart(s.startsAt)}{s.status === "live" ? " / 配信中" : ""}）
+                  </option>
+                ))}
+              </select>
+              {sessions.length === 0 && (
+                <span className="mt-1 block text-xs text-white/30">予定されている枠がありません。</span>
+              )}
             </label>
           )}
 
