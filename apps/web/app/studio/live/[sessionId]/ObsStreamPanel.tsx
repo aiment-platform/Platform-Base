@@ -39,6 +39,7 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
   const [confirmRegen, setConfirmRegen] = useState(false);
   const [swapping, setSwapping] = useState(false);
   const [confirmSwap, setConfirmSwap] = useState(false);
+  const [showSwapDone, setShowSwapDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
 
@@ -145,6 +146,7 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
       setShowKey(true);
       setObsConnected(false);
       onConnectionChange(false);
+      setShowSwapDone(true); // OBSへのキー張り替えを依頼するポップアップを表示
     } catch {
       if (mountedRef.current) {
         setError(tx("通信エラーが発生しました。時間をおいて再度お試しください。", "A network error occurred. Please try again later."));
@@ -415,6 +417,77 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
           </div>
         )}
       </div>
+
+      {/* 回線切替後: OBSへのストリームキー張り替え依頼ポップアップ */}
+      {showSwapDone && ingress && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setShowSwapDone(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-[var(--brand-surface)] p-6 shadow-2xl shadow-black/50"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center gap-2">
+              <ExclamationTriangleIcon className="h-5 w-5 text-yellow-400" />
+              <h2 className="text-base font-bold text-[var(--brand-text)]">
+                {tx("OBSのストリームキーを張り替えてください", "Update the stream key in OBS")}
+              </h2>
+            </div>
+            <p className="mb-4 text-sm leading-relaxed text-[var(--brand-text-muted)]">
+              {tx(
+                "新しい回線を発行しました。OBSの「設定 → 配信」で、サーバーとストリームキーを下記に張り替えてから「配信開始」を押し直してください。古い回線は使えなくなります。",
+                "A new connection was issued. In OBS (Settings → Stream), replace the Server and Stream Key with the values below, then press Start Streaming again. The old connection no longer works.",
+              )}
+            </p>
+
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--brand-text-muted)]">
+                  {tx("サーバー（RTMP URL）", "Server (RTMP URL)")}
+                </span>
+                <div className="flex gap-2">
+                  <div className="flex-1 overflow-hidden rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 font-mono text-xs text-[var(--brand-text)]">
+                    <span className="block truncate">{ingress.rtmpUrl}</span>
+                  </div>
+                  <button
+                    onClick={() => void copyToClipboard(ingress.rtmpUrl, setCopiedUrl)}
+                    className="flex shrink-0 items-center gap-1 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-xs font-semibold text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+                  >
+                    {copiedUrl ? <CheckIcon className="h-3.5 w-3.5 text-green-400" /> : <ClipboardDocumentIcon className="h-3.5 w-3.5" />}
+                    {copiedUrl ? tx("コピー済", "Copied") : tx("コピー", "Copy")}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--brand-text-muted)]">
+                  {tx("新しいストリームキー", "New Stream Key")}
+                </span>
+                <div className="flex gap-2">
+                  <div className="flex-1 overflow-hidden rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 font-mono text-xs text-[var(--brand-text)]">
+                    {showKey ? ingress.streamKey : "•".repeat(12)}
+                  </div>
+                  <button
+                    onClick={() => void copyToClipboard(ingress.streamKey, setCopiedKey)}
+                    className="flex shrink-0 items-center gap-1 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-xs font-semibold text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+                  >
+                    {copiedKey ? <CheckIcon className="h-3.5 w-3.5 text-green-400" /> : <ClipboardDocumentIcon className="h-3.5 w-3.5" />}
+                    {copiedKey ? tx("コピー済", "Copied") : tx("コピー", "Copy")}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowSwapDone(false)}
+              className="mt-5 w-full rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-bold text-white"
+            >
+              {tx("張り替えました", "Done — I've updated OBS")}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* OBSチュートリアルモーダル */}
       {showTutorial && (
