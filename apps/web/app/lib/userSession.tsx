@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { SessionUser } from "./apiTypes";
 
 export type { SessionUser };
-export type UserRole = "listener" | "vtuber";
+export type UserRole = "listener" | "vtuber" | "supporter";
 
 type UserSessionContextValue = {
   user: SessionUser | null;

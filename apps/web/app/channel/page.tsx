@@ -1,18 +1,19 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { QueueListIcon, UserCircleIcon } from "@heroicons/react/24/outline";
+import { QueueListIcon, TicketIcon, UserCircleIcon } from "@heroicons/react/24/outline";
 import { MySessionsManager } from "../components/channel/MySessionsManager";
 import { TopNav } from "../components/home/TopNav";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { FieldLabel, TextArea, TextInput } from "../components/ui/Field";
+import type { ParticipationTicket } from "../lib/apiTypes";
 import { useI18n } from "../lib/i18n";
 import { uploadImageToR2 } from "../lib/uploadImage";
 import { useUserSession } from "../lib/userSession";
 
-type ChannelView = "profile" | "sessions";
+type ChannelView = "profile" | "sessions" | "tickets";
 
 type ProfileDraft = {
   name: string;
@@ -27,9 +28,12 @@ const CHANNEL_TABS: Array<{
   labelJa: string;
   labelEn: string;
   Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  vtuberOnly?: boolean;
+  nonVtuberOnly?: boolean;
 }> = [
   { key: "profile", labelJa: "プロフィール", labelEn: "Profile", Icon: UserCircleIcon },
-  { key: "sessions", labelJa: "配信枠管理", labelEn: "Session Manager", Icon: QueueListIcon },
+  { key: "sessions", labelJa: "配信枠管理", labelEn: "Session Manager", Icon: QueueListIcon, vtuberOnly: true },
+  { key: "tickets", labelJa: "所持チケット", labelEn: "Tickets", Icon: TicketIcon, nonVtuberOnly: true },
 ];
 
 async function request(url: string, init?: RequestInit) {
@@ -44,15 +48,33 @@ async function request(url: string, init?: RequestInit) {
   if (!response.ok) throw new Error(payload?.error ?? "Request failed");
 }
 
+function formatTicketDate(value?: string) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`;
+}
+
 export default function ChannelPage() {
   const router = useRouter();
   const pathname = usePathname();
   const { tx } = useI18n();
-  const { user, hydrated, isVtuber, updateUser, refreshSession } = useUserSession();
+  const { user, hydrated, isAuthenticated, isVtuber, updateUser, refreshSession } = useUserSession();
 
-  const parseTab = (value: string | null): ChannelView => (value === "sessions" ? "sessions" : "profile");
+  const availableTabs = useMemo(() => CHANNEL_TABS.filter((tab) => {
+    if (tab.vtuberOnly) return isVtuber;
+    if (tab.nonVtuberOnly) return !isVtuber;
+    return true;
+  }), [isVtuber]);
+  const parseTab = useCallback((value: string | null): ChannelView => {
+    const requested = value === "sessions" || value === "tickets" ? value : "profile";
+    return availableTabs.some((tab) => tab.key === requested) ? requested : "profile";
+  }, [availableTabs]);
   const [activeView, setActiveView] = useState<ChannelView>("profile");
   const [draft, setDraft] = useState<ProfileDraft>({ name: "", channelName: "", bio: "", avatarUrl: "", headerUrl: "" });
+  const [tickets, setTickets] = useState<ParticipationTicket[]>([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [ticketsError, setTicketsError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -60,8 +82,8 @@ export default function ChannelPage() {
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!isVtuber) router.replace("/");
-  }, [hydrated, isVtuber, router]);
+    if (!isAuthenticated) router.replace("/auth");
+  }, [hydrated, isAuthenticated, router]);
 
   useEffect(() => {
     if (!user) return;
@@ -79,7 +101,31 @@ export default function ChannelPage() {
     const tab = new URLSearchParams(window.location.search).get("tab");
     const next = parseTab(tab);
     setActiveView((prev) => (prev === next ? prev : next));
-  }, []);
+  }, [parseTab]);
+
+  useEffect(() => {
+    if (!user || isVtuber) return;
+    let cancelled = false;
+    const loadTickets = async () => {
+      setTicketsLoading(true);
+      setTicketsError(null);
+      try {
+        const response = await fetch("/api/account/participation-tickets", { cache: "no-store" });
+        const payload = (await response.json().catch(() => null)) as { tickets?: ParticipationTicket[]; error?: string } | null;
+        if (!response.ok) throw new Error(payload?.error ?? "Failed to load tickets");
+        if (!cancelled) setTickets(payload?.tickets ?? []);
+      } catch (caught) {
+        if (!cancelled) setTicketsError(caught instanceof Error ? caught.message : tx("チケットの取得に失敗しました。", "Failed to load tickets."));
+      } finally {
+        if (!cancelled) setTicketsLoading(false);
+      }
+    };
+
+    void loadTickets();
+    return () => {
+      cancelled = true;
+    };
+  }, [isVtuber, tx, user]);
 
   function switchView(next: ChannelView) {
     setActiveView(next);
@@ -132,7 +178,7 @@ export default function ChannelPage() {
     setError(null);
   }
 
-  if (!hydrated || !isVtuber || !user) return null;
+  if (!hydrated || !isAuthenticated || !user) return null;
 
   async function handleAvatarFileChange(file: File | null) {
     if (!file) return;
@@ -193,7 +239,7 @@ export default function ChannelPage() {
               {tx("チャンネル管理", "Channel")}
             </p>
             <div className="space-y-1">
-              {CHANNEL_TABS.map(({ key, labelJa, labelEn, Icon }) => (
+              {availableTabs.map(({ key, labelJa, labelEn, Icon }) => (
                 <button
                   key={key}
                   type="button"
@@ -218,7 +264,9 @@ export default function ChannelPage() {
               <div>
                 <h1 className="text-2xl font-bold">{tx("プロフィール管理", "Profile Settings")}</h1>
                 <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
-                  {tx("チャンネルの公開情報を編集できます。", "Edit your channel public profile.")}
+                  {isVtuber
+                    ? tx("チャンネルの公開情報と配信枠を管理できます。", "Manage your public channel profile and stream sessions.")
+                    : tx("公開プロフィールと所持チケットを管理できます。", "Manage your public profile and tickets.")}
                 </p>
 
                 <form onSubmit={saveProfile} className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
@@ -337,12 +385,70 @@ export default function ChannelPage() {
                   </div>
                 </form>
               </div>
-            ) : (
+            ) : activeView === "sessions" && isVtuber ? (
               <MySessionsManager
                 title={tx("作成済み配信枠", "Your Stream Sessions")}
                 description={tx("studio/sessions と同じデータを表示しています。", "Showing the same data source as studio/sessions.")}
                 framed={false}
               />
+            ) : (
+              <div>
+                <h1 className="text-2xl font-bold">{tx("所持チケット", "Tickets")}</h1>
+                <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
+                  {tx("運営から付与された参加チケットを確認できます。", "View participation tickets granted by the operations team.")}
+                </p>
+
+                <div className="mt-5 rounded-2xl bg-[var(--brand-surface)] p-4 shadow-[var(--ui-shadow-1)]">
+                  {ticketsLoading ? (
+                    <p className="rounded-xl bg-[var(--brand-bg-900)] px-4 py-6 text-sm text-[var(--brand-text-muted)]">
+                      {tx("チケットを読み込み中...", "Loading tickets...")}
+                    </p>
+                  ) : ticketsError ? (
+                    <p className="rounded-xl bg-[var(--brand-accent)]/15 px-4 py-3 text-sm text-[var(--brand-accent)]">
+                      {ticketsError}
+                    </p>
+                  ) : tickets.length === 0 ? (
+                    <p className="rounded-xl bg-[var(--brand-bg-900)] px-4 py-6 text-sm text-[var(--brand-text-muted)]">
+                      {tx("現在所持している参加チケットはありません。", "You do not currently have participation tickets.")}
+                    </p>
+                  ) : (
+                    <div className="grid gap-3 lg:grid-cols-2">
+                      {tickets.map((ticket) => {
+                        const active = ticket.status === "active";
+                        return (
+                          <div key={ticket.ticketId} className="rounded-xl bg-[var(--brand-bg-900)] p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-bold text-[var(--brand-text)]">
+                                  {ticket.scope === "all"
+                                    ? tx("全配信用チケット", "All-session ticket")
+                                    : tx("特定配信用チケット", "Session-specific ticket")}
+                                </p>
+                                <p className="mt-1 text-xs text-[var(--brand-text-muted)]">
+                                  ID: {ticket.ticketId}
+                                </p>
+                              </div>
+                              <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                                active
+                                  ? "bg-[var(--brand-secondary)]/18 text-[var(--brand-secondary)]"
+                                  : "bg-[var(--brand-surface)] text-[var(--brand-text-muted)]"
+                              }`}>
+                                {active ? tx("使用可能", "Active") : tx("使用済み", "Used")}
+                              </span>
+                            </div>
+                            <div className="mt-3 grid gap-2 text-xs text-[var(--brand-text-muted)] sm:grid-cols-2">
+                              <p>{tx("付与日", "Granted")}: {formatTicketDate(ticket.createdAt)}</p>
+                              <p>{tx("対象", "Scope")}: {ticket.sessionId ?? tx("全配信", "All sessions")}</p>
+                              {ticket.usedAt ? <p>{tx("使用日", "Used")}: {formatTicketDate(ticket.usedAt)}</p> : null}
+                              {ticket.usedSessionId ? <p>{tx("使用配信", "Used session")}: {ticket.usedSessionId}</p> : null}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </section>

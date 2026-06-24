@@ -32,6 +32,10 @@ async function postJson<T>(url: string, body: unknown) {
   return payload;
 }
 
+async function checkEmailAvailability(email: string) {
+  return postJson<{ available: boolean }>("/api/auth/email-availability", { email });
+}
+
 function InputLabel({
   label,
   children,
@@ -114,7 +118,7 @@ export default function SignupPage() {
 
   if (isAuthenticated) return null;
 
-  const goStep2 = () => {
+  const goStep2 = async () => {
     setError(null);
     if (!email.trim()) {
       setError(tx("メールアドレスを入力してください。", "Please enter your email address."));
@@ -128,7 +132,19 @@ export default function SignupPage() {
       setError(tx("利用規約とプライバシーポリシーへの同意が必要です。", "You need to accept the Terms and Privacy Policy."));
       return;
     }
-    setStep(2);
+    setSubmitting(true);
+    try {
+      const result = await checkEmailAvailability(email.trim());
+      if (!result.available) {
+        setError(tx("このメールアドレスはすでに使われています。", "This email address is already in use."));
+        return;
+      }
+      setStep(2);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : tx("メールアドレスの確認に失敗しました。", "Failed to check this email address."));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const goStep3 = () => {
@@ -145,7 +161,7 @@ export default function SignupPage() {
     setError(null);
 
     if (step === 1) {
-      goStep2();
+      void goStep2();
       return;
     }
 
