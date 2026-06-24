@@ -72,7 +72,7 @@
   --brand-accent: var(--accent);
   --brand-text: var(--text);
   --brand-text-muted: var(--text-sub);
-  --brand-logo-filter: none;
+  --brand-logo-filter: brightness(0) invert(1);
 
   /* UI foundation tokens */
   --ui-radius-sm: 10px;
@@ -93,6 +93,7 @@ html[data-theme="light"] {
   --secondary: #0098ad;
   --accent: #df3150;
   --text: #252423;
+  --brand-logo-filter: none;
   --ui-shadow-1: 0 8px 24px rgba(37, 36, 35, 0.1);
   --ui-shadow-2: 0 14px 36px rgba(37, 36, 35, 0.14);
 }
@@ -121,6 +122,10 @@ body {
   transition: background-color 160ms ease, color 160ms ease;
 }
 
+img[src*="aiment_logotype.svg"] {
+  filter: var(--brand-logo-filter) !important;
+}
+
 html:lang(ja) {
   --font-ui: var(--font-jp);
 }
@@ -146,8 +151,8 @@ textarea {
   position: relative;
   container-type: inline-size;
   display: block;
-  width: 100%;
-  max-width: 320px;
+  width: min(100%, 280px);
+  max-width: 280px;
   padding: 0;
   border: 0;
   appearance: none;
@@ -158,8 +163,8 @@ textarea {
 
 .aiment-session-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 320px));
-  gap: 40px 24px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 228px), 280px));
+  gap: 34px 22px;
   justify-content: start;
 }
 
@@ -241,7 +246,7 @@ textarea {
   display: block;
   height: 100%;
   width: var(--slot-progress, 0%);
-  background: var(--brand-primary-dark);
+  background: var(--slot-color, var(--brand-primary-dark));
 }
 
 .aiment-session-card:hover .aiment-session-card__progress,

@@ -35,10 +35,10 @@ export function TopNav({ mode = "default", searchQuery, onSearchChange }: TopNav
   const router = useRouter();
   const pathname = usePathname();
   const { locale, setLocale, tx } = useI18n();
-  const { isVtuber } = useUserSession();
+  const { isAuthenticated, isVtuber } = useUserSession();
   const isStudioMode = mode === "studio";
   const showSearch = !isStudioMode && searchQuery !== undefined && onSearchChange !== undefined;
-  const navItems: NavItem[] = isVtuber
+  const navItems: NavItem[] = isAuthenticated
     ? [
         ...BASE_NAV_ITEMS,
         { labelJp: "チャンネル", labelEn: "Channel", href: "/channel", shortLabelEn: "Channel", icon: RectangleStackIcon },
