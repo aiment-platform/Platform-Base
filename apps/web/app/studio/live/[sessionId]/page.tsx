@@ -731,6 +731,39 @@ export default function StudioLiveSessionPage() {
     }
   };
 
+  // OBS(ingress)の映像をモニタ用<video>に(再)アタッチする。マイク/カメラ操作で
+  // 再ネゴが起きてもモニタ受信が止まらない/必ず復旧するための保険。
+  const attachObsMonitor = useCallback(() => {
+    const room = roomRef.current;
+    const el = monitorRef.current;
+    if (!room || !el) return;
+    for (const p of room.remoteParticipants.values()) {
+      if (!(p.identity.startsWith("obs-") || p.identity.startsWith("ingress-"))) continue;
+      for (const pub of p.trackPublications.values()) {
+        if (pub.kind === Track.Kind.Video && pub.track) {
+          pub.track.attach(el);
+          el.muted = true;
+          void el.play().catch(() => {});
+          setMonitorActive(true);
+          return;
+        }
+      }
+    }
+  }, []);
+
+  // OBS接続中はモニタ映像を維持・復旧する。マイク/カメラのトグルで再ネゴが起きて
+  // モニタが消えても、micOn/camOn の変化を契機に再アタッチして必ず復旧させる。
+  useEffect(() => {
+    if (!obsConnected) return;
+    attachObsMonitor();
+    const t1 = window.setTimeout(attachObsMonitor, 600);
+    const t2 = window.setTimeout(attachObsMonitor, 1800);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [obsConnected, micOn, camOn, attachObsMonitor]);
+
   // トラブルシューティング用の診断値とチェック結果を集める。
   const collectDiagnostics = useCallback((): { diagnostics: Diagnostics; checks: { label: string; ok: boolean; hint?: string }[] } => {
     const online = typeof navigator !== "undefined" ? navigator.onLine : true;
@@ -1150,7 +1183,8 @@ export default function StudioLiveSessionPage() {
           <section className="rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/25">
             {/* 配信モニタ: OBS接続中は「視聴者に見えている映像」を主表示にする */}
             <div className="relative mx-auto max-w-[640px] overflow-hidden rounded-xl bg-[var(--brand-bg-900)]" style={{ aspectRatio: "16/9" }}>
-              {/* OBSモニタ（視聴者の見え方）。音声はミュート（自分の遅延音エコー防止）。 */}
+              {/* OBSモニタ（視聴者の見え方）。音声はミュート（自分の遅延音エコー防止）。
+                  マイク/カメラ操作に関わらず、OBSの受信が続く限り表示し続ける。 */}
               <video
                 ref={monitorRef}
                 autoPlay
@@ -1158,14 +1192,22 @@ export default function StudioLiveSessionPage() {
                 muted
                 className={`h-full w-full object-cover ${monitorActive ? "" : "hidden"}`}
               />
-              {/* ブラウザカメラのプレビュー。OBSモニタ表示中は隠す。 */}
+              {/* ブラウザカメラのプレビュー。OBSモニタ表示中・カメラオフ時は隠す。 */}
               <video
                 ref={previewRef}
                 autoPlay
                 playsInline
                 muted
-                className={`h-full w-full object-cover ${monitorActive ? "hidden" : ""}`}
+                className={`h-full w-full object-cover ${!monitorActive && camOn ? "" : "hidden"}`}
               />
+              {/* カメラオフのプレースホルダ（OBS仮想カメラのデフォルト画面を出さない）。 */}
+              {!monitorActive && !camOn && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--brand-bg-900)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/logo/aiment_logo_white.svg" alt="aiment" className="h-10 w-auto opacity-30" />
+                  <span className="text-sm font-semibold text-white/40">{tx("カメラオフ", "Camera off")}</span>
+                </div>
+              )}
               {monitorActive && (
                 <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-bold text-white">
                   {tx("配信モニタ（視聴者の見え方）", "Monitor (what viewers see)")}
