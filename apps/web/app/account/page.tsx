@@ -8,7 +8,6 @@ import {
   EyeIcon,
   EyeSlashIcon,
   ShieldCheckIcon,
-  UserCircleIcon,
   WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline";
 import { TopNav } from "../components/home/TopNav";
@@ -81,7 +80,6 @@ const ACCOUNT_TABS: Array<{
   labelEn: string;
   Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
 }> = [
-  { key: "profile", labelJp: "プロフィール", labelEn: "Profile", Icon: UserCircleIcon },
   { key: "security", labelJp: "セキュリティ", labelEn: "Security", Icon: ShieldCheckIcon },
   { key: "notifications", labelJp: "通知・データ", labelEn: "Notifications & Data", Icon: BellAlertIcon },
   { key: "billing", labelJp: "課金", labelEn: "Billing", Icon: CreditCardIcon },
@@ -183,7 +181,7 @@ export default function AccountPage() {
   const [reportTargetId, setReportTargetId] = useState("");
   const [reportCategory, setReportCategory] = useState<ReportCategory>("other");
   const [reportDetails, setReportDetails] = useState("");
-  const [activeTab, setActiveTab] = useState<AccountTab>("profile");
+  const [activeTab, setActiveTab] = useState<AccountTab>("security");
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showPhoneModal, setShowPhoneModal] = useState(false);

@@ -40,6 +40,7 @@ import {
 } from "../../../lib/streamSessions";
 import { useUserSession } from "../../../lib/userSession";
 import { ObsStreamPanel } from "./ObsStreamPanel";
+import { TroubleshootPanel, type Diagnostics } from "./TroubleshootPanel";
 
 type ParticipantItem = {
   id: string;
@@ -429,6 +430,7 @@ export default function StudioLiveSessionPage() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("idle");
   const [connectedViewers, setConnectedViewers] = useState(0);
   const [obsConnected, setObsConnected] = useState(false);
+  const [monitorActive, setMonitorActive] = useState(false);
   const [speakerReservations, setSpeakerReservations] = useState<{ reservationId: string; userName: string }[]>([]);
   const [showStopConfirm, setShowStopConfirm] = useState(false);
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
@@ -439,6 +441,9 @@ export default function StudioLiveSessionPage() {
   const [showCamMenu, setShowCamMenu] = useState(false);
 
   const previewRef = useRef<HTMLVideoElement | null>(null);
+  const monitorRef = useRef<HTMLVideoElement | null>(null);
+  // OBS接続の false→true 遷移を検知して一度だけブラウザのマイク/カメラを止める。
+  const prevObsConnectedRef = useRef(false);
   const remoteAudioContainerRef = useRef<HTMLDivElement | null>(null);
   const chatListRef = useRef<HTMLDivElement | null>(null);
   const shouldAutoScrollRef = useRef(true);
@@ -783,6 +788,25 @@ export default function StudioLiveSessionPage() {
     }
   };
 
+  // 二重音声/映像対策: OBS(ingress)が接続されたら、配信のA/VソースをOBSに一本化する。
+  // ブラウザのマイク/カメラを止めることで「二重音声」と「映像/音声のズレ」を防ぐ。
+  // 接続の false→true 遷移時に一度だけ実行し、その後の手動トグルは尊重する。
+  useEffect(() => {
+    const wasConnected = prevObsConnectedRef.current;
+    prevObsConnectedRef.current = obsConnected;
+    if (!obsConnected || wasConnected) return;
+    if (connectionStatus !== "live") return;
+    // OBSが新たに接続された → ブラウザのマイク・カメラを停止
+    if (micOn) {
+      setMicOn(false);
+      void roomRef.current?.localParticipant.setMicrophoneEnabled(false);
+    }
+    if (camOn) {
+      setCamOn(false);
+      void roomRef.current?.localParticipant.setCameraEnabled(false);
+    }
+  }, [obsConnected, connectionStatus, micOn, camOn]);
+
   const handleMicDeviceChange = (deviceId: string) => {
     setSelectedMicDeviceId(deviceId);
     if (roomRef.current && connectionStatus === "live" && micOn) {
@@ -796,6 +820,74 @@ export default function StudioLiveSessionPage() {
       void roomRef.current.localParticipant.setCameraEnabled(true, deviceId ? { deviceId } : undefined);
     }
   };
+
+  // OBS(ingress)の映像をモニタ用<video>に(再)アタッチする。マイク/カメラ操作で
+  // 再ネゴが起きてもモニタ受信が止まらない/必ず復旧するための保険。
+  const attachObsMonitor = useCallback(() => {
+    const room = roomRef.current;
+    const el = monitorRef.current;
+    if (!room || !el) return;
+    for (const p of room.remoteParticipants.values()) {
+      if (!(p.identity.startsWith("obs-") || p.identity.startsWith("ingress-"))) continue;
+      for (const pub of p.trackPublications.values()) {
+        if (pub.kind === Track.Kind.Video && pub.track) {
+          pub.track.attach(el);
+          el.muted = true;
+          void el.play().catch(() => {});
+          setMonitorActive(true);
+          return;
+        }
+      }
+    }
+  }, []);
+
+  // OBS接続中はモニタ映像を維持・復旧する。マイク/カメラのトグルで再ネゴが起きて
+  // モニタが消えても、micOn/camOn の変化を契機に再アタッチして必ず復旧させる。
+  useEffect(() => {
+    if (!obsConnected) return;
+    attachObsMonitor();
+    const t1 = window.setTimeout(attachObsMonitor, 600);
+    const t2 = window.setTimeout(attachObsMonitor, 1800);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [obsConnected, micOn, camOn, attachObsMonitor]);
+
+  // トラブルシューティング用の診断値とチェック結果を集める。
+  const collectDiagnostics = useCallback((): { diagnostics: Diagnostics; checks: { label: string; ok: boolean; hint?: string }[] } => {
+    const online = typeof navigator !== "undefined" ? navigator.onLine : true;
+    const roomConnected = connectionStatus === "live";
+    const quality = roomRef.current?.localParticipant.connectionQuality ?? "unknown";
+    const hasAudio = obsConnected || micOn;
+    const hasVideo = obsConnected || camOn;
+
+    const diagnostics: Diagnostics = {
+      online,
+      connectionStatus,
+      connectionQuality: String(quality),
+      obsConnected,
+      monitorActive,
+      micPublishing: micOn,
+      camPublishing: camOn,
+      participantCount: participants.length,
+      viewerCount: connectedViewers,
+      userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "n/a",
+    };
+
+    const checks = [
+      { label: tx("インターネット接続", "Internet connection"), ok: online, hint: tx("ネットワークを確認してください。", "Check your network.") },
+      { label: tx("配信ルームに接続", "Connected to room"), ok: roomConnected, hint: tx("配信を開始してください。", "Start the broadcast.") },
+      { label: tx("音声ソースあり（OBSまたはマイク）", "Audio source present (OBS or mic)"), ok: hasAudio, hint: tx("マイクをONにするかOBSを接続してください。", "Turn on mic or connect OBS.") },
+      { label: tx("映像ソースあり（OBSまたはカメラ）", "Video source present (OBS or camera)"), ok: hasVideo, hint: tx("カメラをONにするかOBSを接続してください。", "Turn on camera or connect OBS.") },
+      {
+        label: tx("OBS映像の受信（モニタ）", "Receiving OBS video (monitor)"),
+        ok: !obsConnected || monitorActive,
+        hint: tx("OBSは接続済みですが映像が届いていません。回線の切り替えを試してください。", "OBS connected but no video — try switching the connection."),
+      },
+    ];
+    return { diagnostics, checks };
+  }, [connectionStatus, obsConnected, monitorActive, micOn, camOn, participants.length, connectedViewers, tx]);
 
   const startBroadcast = async () => {
     if (!session) return;
@@ -920,9 +1012,21 @@ export default function StudioLiveSessionPage() {
     });
 
     room.on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
+      const isObs = participant.identity.startsWith("obs-") || participant.identity.startsWith("ingress-");
+      // 配信モニタ: OBS(ingress)の映像を「視聴者に見えている画」として表示する。
+      if (track.kind === Track.Kind.Video && isObs && monitorRef.current) {
+        track.attach(monitorRef.current);
+        monitorRef.current.muted = true;
+        void monitorRef.current.play().catch(() => {
+          // autoplay制限時は無視（映像のみ・音声なし）
+        });
+        setMonitorActive(true);
+        return;
+      }
       if (track.kind !== Track.Kind.Audio) return;
       if (participant.identity === room.localParticipant.identity) return;
-      if (participant.identity.startsWith("obs-") || participant.identity.startsWith("ingress-")) return;
+      // OBS音声はVTuber自身には流さない（遅延した自分の声によるエコー防止）。
+      if (isObs) return;
       upsertParticipant(participant, {
         muted: !participant.isMicrophoneEnabled,
         isSpeaking: participant.isSpeaking,
@@ -942,7 +1046,13 @@ export default function StudioLiveSessionPage() {
       });
     });
 
-    room.on(RoomEvent.TrackUnsubscribed, (track) => {
+    room.on(RoomEvent.TrackUnsubscribed, (track, _pub, participant) => {
+      const isObs = participant.identity.startsWith("obs-") || participant.identity.startsWith("ingress-");
+      if (track.kind === Track.Kind.Video && isObs) {
+        track.detach();
+        setMonitorActive(false);
+        return;
+      }
       if (track.kind !== Track.Kind.Audio || !remoteAudioContainerRef.current) return;
       const audioEl = remoteAudioContainerRef.current.querySelector(
         `audio[data-lk-track-sid="${track.sid}"]`,
@@ -1161,11 +1271,49 @@ export default function StudioLiveSessionPage() {
           </div>
 
           <section className="rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/25">
-            <div className="mx-auto max-w-[640px] overflow-hidden rounded-xl bg-[var(--brand-bg-900)]" style={{ aspectRatio: "16/9" }}>
-              <video ref={previewRef} autoPlay playsInline muted className="h-full w-full object-cover" />
+            {/* 配信モニタ: OBS接続中は「視聴者に見えている映像」を主表示にする */}
+            <div className="relative mx-auto max-w-[640px] overflow-hidden rounded-xl bg-[var(--brand-bg-900)]" style={{ aspectRatio: "16/9" }}>
+              {/* OBSモニタ（視聴者の見え方）。音声はミュート（自分の遅延音エコー防止）。
+                  マイク/カメラ操作に関わらず、OBSの受信が続く限り表示し続ける。 */}
+              <video
+                ref={monitorRef}
+                autoPlay
+                playsInline
+                muted
+                className={`h-full w-full object-cover ${monitorActive ? "" : "hidden"}`}
+              />
+              {/* ブラウザカメラのプレビュー。OBSモニタ表示中・カメラオフ時は隠す。 */}
+              <video
+                ref={previewRef}
+                autoPlay
+                playsInline
+                muted
+                className={`h-full w-full object-cover ${!monitorActive && camOn ? "" : "hidden"}`}
+              />
+              {/* カメラオフのプレースホルダ（OBS仮想カメラのデフォルト画面を出さない）。 */}
+              {!monitorActive && !camOn && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--brand-bg-900)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/logo/aiment_logo_white.svg" alt="aiment" className="h-10 w-auto opacity-30" />
+                  <span className="text-sm font-semibold text-white/40">{tx("カメラオフ", "Camera off")}</span>
+                </div>
+              )}
+              {monitorActive && (
+                <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-bold text-white">
+                  {tx("配信モニタ（視聴者の見え方）", "Monitor (what viewers see)")}
+                </span>
+              )}
               <div ref={remoteAudioContainerRef} className="hidden" aria-hidden />
             </div>
-            {!camOn && <p className="mt-2 text-xs text-[var(--brand-text-muted)]">{tx("カメラOFF", "Camera OFF")}</p>}
+            {obsConnected && (
+              <p className="mt-2 rounded-lg bg-[var(--brand-primary)]/12 px-3 py-2 text-xs text-[var(--brand-primary)]">
+                {tx(
+                  "OBS接続中: 二重音声・映像のズレ防止のため、ブラウザのマイク/カメラは停止しています。OBSの音声・映像がそのまま配信されます。",
+                  "OBS connected: browser mic/camera are stopped to prevent double audio and A/V drift. OBS audio/video is broadcast as-is.",
+                )}
+              </p>
+            )}
+            {!camOn && !obsConnected && <p className="mt-2 text-xs text-[var(--brand-text-muted)]">{tx("カメラOFF", "Camera OFF")}</p>}
             {mediaError && <p className="mt-2 text-xs text-[var(--brand-accent)]">{mediaError}</p>}
 
             <div className="mt-3 rounded-[24px] bg-[var(--brand-bg-900)] px-4 py-3">
@@ -1308,6 +1456,8 @@ export default function StudioLiveSessionPage() {
                   onConnectionChange={setObsConnected}
                 />
               </div>
+
+              <TroubleshootPanel sessionId={sessionId} collect={collectDiagnostics} />
             </div>
           </section>
         </section>

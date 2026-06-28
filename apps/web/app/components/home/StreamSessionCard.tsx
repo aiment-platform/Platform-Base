@@ -35,13 +35,16 @@ export function StreamSessionCard({
   onOpenChannel,
 }: StreamSessionCardProps) {
   const ajl = getAjlInfo(japaneseLevel);
-  const progress = `${Math.min(100, Math.max(12, ajl.level * 11))}%`;
+  // スライダ（バー）は残り枠数の割合を表す。残りが多いほど満たされる。
+  const slotRatio = slotsTotal > 0 ? Math.max(0, Math.min(1, slotsLeft / slotsTotal)) : 0;
+  const slotProgress = `${Math.round(slotRatio * 100)}%`;
+  const slotColor = slotRatio <= 0.2 || slotsLeft === 1 ? "var(--brand-accent)" : "var(--brand-primary-dark)";
   const initial = (channelName || title || "A").slice(0, 1).toUpperCase();
 
   return (
     <div
       className="aiment-session-card group text-left"
-      style={{ "--ajl-progress": progress } as CSSProperties & Record<"--ajl-progress", string>}
+      style={{ "--slot-progress": slotProgress, "--slot-color": slotColor } as CSSProperties & Record<"--slot-progress" | "--slot-color", string>}
     >
       <button type="button" onClick={onOpen} className="aiment-session-card__hitbox">
         <span className="aiment-session-card__media-shell">

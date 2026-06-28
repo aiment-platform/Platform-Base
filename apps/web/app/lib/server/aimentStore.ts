@@ -6,6 +6,8 @@ import type {
   AuthProvider,
   CreateReservationInput,
   CreateStreamSessionInput,
+  ParticipationTicket,
+  ParticipationTicketScope,
   SessionComment,
   Reservation,
   ReservationStatus,
@@ -33,6 +35,7 @@ type StoreFile = {
   streamSessions: StreamSession[];
   reservations: Reservation[];
   sessionComments: SessionComment[];
+  participationTickets: ParticipationTicket[];
 };
 
 const LEGACY_USER_DEFAULTS: Record<string, Partial<StoredUser>> = {};
@@ -56,6 +59,7 @@ const DEFAULT_STORE: StoreFile = {
   streamSessions: [],
   reservations: [],
   sessionComments: [],
+  participationTickets: [],
 };
 
 let writeQueue: Promise<unknown> = Promise.resolve();
@@ -112,6 +116,7 @@ function normalizeReservation(entry: Partial<Reservation>): Reservation | null {
     status,
     type,
     cancelledAt: typeof entry.cancelledAt === "string" ? entry.cancelledAt : undefined,
+    paymentIntentId: typeof entry.paymentIntentId === "string" ? entry.paymentIntentId : undefined,
   };
 }
 
@@ -455,6 +460,25 @@ async function initSchema() {
       deleted_by TEXT
     )
   `;
+  await db`
+    CREATE TABLE IF NOT EXISTS participation_tickets (
+      ticket_id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      scope TEXT NOT NULL,
+      session_id TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
+      granted_by TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      used_at TEXT,
+      used_session_id TEXT
+    )
+  `;
+  await db`CREATE INDEX IF NOT EXISTS idx_tickets_user_status ON participation_tickets (user_id, status)`;
+  await db`CREATE INDEX IF NOT EXISTS idx_stream_sessions_status ON stream_sessions (status)`;
+  await db`CREATE INDEX IF NOT EXISTS idx_stream_sessions_host_user_id ON stream_sessions (host_user_id)`;
+  await db`CREATE INDEX IF NOT EXISTS idx_stream_sessions_starts_at ON stream_sessions (starts_at)`;
+  await db`CREATE INDEX IF NOT EXISTS idx_reservations_session_id ON reservations (session_id)`;
+  await db`CREATE INDEX IF NOT EXISTS idx_reservations_user_id ON reservations (user_id)`;
 }
 
 // Row → TypeScript type converters
@@ -537,6 +561,21 @@ function rowToSessionComment(row: any): SessionComment {
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToTicket(row: any): ParticipationTicket {
+  return {
+    ticketId: row.ticket_id as string,
+    userId: row.user_id as string,
+    scope: row.scope as ParticipationTicketScope,
+    sessionId: row.session_id ?? undefined,
+    status: row.status as ParticipationTicket["status"],
+    grantedBy: row.granted_by as string,
+    createdAt: row.created_at as string,
+    usedAt: row.used_at ?? undefined,
+    usedSessionId: row.used_session_id ?? undefined,
+  };
+}
+
 function attachHostFields(
   sessions: StreamSession[],
   users: Pick<StoredUser, "id" | "avatarUrl" | "channelName" | "name">[],
@@ -594,6 +633,7 @@ function cloneStore(store: StoreFile): StoreFile {
     streamSessions: [...store.streamSessions],
     reservations: [...store.reservations],
     sessionComments: [...store.sessionComments],
+    participationTickets: [...store.participationTickets],
   };
 }
 
@@ -670,6 +710,9 @@ function parseStoreFile(raw: string): StoreFile {
       ? parsed.sessionComments
           .map((entry) => normalizeSessionComment(entry as Partial<SessionComment>))
           .filter((entry): entry is SessionComment => entry != null)
+      : [],
+    participationTickets: Array.isArray(parsed.participationTickets)
+      ? (parsed.participationTickets as ParticipationTicket[])
       : [],
   };
   syncSessionSlots(store);
@@ -2013,6 +2056,164 @@ export async function confirmSpeakerPayment(
     if (!res) return null;
     res.paymentIntentId = paymentIntentId;
     return res;
+  });
+}
+
+export async function grantParticipationTickets(input: {
+  grantedBy: string;
+  userId: string;
+  scope: ParticipationTicketScope;
+  sessionId?: string;
+  quantity: number;
+}): Promise<number> {
+  const quantity = Math.max(1, Math.min(100, Math.floor(input.quantity)));
+  if (input.scope === "session" && !input.sessionId?.trim()) {
+    throw new Error("session スコープには sessionId が必要です");
+  }
+  const sessionId = input.scope === "session" ? input.sessionId!.trim() : null;
+  const now = new Date().toISOString();
+
+  const tickets: ParticipationTicket[] = Array.from({ length: quantity }, () => ({
+    ticketId: `pt_${Date.now().toString(36)}_${randomUUID().slice(0, 8)}`,
+    userId: input.userId,
+    scope: input.scope,
+    sessionId: sessionId ?? undefined,
+    status: "active",
+    grantedBy: input.grantedBy,
+    createdAt: now,
+  }));
+
+  if (USE_NEON) {
+    await ensureSchema();
+    const db = getDb();
+    for (const ticket of tickets) {
+      await db`
+        INSERT INTO participation_tickets (ticket_id, user_id, scope, session_id, status, granted_by, created_at)
+        VALUES (${ticket.ticketId}, ${ticket.userId}, ${ticket.scope}, ${sessionId}, 'active', ${ticket.grantedBy}, ${now})
+      `;
+    }
+    return quantity;
+  }
+
+  await mutateStore((store) => {
+    store.participationTickets.push(...tickets);
+  });
+  return quantity;
+}
+
+export async function listParticipationTicketsForUser(userId: string): Promise<ParticipationTicket[]> {
+  if (USE_NEON) {
+    await ensureSchema();
+    const db = getDb();
+    const rows = await db`
+      SELECT * FROM participation_tickets
+      WHERE user_id = ${userId}
+      ORDER BY created_at DESC
+    `;
+    return rows.map(rowToTicket);
+  }
+
+  const store = await readStore();
+  return store.participationTickets
+    .filter((ticket) => ticket.userId === userId)
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+export async function countUsableTickets(userId: string, sessionId: string): Promise<number> {
+  if (USE_NEON) {
+    await ensureSchema();
+    const db = getDb();
+    const rows = await db`
+      SELECT COUNT(*)::int AS n FROM participation_tickets
+      WHERE user_id = ${userId} AND status = 'active'
+        AND (scope = 'all' OR (scope = 'session' AND session_id = ${sessionId}))
+    `;
+    return Number(rows[0].n);
+  }
+
+  const store = await readStore();
+  return store.participationTickets.filter(
+    (ticket) =>
+      ticket.userId === userId &&
+      ticket.status === "active" &&
+      (ticket.scope === "all" || (ticket.scope === "session" && ticket.sessionId === sessionId)),
+  ).length;
+}
+
+export async function redeemParticipationTicket(
+  userId: string,
+  sessionId: string,
+): Promise<Reservation> {
+  if (USE_NEON) {
+    await ensureSchema();
+    const db = getDb();
+    const resRows = await db`
+      SELECT * FROM reservations
+      WHERE session_id = ${sessionId} AND user_id = ${userId} AND status = 'reserved' AND type = 'speaker'
+    `;
+    if (!resRows[0]) throw new Error("先にスピーカー枠を予約してください");
+    if (resRows[0].payment_intent_id) return rowToReservation(resRows[0]);
+
+    const now = new Date().toISOString();
+    const claimed = await db`
+      UPDATE participation_tickets
+      SET status = 'used', used_at = ${now}, used_session_id = ${sessionId}
+      WHERE ticket_id = (
+        SELECT ticket_id FROM participation_tickets
+        WHERE user_id = ${userId} AND status = 'active'
+          AND (scope = 'all' OR (scope = 'session' AND session_id = ${sessionId}))
+        ORDER BY (scope = 'session') DESC, created_at ASC
+        LIMIT 1
+      )
+      RETURNING ticket_id
+    `;
+    if (!claimed[0]) throw new Error("使えるチケットがありません");
+
+    const ticketRef = `ticket:${claimed[0].ticket_id}`;
+    await db`
+      UPDATE reservations
+      SET payment_intent_id = ${ticketRef}
+      WHERE reservation_id = ${resRows[0].reservation_id}
+    `;
+    const updated = await db`
+      SELECT * FROM reservations
+      WHERE reservation_id = ${resRows[0].reservation_id}
+    `;
+    return rowToReservation(updated[0]);
+  }
+
+  return mutateStore((store) => {
+    const reservation = store.reservations.find(
+      (entry) =>
+        entry.sessionId === sessionId &&
+        entry.userId === userId &&
+        entry.status === "reserved" &&
+        entry.type === "speaker",
+    );
+    if (!reservation) throw new Error("先にスピーカー枠を予約してください");
+    if (reservation.paymentIntentId) return reservation;
+
+    const usable = store.participationTickets
+      .filter(
+        (ticket) =>
+          ticket.userId === userId &&
+          ticket.status === "active" &&
+          (ticket.scope === "all" || (ticket.scope === "session" && ticket.sessionId === sessionId)),
+      )
+      .sort((a, b) => {
+        const aSession = a.scope === "session" ? 1 : 0;
+        const bSession = b.scope === "session" ? 1 : 0;
+        if (aSession !== bSession) return bSession - aSession;
+        return a.createdAt < b.createdAt ? -1 : 1;
+      });
+    const ticket = usable[0];
+    if (!ticket) throw new Error("使えるチケットがありません");
+
+    ticket.status = "used";
+    ticket.usedAt = new Date().toISOString();
+    ticket.usedSessionId = sessionId;
+    reservation.paymentIntentId = `ticket:${ticket.ticketId}`;
+    return reservation;
   });
 }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSessionUser } from "@/app/lib/server/auth";
 import {
+  countUsableTickets,
   createReservation,
   getStreamSessionById,
   hasActiveSpeakerReservation,
@@ -38,6 +39,8 @@ export async function GET(req: Request, ctx: RouteContext) {
 
     const isSpeaker = await hasActiveSpeakerReservation(actor.id, sessionId);
     const isPaid = isSpeaker ? await hasPaidSpeakerReservation(actor.id, sessionId) : false;
+    // 予約済みかつ未払いのときのみ、使えるチケット数を返す（UIの「チケットで参加」表示用）
+    const usableTicketCount = isSpeaker && !isPaid ? await countUsableTickets(actor.id, sessionId) : 0;
 
     // Payment window opens 24h before startsAt
     const startsAt = new Date(session.startsAt);
@@ -47,6 +50,7 @@ export async function GET(req: Request, ctx: RouteContext) {
       hasSpeakerReservation: isSpeaker,
       hasPaidSpeakerReservation: isPaid,
       paymentWindowOpen,
+      usableTicketCount,
       speakerSlotsLeft: session.speakerSlotsLeft,
       speakerSlotsTotal: session.speakerSlotsTotal,
       speakerRequiredPlan: session.speakerRequiredPlan,

@@ -58,7 +58,9 @@ async function requestJson<T>(fetchUrl: string, init?: RequestInit): Promise<T> 
       "Content-Type": "application/json",
       ...(init?.headers ?? {}),
     },
-    cache: "no-store",
+    // 既定は no-store（認証必須/更新系の鮮度を担保）。公開GETは init.cache で
+    // "default" を指定し、route の s-maxage/SWR を CDN・ブラウザで効かせる。
+    cache: init?.cache ?? "no-store",
   });
 
   if (!response.ok) {
@@ -95,12 +97,15 @@ export function notifyStreamSessionsUpdated() {
 }
 
 export async function listAllStreamSessions(): Promise<StreamSession[]> {
-  const { sessions } = await requestJson<{ sessions: StreamSession[] }>(API_BASE);
+  const { sessions } = await requestJson<{ sessions: StreamSession[] }>(API_BASE, { cache: "default" });
   return sessions.slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 
 export async function listActiveStreamSessions(): Promise<StreamSession[]> {
-  const { sessions } = await requestJson<{ sessions: StreamSession[] }>(`${API_BASE}?status=prelive,live`);
+  // 公開一覧は CDN/ブラウザキャッシュ（route の s-maxage=30, SWR=60）を活用する。
+  const { sessions } = await requestJson<{ sessions: StreamSession[] }>(`${API_BASE}?status=prelive,live`, {
+    cache: "default",
+  });
   const sorted = sessions.slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
   setCachedActiveSessions(sorted);
   return sorted;
@@ -108,7 +113,8 @@ export async function listActiveStreamSessions(): Promise<StreamSession[]> {
 
 export async function getStreamSession(sessionId: string): Promise<StreamSession | null> {
   try {
-    const { session } = await requestJson<{ session: StreamSession }>(sessionUrl(sessionId));
+    // 詳細も公開GETのためキャッシュ可（クリック→詳細の体感改善）。
+    const { session } = await requestJson<{ session: StreamSession }>(sessionUrl(sessionId), { cache: "default" });
     return session;
   } catch {
     return null;
