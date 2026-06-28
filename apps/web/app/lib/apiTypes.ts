@@ -160,6 +160,21 @@ export type CreateReservationInput = {
   type: ReservationType;
 };
 
+export type SessionComment = {
+  id: string;
+  sessionId: string;
+  senderId: string;
+  senderRole: "vtuber" | "speaker" | "listener";
+  senderName: string;
+  originalText: string;
+  originalLang: "ja" | "en";
+  translatedText?: string;
+  translatedLang?: "ja" | "en";
+  createdAt: string;
+  deletedAt?: string;
+  deletedBy?: string;
+};
+
 /** 参加チケット（支払いスキップ用）。1枚=1回使い切り。 */
 export type ParticipationTicketScope = "all" | "session";
 

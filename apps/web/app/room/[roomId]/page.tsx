@@ -22,6 +22,7 @@ import { Room, RoomEvent, Track, type Participant } from "livekit-client";
 import type { CueCategory, CueEvent } from "../../components/cue/CueMiniPanel";
 import { SmartPhraseAssist, type SmartPhraseSessionState } from "../../components/chat/SmartPhraseAssist";
 import { SpeakerTranslationAssistPanel } from "../../components/translation/TranslationAssistPanels";
+import type { SessionComment } from "../../lib/apiTypes";
 import {
   isChatLanguage,
   isChatSenderRole,
@@ -34,15 +35,19 @@ import {
 import { useI18n } from "../../lib/i18n";
 import { getStreamSession, listActiveStreamSessions, type StreamSession } from "../../lib/streamSessions";
 import { useWatchTimeTracker } from "../../hooks/useWatchTimeTracker";
+import { useUserSession } from "../../lib/userSession";
 
 type Role = "host" | "listener" | "speaker" | "unknown";
 type RequestedRole = "host" | "listener" | "speaker";
 type Status = "idle" | "waitingForLive" | "connecting" | "connected" | "failed";
 
 type ChatMessage = BilingualChatMessage & {
+  senderId?: string;
   user?: string;
   mine?: boolean;
   kind?: "chat" | "cue";
+  deletedAt?: string;
+  deletedBy?: string;
 };
 
 type CueMessage = Partial<CueEvent> & {
@@ -89,7 +94,8 @@ function isStoredChatMessage(value: unknown): value is ChatMessage {
     typeof message.createdAt === "string" &&
     (message.translatedText === undefined || typeof message.translatedText === "string") &&
     (message.translatedLang === undefined || isChatLanguage(message.translatedLang)) &&
-    (message.kind === undefined || message.kind === "chat" || message.kind === "cue")
+    (message.kind === undefined || message.kind === "chat" || message.kind === "cue") &&
+    (message.deletedAt === undefined || typeof message.deletedAt === "string")
   );
 }
 
@@ -128,6 +134,24 @@ function writeStoredChatMessages(roomId: string, messages: ChatMessage[]) {
   } catch {
     // If storage is unavailable or full, chat still works for the current page session.
   }
+}
+
+function commentToChatMessage(comment: SessionComment, currentUserId?: string): ChatMessage {
+  return {
+    id: comment.id,
+    sessionId: comment.sessionId,
+    senderId: comment.senderId,
+    senderRole: comment.senderRole,
+    senderName: comment.senderName,
+    originalText: comment.originalText,
+    originalLang: comment.originalLang,
+    translatedText: comment.translatedText,
+    translatedLang: comment.translatedLang,
+    createdAt: comment.createdAt,
+    deletedAt: comment.deletedAt,
+    deletedBy: comment.deletedBy,
+    mine: currentUserId ? comment.senderId === currentUserId : undefined,
+  };
 }
 
 const PREVIEW_SPEAKER_PARTICIPANTS: SpeakerParticipantItem[] = [
@@ -421,6 +445,7 @@ function SpeakerParticipantDock({
 export default function RoomPage() {
   const router = useRouter();
   const { tx } = useI18n();
+  const { user } = useUserSession();
   const params = useParams<{ roomId: string }>();
   const searchParams = useSearchParams();
   const roomId = params?.roomId ?? "";
@@ -440,6 +465,15 @@ export default function RoomPage() {
   );
   const [chatInput, setChatInput] = useState("");
   const [chatSendError, setChatSendError] = useState<string | null>(null);
+  const [guestCommentClientId] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const key = "aiment-comment-client-id";
+    const existing = window.localStorage.getItem(key);
+    if (existing) return existing;
+    const next = crypto.randomUUID();
+    window.localStorage.setItem(key, next);
+    return next;
+  });
   const [chatOpen, setChatOpen] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showVideoControls, setShowVideoControls] = useState(false);
@@ -492,6 +526,30 @@ export default function RoomPage() {
     connected: status === "connected",
     isHost: requestedRole === "host",
   });
+
+  useEffect(() => {
+    if (!roomId) return;
+    let cancelled = false;
+    const loadComments = async () => {
+      try {
+        const response = await fetch(`/api/stream-sessions/${encodeURIComponent(roomId)}/comments`, { cache: "no-store" });
+        const payload = (await response.json().catch(() => null)) as { comments?: SessionComment[] } | null;
+        if (!response.ok || cancelled) return;
+        const nextMessages = (payload?.comments ?? []).map((comment) => commentToChatMessage(comment, user?.id));
+        nextMessages.forEach((message) => seenChatIdsRef.current.add(message.id));
+        setChatMessages((current) => mergeChatMessages(current.filter((message) => message.kind === "cue"), nextMessages));
+      } catch {
+        // keep local/livekit chat available
+      }
+    };
+
+    void loadComments();
+    const timer = window.setInterval(() => void loadComments(), 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [roomId, user?.id]);
 
   useEffect(() => {
     if (!roomId || !chatHistoryHydratedRef.current) return;
@@ -595,36 +653,63 @@ export default function RoomPage() {
 
   const publishTranslatedMessage = useCallback((message: BilingualChatMessage, mine = true) => {
     const room = roomRef.current;
-    if (!room || status !== "connected") {
-      setChatSendError(tx("接続後に送信できます。", "You can send after the room is connected."));
+    const senderId = user?.id ?? (guestCommentClientId ? `guest:${guestCommentClientId}` : "");
+    if (!senderId) {
+      setChatSendError(tx("コメント送信の準備中です。少し待ってください。", "Preparing comments. Please wait a moment."));
       return;
     }
+    setChatSendError(null);
+    const optimistic: ChatMessage = { ...message, senderId, mine };
     seenChatIdsRef.current.add(message.id);
-    setChatMessages((prev) => [...prev, { ...message, mine }].slice(-MAX_CHAT_MESSAGES));
+    setChatMessages((prev) => [...prev, optimistic].slice(-MAX_CHAT_MESSAGES));
     setChatInput("");
-    const payload = JSON.stringify({ type: "chat", ...message });
-    console.debug("[room] publishData", payload.slice(0, 80));
-    void room.localParticipant
-      .publishData(
-        new TextEncoder().encode(payload),
-        { reliable: true },
-      )
+
+    void fetch(`/api/stream-sessions/${encodeURIComponent(roomId)}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: message.id,
+        clientId: guestCommentClientId,
+        senderRole: message.senderRole,
+        senderName: message.senderName,
+        originalText: message.originalText,
+        originalLang: message.originalLang,
+        translatedText: message.translatedText,
+        translatedLang: message.translatedLang,
+      }),
+    })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => null)) as { comment?: SessionComment; error?: string } | null;
+        if (!response.ok) throw new Error(payload?.error ?? "Failed to send comment");
+        if (payload?.comment) {
+          const saved = commentToChatMessage(payload.comment, user?.id);
+          setChatMessages((prev) => mergeChatMessages(prev, [saved]));
+        }
+      })
       .catch((error: unknown) => {
-        console.error("Failed to publish chat message", error);
-        setChatSendError(tx("コメントの送信に失敗しました。接続状態を確認してください。", "Failed to send the message. Please check your connection."));
+        console.error("Failed to save chat message", error);
+        setChatSendError(tx("コメントの送信に失敗しました。", "Failed to send the message."));
       });
-  }, [status, tx]);
+
+    if (room && status === "connected") {
+      const payload = JSON.stringify({ type: "chat", ...message });
+      console.debug("[room] publishData", payload.slice(0, 80));
+      void room.localParticipant
+        .publishData(
+          new TextEncoder().encode(payload),
+          { reliable: true },
+        )
+        .catch((error: unknown) => {
+          console.error("Failed to publish chat message", error);
+        });
+    }
+  }, [guestCommentClientId, roomId, status, tx, user?.id]);
 
   const sendChatText = useCallback((text: string) => {
     const value = text.trim();
     if (!value) return;
-    const room = roomRef.current;
-    if (!room || status !== "connected") {
-      setChatSendError(tx("接続後に送信できます。", "You can send after the room is connected."));
-      return;
-    }
     setChatSendError(null);
-    const displayName = room.localParticipant.name ?? "you";
+    const displayName = user?.channelName ?? user?.name ?? tx("ゲスト", "Guest");
     publishTranslatedMessage({
       id: crypto.randomUUID(),
       sessionId: roomId,
@@ -634,11 +719,29 @@ export default function RoomPage() {
       originalLang: senderRole === "vtuber" ? "ja" : "en",
       createdAt: new Date().toISOString(),
     });
-  }, [publishTranslatedMessage, roomId, senderRole, status, tx]);
+  }, [publishTranslatedMessage, roomId, senderRole, tx, user?.channelName, user?.name]);
 
   const sendChat = useCallback(() => {
     sendChatText(chatInput);
   }, [chatInput, sendChatText]);
+
+  const retractChatMessage = useCallback((messageId: string) => {
+    void fetch(`/api/stream-sessions/${encodeURIComponent(roomId)}/comments?commentId=${encodeURIComponent(messageId)}`, {
+      method: "DELETE",
+    })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => null)) as { comment?: SessionComment; error?: string } | null;
+        if (!response.ok) throw new Error(payload?.error ?? "Failed to retract comment");
+        if (payload?.comment) {
+          const next = commentToChatMessage(payload.comment, user?.id);
+          setChatMessages((prev) => prev.map((message) => (message.id === messageId ? { ...message, ...next } : message)));
+        }
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to retract comment", error);
+        setChatSendError(tx("コメントの取り消しに失敗しました。", "Failed to retract the comment."));
+      });
+  }, [roomId, tx, user?.id]);
 
   const insertChatPhrase = useCallback((phrase: string) => {
     setChatInput((current) => (current.trim() ? `${current.trimEnd()} ${phrase}` : phrase));
@@ -1311,13 +1414,30 @@ export default function RoomPage() {
                           : "mr-6 bg-[var(--brand-surface)]"
                     }`}
                   >
-                    <p className={`mb-1 text-[11px] font-semibold ${message.kind === "cue" ? "text-[var(--brand-secondary)]" : "text-[var(--brand-primary)]"}`}>
-                      {message.senderName ?? message.senderRole}
-                    </p>
-                    <p className={`text-sm leading-relaxed ${message.kind === "cue" ? "font-bold text-[var(--brand-secondary)]" : "text-[var(--brand-text)]"}`}>
-                      {primaryTextForMessage(message)}
-                    </p>
-                    {secondaryTextForMessage(message) ? (
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <p className={`text-[11px] font-semibold ${message.kind === "cue" ? "text-[var(--brand-secondary)]" : "text-[var(--brand-primary)]"}`}>
+                        {message.senderName ?? message.senderRole}
+                      </p>
+                      {user && message.mine && !message.deletedAt && message.kind !== "cue" ? (
+                        <button
+                          type="button"
+                          onClick={() => retractChatMessage(message.id)}
+                          className="rounded-full bg-[var(--brand-bg-900)] px-2 py-0.5 text-[10px] font-bold text-[var(--brand-text-muted)] hover:text-[var(--brand-accent)]"
+                        >
+                          {tx("取消", "Undo")}
+                        </button>
+                      ) : null}
+                    </div>
+                    {message.deletedAt ? (
+                      <p className="text-sm italic leading-relaxed text-[var(--brand-text-muted)]">
+                        {tx("このコメントは取り消されました。", "This comment was retracted.")}
+                      </p>
+                    ) : (
+                      <p className={`text-sm leading-relaxed ${message.kind === "cue" ? "font-bold text-[var(--brand-secondary)]" : "text-[var(--brand-text)]"}`}>
+                        {primaryTextForMessage(message)}
+                      </p>
+                    )}
+                    {!message.deletedAt && secondaryTextForMessage(message) ? (
                       <p className="mt-1 text-xs leading-relaxed text-[var(--brand-text-muted)]">
                         {secondaryTextForMessage(message)}
                       </p>
@@ -1359,13 +1479,12 @@ export default function RoomPage() {
                     event.preventDefault();
                     sendChat();
                   }}
-                  disabled={status !== "connected"}
-                  placeholder={status === "connected" ? tx("チャットを入力", "Type a message") : tx("接続後に送信できます", "Connect to send")}
-                  className="flex-1 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-sm text-[var(--brand-text)] outline-none placeholder:text-[var(--brand-text-muted)] disabled:cursor-not-allowed disabled:opacity-60"
+                  placeholder={tx("チャットを入力", "Type a message")}
+                  className="flex-1 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-sm text-[var(--brand-text)] outline-none placeholder:text-[var(--brand-text-muted)]"
                 />
                 <button
                   onClick={sendChat}
-                  disabled={status !== "connected"}
+                  disabled={!user && !guestCommentClientId}
                   className="rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-55"
                 >
                   {tx("送信", "Send")}
