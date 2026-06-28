@@ -24,6 +24,7 @@ const DEFAULT_THUMBNAIL = PRESET_THUMBNAILS[4];
 type NoticeItem = {
   id: string;
   text: string;
+  deletedAt?: string;
 };
 
 function localNow30min() {
@@ -124,6 +125,16 @@ export default function StudioPreLivePage() {
     if (!text) return;
     setNotices((prev) => [...prev, { id: crypto.randomUUID(), text }]);
     setChatInput("");
+  };
+
+  const retractNotice = (noticeId: string) => {
+    setNotices((prev) =>
+      prev.map((notice) =>
+        notice.id === noticeId && !notice.deletedAt
+          ? { ...notice, deletedAt: new Date().toISOString() }
+          : notice,
+      ),
+    );
   };
 
   const startBroadcastFlow = async () => {
@@ -544,8 +555,25 @@ export default function StudioPreLivePage() {
                 <div className="space-y-2">
                   {notices.map((notice) => (
                     <div key={notice.id} className="ml-6 rounded-lg bg-[var(--brand-primary)]/20 px-3 py-2">
-                      <p className="mb-1 text-[11px] font-semibold text-[var(--brand-primary)]">host</p>
-                      <p className="text-sm text-[var(--brand-text)]">{notice.text}</p>
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <p className="text-[11px] font-semibold text-[var(--brand-primary)]">host</p>
+                        {!notice.deletedAt ? (
+                          <button
+                            type="button"
+                            onClick={() => retractNotice(notice.id)}
+                            className="rounded-full bg-[var(--brand-surface)] px-2 py-0.5 text-[10px] font-semibold text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+                          >
+                            {tx("取消", "Undo")}
+                          </button>
+                        ) : null}
+                      </div>
+                      {notice.deletedAt ? (
+                        <p className="text-sm italic text-[var(--brand-text-muted)]">
+                          {tx("このコメントは取り消されました。", "This comment was retracted.")}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-[var(--brand-text)]">{notice.text}</p>
+                      )}
                     </div>
                   ))}
                 </div>

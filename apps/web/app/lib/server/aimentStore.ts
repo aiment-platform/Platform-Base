@@ -6,6 +6,7 @@ import type {
   AuthProvider,
   CreateReservationInput,
   CreateStreamSessionInput,
+  SessionComment,
   Reservation,
   ReservationStatus,
   ReservationType,
@@ -31,6 +32,7 @@ type StoreFile = {
   users: StoredUser[];
   streamSessions: StreamSession[];
   reservations: Reservation[];
+  sessionComments: SessionComment[];
 };
 
 const LEGACY_USER_DEFAULTS: Record<string, Partial<StoredUser>> = {};
@@ -53,6 +55,7 @@ const DEFAULT_STORE: StoreFile = {
   users: [],
   streamSessions: [],
   reservations: [],
+  sessionComments: [],
 };
 
 let writeQueue: Promise<unknown> = Promise.resolve();
@@ -109,6 +112,38 @@ function normalizeReservation(entry: Partial<Reservation>): Reservation | null {
     status,
     type,
     cancelledAt: typeof entry.cancelledAt === "string" ? entry.cancelledAt : undefined,
+  };
+}
+
+function normalizeSessionComment(entry: Partial<SessionComment>): SessionComment | null {
+  if (
+    typeof entry.id !== "string" ||
+    typeof entry.sessionId !== "string" ||
+    typeof entry.senderId !== "string" ||
+    typeof entry.senderName !== "string" ||
+    typeof entry.originalText !== "string" ||
+    typeof entry.createdAt !== "string"
+  ) {
+    return null;
+  }
+
+  const senderRole = entry.senderRole === "vtuber" || entry.senderRole === "speaker" ? entry.senderRole : "listener";
+  const originalLang = entry.originalLang === "ja" || entry.originalLang === "en" ? entry.originalLang : senderRole === "vtuber" ? "ja" : "en";
+  const translatedLang = entry.translatedLang === "ja" || entry.translatedLang === "en" ? entry.translatedLang : undefined;
+
+  return {
+    id: entry.id,
+    sessionId: entry.sessionId,
+    senderId: entry.senderId,
+    senderRole,
+    senderName: entry.senderName,
+    originalText: entry.originalText,
+    originalLang,
+    translatedText: typeof entry.translatedText === "string" ? entry.translatedText : undefined,
+    translatedLang,
+    createdAt: entry.createdAt,
+    deletedAt: typeof entry.deletedAt === "string" ? entry.deletedAt : undefined,
+    deletedBy: typeof entry.deletedBy === "string" ? entry.deletedBy : undefined,
   };
 }
 
@@ -404,6 +439,22 @@ async function initSchema() {
   await db`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'listener'`;
   await db`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS cancelled_at TEXT`;
   await db`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS email TEXT`;
+  await db`
+    CREATE TABLE IF NOT EXISTS session_comments (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      sender_id TEXT NOT NULL,
+      sender_role TEXT NOT NULL,
+      sender_name TEXT NOT NULL,
+      original_text TEXT NOT NULL,
+      original_lang TEXT NOT NULL,
+      translated_text TEXT,
+      translated_lang TEXT,
+      created_at TEXT NOT NULL,
+      deleted_at TEXT,
+      deleted_by TEXT
+    )
+  `;
 }
 
 // Row → TypeScript type converters
@@ -468,6 +519,24 @@ function rowToStreamSession(row: any): StreamSession {
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToSessionComment(row: any): SessionComment {
+  return {
+    id: row.id as string,
+    sessionId: row.session_id as string,
+    senderId: row.sender_id as string,
+    senderRole: row.sender_role as SessionComment["senderRole"],
+    senderName: row.sender_name as string,
+    originalText: row.original_text as string,
+    originalLang: row.original_lang as SessionComment["originalLang"],
+    translatedText: row.translated_text ?? undefined,
+    translatedLang: row.translated_lang ?? undefined,
+    createdAt: row.created_at as string,
+    deletedAt: row.deleted_at ?? undefined,
+    deletedBy: row.deleted_by ?? undefined,
+  };
+}
+
 function attachHostFields(
   sessions: StreamSession[],
   users: Pick<StoredUser, "id" | "avatarUrl" | "channelName" | "name">[],
@@ -524,6 +593,7 @@ function cloneStore(store: StoreFile): StoreFile {
     users: [...store.users],
     streamSessions: [...store.streamSessions],
     reservations: [...store.reservations],
+    sessionComments: [...store.sessionComments],
   };
 }
 
@@ -595,6 +665,11 @@ function parseStoreFile(raw: string): StoreFile {
       ? parsed.reservations
           .map((entry) => normalizeReservation(entry as Partial<Reservation>))
           .filter((entry): entry is Reservation => entry != null)
+      : [],
+    sessionComments: Array.isArray(parsed.sessionComments)
+      ? parsed.sessionComments
+          .map((entry) => normalizeSessionComment(entry as Partial<SessionComment>))
+          .filter((entry): entry is SessionComment => entry != null)
       : [],
   };
   syncSessionSlots(store);
@@ -1678,6 +1753,106 @@ export async function setStreamSessionStatus(
     store.streamSessions[index] = next;
     syncSessionSlots(store);
     return next;
+  });
+}
+
+export async function listSessionComments(sessionId: string): Promise<SessionComment[]> {
+  if (USE_NEON) {
+    await ensureSchema();
+    const db = getDb();
+    const rows = await db`
+      SELECT * FROM session_comments
+      WHERE session_id = ${sessionId}
+      ORDER BY created_at ASC
+      LIMIT 300
+    `;
+    return rows.map(rowToSessionComment);
+  }
+
+  const store = await readStore();
+  return store.sessionComments
+    .filter((comment) => comment.sessionId === sessionId)
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    .slice(-300);
+}
+
+export async function createSessionComment(input: Omit<SessionComment, "id" | "createdAt"> & { id?: string; createdAt?: string }) {
+  const comment: SessionComment = {
+    id: input.id ?? `comment_${Date.now().toString(36)}_${randomUUID().slice(0, 8)}`,
+    sessionId: input.sessionId,
+    senderId: input.senderId,
+    senderRole: input.senderRole,
+    senderName: input.senderName,
+    originalText: input.originalText,
+    originalLang: input.originalLang,
+    translatedText: input.translatedText,
+    translatedLang: input.translatedLang,
+    createdAt: input.createdAt ?? new Date().toISOString(),
+  };
+
+  if (USE_NEON) {
+    await ensureSchema();
+    const db = getDb();
+    await db`
+      INSERT INTO session_comments (
+        id, session_id, sender_id, sender_role, sender_name, original_text, original_lang,
+        translated_text, translated_lang, created_at
+      )
+      VALUES (
+        ${comment.id}, ${comment.sessionId}, ${comment.senderId}, ${comment.senderRole}, ${comment.senderName},
+        ${comment.originalText}, ${comment.originalLang}, ${comment.translatedText ?? null}, ${comment.translatedLang ?? null},
+        ${comment.createdAt}
+      )
+      ON CONFLICT (id) DO NOTHING
+    `;
+    return comment;
+  }
+
+  return mutateStore((store) => {
+    const exists = store.sessionComments.some((entry) => entry.id === comment.id);
+    if (!exists) store.sessionComments.push(comment);
+    return comment;
+  });
+}
+
+export async function retractSessionComment(input: {
+  sessionId: string;
+  commentId: string;
+  actorId: string;
+}) {
+  const now = new Date().toISOString();
+  const session = await getStreamSessionById(input.sessionId);
+  const canModerate = session?.hostUserId === input.actorId;
+
+  if (USE_NEON) {
+    await ensureSchema();
+    const db = getDb();
+    const rows = await db`
+      SELECT * FROM session_comments
+      WHERE id = ${input.commentId} AND session_id = ${input.sessionId}
+      LIMIT 1
+    `;
+    const current = rows[0] ? rowToSessionComment(rows[0]) : null;
+    if (!current) throw new Error("Comment not found");
+    if (current.senderId !== input.actorId && !canModerate) throw new Error("Cannot retract this comment");
+    const updated = await db`
+      UPDATE session_comments
+      SET deleted_at = ${now}, deleted_by = ${input.actorId}
+      WHERE id = ${input.commentId}
+      RETURNING *
+    `;
+    return rowToSessionComment(updated[0]);
+  }
+
+  return mutateStore((store) => {
+    const current = store.sessionComments.find(
+      (comment) => comment.id === input.commentId && comment.sessionId === input.sessionId,
+    );
+    if (!current) throw new Error("Comment not found");
+    if (current.senderId !== input.actorId && !canModerate) throw new Error("Cannot retract this comment");
+    current.deletedAt = now;
+    current.deletedBy = input.actorId;
+    return current;
   });
 }
 

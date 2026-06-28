@@ -30,7 +30,7 @@ import {
   type BilingualChatMessage,
   type ChatSenderRole,
 } from "../../../lib/chatMessages";
-import type { Reservation } from "../../../lib/apiTypes";
+import type { Reservation, SessionComment } from "../../../lib/apiTypes";
 import { useI18n } from "../../../lib/i18n";
 import {
   getStreamSession,
@@ -64,13 +64,34 @@ declare global {
 }
 
 type ChatItem = BilingualChatMessage & {
+  senderId?: string;
   mine?: boolean;
+  deletedAt?: string;
+  deletedBy?: string;
 };
 
 const INITIAL_CHAT: ChatItem[] = [];
 
 const MAX_CHAT_MESSAGES = 200;
 const STUDIO_CHAT_HISTORY_STORAGE_PREFIX = "aiment:studio-chat-history";
+
+function commentToChatItem(comment: SessionComment, currentUserId?: string): ChatItem {
+  return {
+    id: comment.id,
+    sessionId: comment.sessionId,
+    senderId: comment.senderId,
+    senderRole: comment.senderRole,
+    senderName: comment.senderName,
+    originalText: comment.originalText,
+    originalLang: comment.originalLang,
+    translatedText: comment.translatedText,
+    translatedLang: comment.translatedLang,
+    createdAt: comment.createdAt,
+    deletedAt: comment.deletedAt,
+    deletedBy: comment.deletedBy,
+    mine: currentUserId ? comment.senderId === currentUserId : undefined,
+  };
+}
 
 function studioChatHistoryStorageKey(sessionId: string) {
   return `${STUDIO_CHAT_HISTORY_STORAGE_PREFIX}:${sessionId}`;
@@ -88,7 +109,8 @@ function isStoredChatItem(value: unknown): value is ChatItem {
     typeof message.createdAt === "string" &&
     (message.translatedText === undefined || typeof message.translatedText === "string") &&
     (message.translatedLang === undefined || isChatLanguage(message.translatedLang)) &&
-    (message.mine === undefined || typeof message.mine === "boolean")
+    (message.mine === undefined || typeof message.mine === "boolean") &&
+    (message.deletedAt === undefined || typeof message.deletedAt === "string")
   );
 }
 
@@ -388,7 +410,7 @@ export default function StudioLiveSessionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { tx } = useI18n();
-  const { isVtuber, hydrated: sessionHydrated } = useUserSession();
+  const { user, isVtuber, hydrated: sessionHydrated } = useUserSession();
   const params = useParams<{ sessionId: string }>();
   const sessionId = params?.sessionId ?? "";
 
@@ -439,6 +461,30 @@ export default function StudioLiveSessionPage() {
     if (!sessionId || !chatHistoryHydratedRef.current) return;
     writeStoredChatItems(sessionId, chat);
   }, [chat, sessionId]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    const loadComments = async () => {
+      try {
+        const response = await fetch(`/api/stream-sessions/${encodeURIComponent(sessionId)}/comments`, { cache: "no-store" });
+        const payload = (await response.json().catch(() => null)) as { comments?: SessionComment[] } | null;
+        if (!response.ok || cancelled) return;
+        const next = (payload?.comments ?? []).map((comment) => commentToChatItem(comment, user?.id));
+        next.forEach((message) => seenChatIdsRef.current.add(message.id));
+        setChat(next.slice(-MAX_CHAT_MESSAGES));
+      } catch {
+        // keep local/livekit chat available
+      }
+    };
+
+    void loadComments();
+    const timer = window.setInterval(() => void loadComments(), 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [sessionId, user?.id]);
 
   useEffect(() => {
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.enumerateDevices) return;
@@ -540,16 +586,44 @@ export default function StudioLiveSessionPage() {
   );
 
   const sendTranslatedChatMessage = useCallback((message: BilingualChatMessage) => {
+    if (!user?.id) return;
     seenChatIdsRef.current.add(message.id);
-    setChat((prev) => [...prev, { ...message, mine: true }].slice(-MAX_CHAT_MESSAGES));
+    setChat((prev) => [...prev, { ...message, senderId: user.id, mine: true }].slice(-MAX_CHAT_MESSAGES));
     setChatInput("");
+    void fetch(`/api/stream-sessions/${encodeURIComponent(sessionId)}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: message.id,
+        senderRole: message.senderRole,
+        senderName: message.senderName,
+        originalText: message.originalText,
+        originalLang: message.originalLang,
+        translatedText: message.translatedText,
+        translatedLang: message.translatedLang,
+      }),
+    })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => null)) as { comment?: SessionComment } | null;
+        if (response.ok && payload?.comment) {
+          const saved = commentToChatItem(payload.comment, user.id);
+          setChat((prev) => {
+            const next = new Map(prev.map((entry) => [entry.id, entry]));
+            next.set(saved.id, saved);
+            return Array.from(next.values()).slice(-MAX_CHAT_MESSAGES);
+          });
+        }
+      })
+      .catch(() => {
+        // Live chat remains visible locally; polling will reconcile if saved.
+      });
     if (roomRef.current && connectionStatus === "live") {
       void roomRef.current.localParticipant.publishData(
         new TextEncoder().encode(JSON.stringify({ type: "chat", ...message })),
         { reliable: true },
       );
     }
-  }, [connectionStatus]);
+  }, [connectionStatus, sessionId, user?.id]);
 
   const sendChatText = useCallback((phrase: string) => {
     const text = phrase.trim();
@@ -558,17 +632,33 @@ export default function StudioLiveSessionPage() {
       id: crypto.randomUUID(),
       sessionId,
       senderRole: "vtuber",
-      senderName: "host",
+      senderName: user?.channelName ?? user?.name ?? "host",
       originalText: text,
       originalLang: "ja",
       createdAt: new Date().toISOString(),
     };
     sendTranslatedChatMessage(message);
-  }, [sendTranslatedChatMessage, sessionId]);
+  }, [sendTranslatedChatMessage, sessionId, user?.channelName, user?.name]);
 
   const sendChat = useCallback(() => {
     sendChatText(chatInput);
   }, [chatInput, sendChatText]);
+
+  const retractChatMessage = useCallback((messageId: string) => {
+    void fetch(`/api/stream-sessions/${encodeURIComponent(sessionId)}/comments?commentId=${encodeURIComponent(messageId)}`, {
+      method: "DELETE",
+    })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => null)) as { comment?: SessionComment } | null;
+        if (response.ok && payload?.comment) {
+          const next = commentToChatItem(payload.comment, user?.id);
+          setChat((prev) => prev.map((message) => (message.id === messageId ? { ...message, ...next } : message)));
+        }
+      })
+      .catch(() => {
+        // no-op
+      });
+  }, [sessionId, user?.id]);
 
   useEffect(() => {
     const el = chatListRef.current;
@@ -722,8 +812,8 @@ export default function StudioLiveSessionPage() {
         body: JSON.stringify({ sessionId: session.sessionId, role: "vtuber" }),
       });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: string };
-        throw new Error(err.error ?? "Token error");
+        const err = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(err?.error ?? "Live session could not start. Please check the streaming server settings.");
       }
       tokenData = (await res.json()) as { token: string; livekitUrl: string };
     } catch (err) {
@@ -1260,9 +1350,26 @@ export default function StudioLiveSessionPage() {
                     key={m.id}
                     className={`rounded-lg px-3 py-2 ${m.mine ? "ml-6 bg-[var(--brand-primary)]/20" : "mr-6 bg-[var(--brand-bg-900)]"}`}
                   >
-                    <p className="mb-1 text-[11px] font-semibold text-[var(--brand-primary)]">{m.senderName ?? m.senderRole}</p>
-                    <p className="text-sm text-[var(--brand-text)]">{primaryTextForMessage(m)}</p>
-                    {secondaryTextForMessage(m) ? (
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <p className="text-[11px] font-semibold text-[var(--brand-primary)]">{m.senderName ?? m.senderRole}</p>
+                      {!m.deletedAt ? (
+                        <button
+                          type="button"
+                          onClick={() => retractChatMessage(m.id)}
+                          className="rounded-full bg-[var(--brand-surface)] px-2 py-0.5 text-[10px] font-bold text-[var(--brand-text-muted)] hover:text-[var(--brand-accent)]"
+                        >
+                          {tx("取消", "Undo")}
+                        </button>
+                      ) : null}
+                    </div>
+                    {m.deletedAt ? (
+                      <p className="text-sm italic text-[var(--brand-text-muted)]">
+                        {tx("このコメントは取り消されました。", "This comment was retracted.")}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-[var(--brand-text)]">{primaryTextForMessage(m)}</p>
+                    )}
+                    {!m.deletedAt && secondaryTextForMessage(m) ? (
                       <p className="mt-1 text-xs leading-relaxed text-[var(--brand-text-muted)]">{secondaryTextForMessage(m)}</p>
                     ) : null}
                   </div>

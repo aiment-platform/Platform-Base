@@ -24,7 +24,13 @@ export async function POST(request: Request) {
     const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
 
     if (!apiKey || !apiSecret || !livekitUrl) {
-      return NextResponse.json({ error: "LiveKit not configured" }, { status: 500 });
+      return NextResponse.json(
+        {
+          error:
+            "LiveKit is not configured. Set LIVEKIT_API_KEY, LIVEKIT_API_SECRET, and NEXT_PUBLIC_LIVEKIT_URL in apps/web/.env.local to start a live session locally.",
+        },
+        { status: 503 },
+      );
     }
 
     const session = await getStreamSessionById(sessionId);
