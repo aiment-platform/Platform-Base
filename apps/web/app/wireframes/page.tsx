@@ -584,12 +584,12 @@ export default function WireframesPage() {
   const activePalette = palettes.find((palette) => palette.id === activePaletteId) ?? classicPalette;
 
   return (
-    <main className="min-h-screen bg-[#070707] px-5 py-8 text-white md:px-10 md:py-12">
+    <main className="min-h-screen bg-[var(--bg)] px-5 py-8 text-[var(--brand-text)] md:px-10 md:py-12">
       <div className="mx-auto max-w-6xl space-y-8">
         <header className="space-y-3">
-          <p className="text-[11px] uppercase tracking-[0.45em] text-neutral-400">Wireframe Study</p>
-          <h1 className="text-2xl font-semibold tracking-[0.06em] text-[#e7dd57] md:text-3xl">LOGIN / ACCOUNT CARD</h1>
-          <p className="max-w-3xl text-sm leading-6 tracking-[0.02em] text-neutral-300">
+          <p className="text-[11px] uppercase tracking-[0.45em] text-[var(--brand-text-muted)]">Wireframe Study</p>
+          <h1 className="text-2xl font-semibold tracking-[0.06em] text-[var(--brand-text)] md:text-3xl">LOGIN / ACCOUNT CARD</h1>
+          <p className="max-w-3xl text-sm leading-6 tracking-[0.02em] text-[var(--brand-text-muted)]">
             カラーパターンを切り替えて確認できます。`warn` は現在 `--brand-accent` を使用しています。
           </p>
         </header>

@@ -11,7 +11,7 @@ import {
   ArrowsPointingInIcon,
   ArrowsPointingOutIcon,
   ChatBubbleLeftRightIcon,
-  ChevronDownIcon,
+  ChevronUpIcon,
   Cog6ToothIcon,
   MicrophoneIcon,
   PhoneXMarkIcon,
@@ -406,7 +406,7 @@ function SpeakerPictureInPictureButton({
         type="button"
         onClick={() => void openPanel()}
         aria-label={tx("スピーカーパネルを開く", "Open speaker panel")}
-        className="grid h-10 w-10 place-items-center rounded-full bg-[var(--brand-secondary)] text-black shadow-[0_12px_28px_rgba(255,213,102,0.24)]"
+        className="ui-btn ui-btn-sm ui-btn-primary h-10 w-10 rounded-full p-0"
       >
         <ArrowTopRightOnSquareIcon className="h-5 w-5" aria-hidden />
       </button>
@@ -1288,7 +1288,7 @@ export default function RoomPage() {
                         void roomRef.current?.startAudio();
                         setAudioBlocked(false);
                       }}
-                      className="flex items-center gap-2 rounded-full bg-black/60 px-5 py-3 text-sm font-bold text-white backdrop-blur hover:bg-black/75"
+                      className="ui-btn ui-btn-md ui-btn-primary"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5" aria-hidden>
                         <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06ZM18.584 5.106a.75.75 0 0 1 1.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 0 1-1.06-1.06 8.25 8.25 0 0 0 0-11.668.75.75 0 0 1 0-1.06Z" />
@@ -1308,7 +1308,7 @@ export default function RoomPage() {
                     type="button"
                     onClick={toggleFullscreen}
                     aria-label={isFullscreen ? tx("フルスクリーンを終了", "Exit fullscreen") : tx("フルスクリーン", "Fullscreen")}
-                    className={`inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/25 text-white shadow-lg backdrop-blur transition-all hover:bg-black/35 focus-visible:opacity-100 ${
+                    className={`inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur transition-all hover:bg-black/50 focus-visible:opacity-100 ${
                       showVideoControls ? "opacity-100" : "opacity-0"
                     }`}
                   >
@@ -1392,7 +1392,7 @@ export default function RoomPage() {
                     type="button"
                     onClick={() => setChatOpen(false)}
                     aria-label={tx("コメントを閉じる", "Close comments")}
-                    className="inline-flex h-8 items-center gap-1 rounded-full bg-[var(--brand-surface)] px-3 text-[11px] font-bold text-[var(--brand-text-muted)] transition-colors hover:text-[var(--brand-text)]"
+                    className="ui-btn ui-btn-sm h-8 gap-1 px-3 text-[11px] ui-btn-ghost"
                   >
                     <ChatBubbleLeftRightIcon className="h-4 w-4" aria-hidden />
                     <span>{tx("OFF", "Off")}</span>
@@ -1408,21 +1408,21 @@ export default function RoomPage() {
                     key={message.id}
                     className={`rounded-lg px-3 py-2 ${
                       message.kind === "cue"
-                        ? "bg-[var(--brand-bg-900)] ring-1 ring-[var(--brand-secondary)]/35"
+                        ? "bg-[var(--brand-bg-900)] ring-1 ring-[var(--brand-primary)]/30"
                         : message.mine
                           ? "ml-6 bg-[var(--brand-primary)]/20"
                           : "mr-6 bg-[var(--brand-surface)]"
                     }`}
                   >
                     <div className="mb-1 flex items-center justify-between gap-2">
-                      <p className={`text-[11px] font-semibold ${message.kind === "cue" ? "text-[var(--brand-secondary)]" : "text-[var(--brand-primary)]"}`}>
+                      <p className={`text-[11px] font-semibold ${message.kind === "cue" ? "text-[var(--brand-primary-dark)]" : "text-[var(--brand-primary)]"}`}>
                         {message.senderName ?? message.senderRole}
                       </p>
                       {user && message.mine && !message.deletedAt && message.kind !== "cue" ? (
                         <button
                           type="button"
                           onClick={() => retractChatMessage(message.id)}
-                          className="rounded-full bg-[var(--brand-bg-900)] px-2 py-0.5 text-[10px] font-bold text-[var(--brand-text-muted)] hover:text-[var(--brand-accent)]"
+                          className="rounded-full bg-[var(--brand-bg-900)] px-2 py-0.5 text-[10px] font-bold text-[var(--brand-text-muted)] ring-1 ring-black/5 hover:text-[var(--brand-accent)]"
                         >
                           {tx("取消", "Undo")}
                         </button>
@@ -1433,7 +1433,7 @@ export default function RoomPage() {
                         {tx("このコメントは取り消されました。", "This comment was retracted.")}
                       </p>
                     ) : (
-                      <p className={`text-sm leading-relaxed ${message.kind === "cue" ? "font-bold text-[var(--brand-secondary)]" : "text-[var(--brand-text)]"}`}>
+                      <p className={`text-sm leading-relaxed ${message.kind === "cue" ? "font-bold text-[var(--brand-primary-dark)]" : "text-[var(--brand-text)]"}`}>
                         {primaryTextForMessage(message)}
                       </p>
                     )}
@@ -1450,7 +1450,7 @@ export default function RoomPage() {
                   type="button"
                   onClick={() => scrollChatToBottom("smooth")}
                   aria-label={tx("最新コメントへ移動", "Jump to latest comments")}
-                  className="absolute bottom-3 right-3 z-10 rounded-full bg-[var(--brand-primary)] px-3 py-2 text-sm font-bold text-white shadow-lg shadow-black/25"
+                  className="ui-btn ui-btn-sm ui-btn-primary absolute bottom-3 right-3 z-10 h-10 w-10 rounded-full p-0"
                 >
                   <ArrowDownCircleIcon className="h-5 w-5" aria-hidden />
                 </button>
@@ -1459,11 +1459,11 @@ export default function RoomPage() {
 
             <div className="p-3">
               {latestCue ? (
-                <div className="mb-2 rounded-xl bg-[var(--brand-surface)] px-3 py-2 shadow-[0_10px_24px_rgba(0,0,0,0.16)]">
+                <div className="mb-2 rounded-xl bg-[var(--brand-surface)] px-3 py-2 shadow-[0_10px_24px_rgba(73,71,70,0.12)]">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--brand-text-muted)]">Live cue</span>
                   </div>
-                  <p className="mt-1 text-sm font-extrabold text-[var(--brand-secondary)]">
+                  <p className="mt-1 text-sm font-extrabold text-[var(--brand-primary-dark)]">
                     {latestCue.english}
                     <span className="ml-2 text-xs text-[var(--brand-text)]">{latestCue.japanese}</span>
                   </p>
@@ -1485,7 +1485,7 @@ export default function RoomPage() {
                 <button
                   onClick={sendChat}
                   disabled={!user && !guestCommentClientId}
-                  className="rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-55"
+                  className="ui-btn ui-btn-sm ui-btn-primary"
                 >
                   {tx("送信", "Send")}
                 </button>
@@ -1517,7 +1517,7 @@ export default function RoomPage() {
                 type="button"
                 onClick={() => setChatOpen(true)}
                 aria-label={tx("コメントを開く", "Open comments")}
-                className="flex h-full min-h-[64px] w-full flex-col items-center justify-center gap-2 text-[var(--brand-text-muted)] transition-colors hover:bg-[var(--brand-surface)] hover:text-[var(--brand-text)]"
+                className="flex h-full min-h-[64px] w-full flex-col items-center justify-center gap-2 text-[var(--brand-text-muted)] transition-colors hover:bg-[var(--brand-bg-900)] hover:text-[var(--brand-primary)]"
               >
                 <ChatBubbleLeftRightIcon className="h-6 w-6" aria-hidden />
                 <span className="text-[11px] font-bold [writing-mode:vertical-rl]">{tx("コメント", "Chat")}</span>
@@ -1529,26 +1529,22 @@ export default function RoomPage() {
 
       {requestedRole !== "listener" && (
         <div className="pointer-events-none fixed bottom-4 left-1/2 z-30 w-[calc(100%-24px)] max-w-[720px] -translate-x-1/2">
-          <div className="pointer-events-auto rounded-[28px] bg-[var(--brand-bg-800)]/95 px-4 py-3 shadow-[0_18px_40px_rgba(0,0,0,0.38)] backdrop-blur">
-            <div className="flex items-center justify-center gap-2 md:gap-3">
-              <div className="relative inline-flex items-center rounded-full bg-[var(--brand-bg-900)]">
+          <div className="pointer-events-auto rounded-[28px] bg-[var(--brand-surface)]/95 px-4 py-3 shadow-[0_14px_34px_rgba(73,71,70,0.18)] backdrop-blur">
+            <div className="flex items-end justify-center gap-2 md:gap-3">
+              <div className="relative">
+                <div className="ui-ctl-group">
                 <button
                   onClick={() => applyMic(!micOn)}
                   disabled={!canSendMic}
-                  className={`flex h-12 w-12 items-center justify-center rounded-full transition-colors ${
-                    canSendMic
-                      ? micOn
-                        ? "bg-[var(--brand-primary)] text-white"
-                        : "bg-transparent text-[var(--brand-text-muted)]"
-                      : "cursor-not-allowed bg-[var(--brand-surface)] text-[var(--brand-text-muted)]/60"
-                  }`}
+                  aria-label={micOn ? tx("マイクをオフ", "Mute microphone") : tx("マイクをオン", "Unmute microphone")}
+                  className={`ui-ctl ui-ctl-md ui-ctl-icon ${canSendMic && micOn ? "ui-ctl-primary" : "ui-ctl-neutral"}`}
                 >
                   {micOn ? (
                     <MicrophoneIcon className="h-5 w-5" aria-hidden />
                   ) : (
                     <span className="relative flex h-5 w-5 items-center justify-center">
                       <MicrophoneIcon className="h-5 w-5" aria-hidden />
-                      <span className="pointer-events-none absolute h-6 w-[5px] -rotate-45 rounded-full bg-black" aria-hidden />
+                      <span className="pointer-events-none absolute h-6 w-[5px] -rotate-45 rounded-full bg-[var(--ctl-face)]" aria-hidden />
                       <span className="pointer-events-none absolute h-6 w-[2px] -rotate-45 rounded-full bg-current" aria-hidden />
                     </span>
                   )}
@@ -1560,12 +1556,14 @@ export default function RoomPage() {
                     setShowMicMenu((v) => !v);
                     setShowCamMenu(false);
                   }}
-                  className="flex h-12 w-8 items-center justify-center border-l border-black/20 bg-transparent text-[var(--brand-text-muted)]"
+                  aria-label={tx("マイク入力を選択", "Select microphone input")}
+                  className="ui-ctl ui-ctl-md ui-ctl-neutral w-8 px-0"
                 >
-                  <ChevronDownIcon className="h-4 w-4" aria-hidden />
+                  <ChevronUpIcon className="h-4 w-4" aria-hidden />
                 </button>
+                </div>
                 {showMicMenu && canSendMic && (
-                  <div className="absolute bottom-14 left-0 z-20 min-w-[220px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/35">
+                  <div className="absolute bottom-14 left-0 z-20 min-w-[220px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/10 ring-1 ring-black/5">
                     {audioDevices.map((device, index) => (
                       <button
                         key={device.deviceId}
@@ -1591,12 +1589,12 @@ export default function RoomPage() {
               </div>
 
             {canSendCam && (
-              <div className="relative inline-flex items-center rounded-full bg-[var(--brand-bg-900)]">
+              <div className="relative">
+                <div className="ui-ctl-group">
                 <button
                   onClick={() => applyCam(!camOn)}
-                  className={`flex h-12 w-12 items-center justify-center rounded-full transition-colors ${
-                    camOn ? "bg-[var(--brand-primary)] text-white" : "bg-transparent text-[var(--brand-text-muted)]"
-                  }`}
+                  aria-label={camOn ? tx("カメラをオフ", "Turn camera off") : tx("カメラをオン", "Turn camera on")}
+                  className={`ui-ctl ui-ctl-md ui-ctl-icon ${camOn ? "ui-ctl-primary" : "ui-ctl-neutral"}`}
                 >
                   {camOn ? <VideoCameraIcon className="h-5 w-5" aria-hidden /> : <VideoCameraSlashIcon className="h-5 w-5" aria-hidden />}
                 </button>
@@ -1606,12 +1604,14 @@ export default function RoomPage() {
                     setShowCamMenu((v) => !v);
                     setShowMicMenu(false);
                   }}
-                  className="flex h-12 w-8 items-center justify-center border-l border-black/20 bg-transparent text-[var(--brand-text-muted)]"
+                  aria-label={tx("カメラ入力を選択", "Select camera input")}
+                  className="ui-ctl ui-ctl-md ui-ctl-neutral w-8 px-0"
                 >
-                  <ChevronDownIcon className="h-4 w-4" aria-hidden />
+                  <ChevronUpIcon className="h-4 w-4" aria-hidden />
                 </button>
+                </div>
                 {showCamMenu && (
-                  <div className="absolute bottom-14 left-0 z-20 min-w-[220px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/35">
+                  <div className="absolute bottom-14 left-0 z-20 min-w-[220px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/10 ring-1 ring-black/5">
                     {videoDevices.map((device, index) => (
                       <button
                         key={device.deviceId}
@@ -1637,33 +1637,27 @@ export default function RoomPage() {
               </div>
             )}
 
-            <div className="inline-flex items-center rounded-full bg-[var(--brand-bg-900)]">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDevicePanel((v) => !v);
-                  setShowMicMenu(false);
-                  setShowCamMenu(false);
-                }}
-                aria-pressed={showDevicePanel}
-                aria-label={tx("入力設定を開く", "Open input settings")}
-                className={`flex h-12 items-center justify-center gap-2 rounded-full px-3.5 text-sm font-bold transition-colors ${
-                  showDevicePanel
-                    ? "bg-[var(--brand-primary)] text-white"
-                    : "text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
-                }`}
-              >
-                <Cog6ToothIcon className="h-5 w-5" aria-hidden />
-                <span className="hidden sm:inline">{tx("入力", "Input")}</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setShowDevicePanel((v) => !v);
+                setShowMicMenu(false);
+                setShowCamMenu(false);
+              }}
+              aria-pressed={showDevicePanel}
+              aria-label={tx("入力設定を開く", "Open input settings")}
+              className={`ui-ctl ui-ctl-md ${showDevicePanel ? "ui-ctl-primary" : "ui-ctl-neutral"}`}
+            >
+              <Cog6ToothIcon className="h-5 w-5" aria-hidden />
+              <span className="hidden sm:inline">{tx("入力", "Input")}</span>
+            </button>
 
             <button
               onClick={() => {
                 cleanup();
                 router.push("/");
               }}
-              className="inline-flex h-12 items-center gap-2 rounded-full bg-[var(--brand-accent)] px-4 text-sm font-semibold text-white"
+              className="ui-ctl ui-ctl-md ui-ctl-danger"
             >
               <PhoneXMarkIcon className="h-5 w-5" aria-hidden />
               {tx("退出", "Leave")}
@@ -1671,7 +1665,7 @@ export default function RoomPage() {
           </div>
 
           {showDevicePanel && (
-            <div className="mt-3 rounded-2xl bg-[var(--brand-surface)] p-3 text-sm text-[var(--brand-text)] shadow-lg shadow-black/25">
+            <div className="mt-3 rounded-2xl bg-[var(--brand-surface)] p-3 text-sm text-[var(--brand-text)] shadow-lg shadow-black/10">
               <div className="grid gap-2 md:grid-cols-3">
                 <div className="rounded-xl bg-[var(--brand-bg-900)] px-3 py-2">
                   <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--brand-text-muted)]">{tx("役割", "Role")}</p>

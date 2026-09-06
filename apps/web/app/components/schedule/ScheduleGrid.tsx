@@ -213,7 +213,7 @@ export function ScheduleGrid({ talents, selectedDate, startHour, endHour, events
                       </div>
                       <p className="mb-1 text-[10px] text-[var(--brand-text-muted)]">{formatTime(clampedStart)} - {formatTime(clampedEnd)}</p>
                       <div className="mb-1 flex flex-wrap gap-1">
-                        <span className="rounded bg-[var(--brand-secondary)]/20 px-1.5 py-0.5 text-[9px] font-black text-[var(--brand-secondary)]">AJL {ajl.level}</span>
+                        <span className="rounded bg-[var(--brand-secondary)]/40 px-1.5 py-0.5 text-[9px] font-black text-[var(--brand-text)]">AJL {ajl.level}</span>
                         {event.slotsLeft != null && event.slotsTotal != null ? (
                           <span className="rounded bg-[var(--brand-surface)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--brand-text-muted)]">
                             {event.slotsLeft}/{event.slotsTotal}

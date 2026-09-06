@@ -3,7 +3,6 @@
 import { CSSProperties, useMemo, useState } from "react";
 import Image from "next/image";
 
-type Mode = "dark" | "light";
 type ThemeKey = "primary" | "secondary" | "accent" | "background" | "surface" | "text";
 type ThemeState = Record<ThemeKey, string>;
 
@@ -21,22 +20,14 @@ type SecondarySwitchProps = {
   onChange: (next: boolean) => void;
 };
 
-const DARK_THEME_FALLBACK: ThemeState = {
-  primary: "#7c6ae6",
-  secondary: "#00e5ff",
-  accent: "#ff3b5c",
-  background: "#222222",
-  surface: "#1f2130",
-  text: "#ededed",
-};
-
-const LIGHT_THEME: ThemeState = {
-  primary: "#4f46e5",
-  secondary: "#0891b2",
-  accent: "#e11d48",
-  background: "#f4f7fb",
+// ver0.3 の実値。ルートの CSS 変数が読めなかったときのフォールバックも兼ねる。
+const V03_THEME: ThemeState = {
+  primary: "#7665f6",
+  secondary: "#9dea70",
+  accent: "#eb4e60",
+  background: "#fff9f4",
   surface: "#ffffff",
-  text: "#18202b",
+  text: "#494746",
 };
 
 const COLOR_FIELDS: Array<{ key: ThemeKey; label: string }> = [
@@ -104,7 +95,7 @@ function readRootThemeVar(name: string): string | null {
   return isValidHex(raw) ? raw : null;
 }
 
-function getDarkThemeDefaults(): ThemeState {
+function getThemeDefaults(): ThemeState {
   const bg = readRootThemeVar("--bg");
   const surface = readRootThemeVar("--surface");
   const primary = readRootThemeVar("--primary");
@@ -113,12 +104,12 @@ function getDarkThemeDefaults(): ThemeState {
   const text = readRootThemeVar("--text");
 
   return {
-    background: bg ?? DARK_THEME_FALLBACK.background,
-    surface: surface ?? DARK_THEME_FALLBACK.surface,
-    primary: primary ?? DARK_THEME_FALLBACK.primary,
-    secondary: secondary ?? DARK_THEME_FALLBACK.secondary,
-    accent: accent ?? DARK_THEME_FALLBACK.accent,
-    text: text ?? DARK_THEME_FALLBACK.text,
+    background: bg ?? V03_THEME.background,
+    surface: surface ?? V03_THEME.surface,
+    primary: primary ?? V03_THEME.primary,
+    secondary: secondary ?? V03_THEME.secondary,
+    accent: accent ?? V03_THEME.accent,
+    text: text ?? V03_THEME.text,
   };
 }
 
@@ -152,11 +143,8 @@ function SecondarySwitch({ checked, label, onChange }: SecondarySwitchProps) {
 }
 
 export default function ColorLabPage() {
-  const [mode, setMode] = useState<Mode>("dark");
-  const [themes, setThemes] = useState<Record<Mode, ThemeState>>(() => ({
-    dark: getDarkThemeDefaults(),
-    light: LIGHT_THEME,
-  }));
+  // ver0.3でダークモードは廃止したので、ライト1系統だけを扱う。
+  const [theme, setTheme] = useState<ThemeState>(() => getThemeDefaults());
   const [copied, setCopied] = useState(false);
 
   const [ready, setReady] = useState(true);
@@ -167,24 +155,22 @@ export default function ColorLabPage() {
   const [chatOn, setChatOn] = useState(true);
   const [status, setStatus] = useState<"connected" | "connecting" | "failed">("connected");
 
-  const activeTheme = themes[mode];
+  const activeTheme = theme;
   const allValid = useMemo(() => Object.values(activeTheme).every(isValidHex), [activeTheme]);
 
   const derived = useMemo(() => {
     if (!allValid) {
-      return {
-        mutedText: mode === "dark" ? "#9aa0af" : "#6b7280",
-      };
+      return { mutedText: "#999999" };
     }
     return {
-      mutedText: mix(activeTheme.text, activeTheme.background, mode === "dark" ? 0.45 : 0.35),
+      mutedText: mix(activeTheme.text, activeTheme.background, 0.35),
     };
-  }, [activeTheme, allValid, mode]);
+  }, [activeTheme, allValid]);
 
   const cssExport = useMemo(() => {
     if (!allValid) return "/* Enter valid HEX colors to export CSS variables */";
-    return `/* ${mode.toUpperCase()} MODE */\n:root {\n  --bg: ${activeTheme.background};\n  --surface: ${activeTheme.surface};\n  --primary: ${activeTheme.primary};\n  --secondary: ${activeTheme.secondary};\n  --accent: ${activeTheme.accent};\n  --text: ${activeTheme.text};\n  --text-sub: ${derived.mutedText};\n\n  --background: var(--bg);\n  --foreground: var(--text);\n  --brand-bg-900: var(--bg);\n  --brand-bg-800: var(--bg);\n  --brand-surface: var(--surface);\n  --brand-surface-soft: var(--surface);\n  --brand-primary: var(--primary);\n  --brand-secondary: var(--secondary);\n  --brand-accent: var(--accent);\n  --brand-text: var(--text);\n  --brand-text-muted: var(--text-sub);\n}`;
-  }, [activeTheme, allValid, derived.mutedText, mode]);
+    return `/* UI ver0.3 (light only) */\n:root {\n  --bg: ${activeTheme.background};\n  --surface: ${activeTheme.surface};\n  --primary: ${activeTheme.primary};\n  --secondary: ${activeTheme.secondary};\n  --accent: ${activeTheme.accent};\n  --text: ${activeTheme.text};\n  --text-sub: ${derived.mutedText};\n\n  --background: var(--bg);\n  --foreground: var(--text);\n  --brand-bg-900: var(--bg);\n  --brand-bg-800: var(--bg);\n  --brand-surface: var(--surface);\n  --brand-surface-soft: var(--surface);\n  --brand-primary: var(--primary);\n  --brand-secondary: var(--secondary);\n  --brand-accent: var(--accent);\n  --brand-text: var(--text);\n  --brand-text-muted: var(--text-sub);\n}`;
+  }, [activeTheme, allValid, derived.mutedText]);
 
   const contrastChecks = useMemo<ContrastResult[]>(() => {
     if (!allValid) return [];
@@ -210,7 +196,7 @@ export default function ColorLabPage() {
   }, [activeTheme, allValid]);
 
   const previewVars = useMemo<CSSProperties>(() => {
-    const fallbackTheme = mode === "dark" ? DARK_THEME_FALLBACK : LIGHT_THEME;
+    const fallbackTheme = V03_THEME;
     return {
       "--bg": allValid ? activeTheme.background : fallbackTheme.background,
       "--surface": allValid ? activeTheme.surface : fallbackTheme.surface,
@@ -231,22 +217,16 @@ export default function ColorLabPage() {
       "--brand-text": "var(--text)",
       "--brand-text-muted": "var(--text-sub)",
     } as CSSProperties;
-  }, [activeTheme, allValid, derived.mutedText, mode]);
+  }, [activeTheme, allValid, derived.mutedText]);
 
   const onColorTextChange = (key: ThemeKey, next: string) => {
     const normalized = normalizeHex(next);
-    setThemes((prev) => ({
-      ...prev,
-      [mode]: { ...prev[mode], [key]: normalized },
-    }));
+    setTheme((prev) => ({ ...prev, [key]: normalized }));
     setCopied(false);
   };
 
   const onColorPickerChange = (key: ThemeKey, next: string) => {
-    setThemes((prev) => ({
-      ...prev,
-      [mode]: { ...prev[mode], [key]: next.toLowerCase() },
-    }));
+    setTheme((prev) => ({ ...prev, [key]: next.toLowerCase() }));
     setCopied(false);
   };
 
@@ -267,26 +247,9 @@ export default function ColorLabPage() {
         <p className="mt-2 text-sm text-[var(--brand-text-muted)]">
           実ページの見た目に近いUIで、色・コントラスト・CSS変数を同時に検証できます。
         </p>
-        <div className="mt-4 inline-flex rounded-xl bg-[var(--brand-surface)] p-1">
-          <button
-            type="button"
-            onClick={() => setMode("dark")}
-            className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
-              mode === "dark" ? "bg-[var(--brand-primary)]/20 text-[var(--brand-primary)]" : "text-[var(--brand-text-muted)]"
-            }`}
-          >
-            Dark Mode
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("light")}
-            className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
-              mode === "light" ? "bg-[var(--brand-primary)]/20 text-[var(--brand-primary)]" : "text-[var(--brand-text-muted)]"
-            }`}
-          >
-            Light Mode
-          </button>
-        </div>
+        <p className="mt-4 inline-flex rounded-[var(--ui-radius-pill)] bg-[var(--brand-primary)]/12 px-3 py-1.5 text-xs font-bold text-[var(--brand-primary)]">
+          UI ver0.3 / ライトモードのみ
+        </p>
       </header>
 
       <section className="grid gap-8 lg:grid-cols-[360px,1fr]">
@@ -491,13 +454,10 @@ export default function ColorLabPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setThemes((prev) => ({
-                      ...prev,
-                      [mode]: mode === "dark" ? getDarkThemeDefaults() : LIGHT_THEME,
-                    }));
+                    setTheme(getThemeDefaults());
                     setCopied(false);
                   }}
-                  className="rounded-md bg-white/5 px-3 py-2 text-sm font-medium"
+                  className="rounded-md bg-black/[0.05] px-3 py-2 text-sm font-medium"
                 >
                   Reset
                 </button>

@@ -103,7 +103,7 @@ export function AuthProfileControl() {
         <button
           type="button"
           onClick={() => setOpen((prev) => !prev)}
-          className="h-10 rounded-xl bg-[var(--brand-secondary)] px-4 text-sm font-bold text-black transition-all hover:brightness-110"
+          className="ui-btn ui-btn-md ui-btn-primary h-10"
         >
           {hydrated ? "ログイン" : "..."}
         </button>

@@ -49,22 +49,34 @@
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
 
-  --bg: #252423;
-  --surface: #494746;
-  --primary: #7c6ae6;
-  --primary-light: #ac9eff;
-  --primary-dark: #6248f7;
-  --secondary: #00e5ff;
-  --accent: #ff3b5c;
-  --text: #ededed;
-  --text-sub: color-mix(in srgb, var(--text) 62%, var(--bg) 38%);
+  /* ==========================================================================
+     UI ver0.3 palette — light only. Dark mode is retired as of ver0.3.
+     Every value below is sampled directly from the ver0.3 reference mockups
+     (session card sheet / button sheet). Do not "adjust" them by eye.
+     ========================================================================== */
+  --bg: #fff9f4;          /* page background, unified across the whole app */
+  --surface: #ffffff;     /* cards, panels, sheets */
+  --surface-ring: #fffcf9; /* the 4px white outline that sits around cards */
+  --primary: #7665f6;     /* button face / brand purple */
+  --primary-light: #9180f7; /* session card bar */
+  --primary-dark: #5e49ee;  /* button "thickness" edge, progress fill, detail tab */
+  --secondary: #9dea70;   /* AJL level badge green */
+  --accent: #eb4e60;      /* destructive / leave */
+  --accent-dark: #cf2c2e; /* thickness edge under accent */
+  --neutral: #bdbdbd;     /* secondary half of a split control */
+  --neutral-dark: #a4a4a4; /* thickness edge under neutral */
+  --track: #e7e7e7;       /* progress / slider track */
+  --placeholder: #d9d9d9; /* empty avatar, empty media */
+  --text: #494746;
+  --text-sub: #999999;
+  --shadow-rgb: 73, 71, 70;
 
   --background: var(--bg);
   --foreground: var(--text);
   --brand-bg-900: var(--bg);
-  --brand-bg-800: color-mix(in srgb, var(--bg) 72%, var(--surface) 28%);
+  --brand-bg-800: color-mix(in srgb, var(--bg) 55%, var(--surface) 45%);
   --brand-surface: var(--surface);
-  --brand-surface-soft: color-mix(in srgb, var(--surface) 82%, #ffffff 18%);
+  --brand-surface-soft: color-mix(in srgb, var(--bg) 55%, var(--placeholder) 45%);
   --brand-primary: var(--primary);
   --brand-primary-light: var(--primary-light);
   --brand-primary-dark: var(--primary-dark);
@@ -72,30 +84,25 @@
   --brand-accent: var(--accent);
   --brand-text: var(--text);
   --brand-text-muted: var(--text-sub);
-  --brand-logo-filter: brightness(0) invert(1);
+  --brand-logo-filter: none;
 
   /* UI foundation tokens */
   --ui-radius-sm: 10px;
   --ui-radius-md: 14px;
   --ui-radius-lg: 18px;
   --ui-radius-pill: 999px;
-  --ui-shadow-1: 0 8px 24px rgba(0, 0, 0, 0.2);
-  --ui-shadow-2: 0 14px 36px rgba(0, 0, 0, 0.28);
-  --ui-focus: 0 0 0 2px color-mix(in srgb, var(--brand-primary) 72%, transparent);
-}
+  --ui-shadow-1: 0 8px 24px rgba(var(--shadow-rgb), 0.12);
+  --ui-shadow-2: 0 14px 36px rgba(var(--shadow-rgb), 0.16);
+  --ui-focus: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 45%, transparent);
 
-html[data-theme="light"] {
-  --bg: #f6f4f1;
-  --surface: #ffffff;
-  --primary: #6f5be8;
-  --primary-light: #917ff0;
-  --primary-dark: #5b45da;
-  --secondary: #0098ad;
-  --accent: #df3150;
-  --text: #252423;
-  --brand-logo-filter: none;
-  --ui-shadow-1: 0 8px 24px rgba(37, 36, 35, 0.1);
-  --ui-shadow-2: 0 14px 36px rgba(37, 36, 35, 0.14);
+  /* ver0.3 depth tokens.
+     A button is a flat rounded shape; a shadow underneath fakes its thickness.
+     - soft buttons  : white ring + blurred drop shadow, sink by --ui-btn-lift
+     - control chips : hard coloured edge, sink by --ui-ctl-lift onto it       */
+  --ui-btn-ring: #ffffff;
+  --ui-btn-ring-w: 4px;
+  --ui-btn-lift: 4px;
+  --ui-ctl-lift: 6px;
 }
 
 @theme inline {
@@ -103,13 +110,6 @@ html[data-theme="light"] {
   --color-foreground: var(--foreground);
   --font-sans: var(--font-ui);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: var(--bg);
-    --foreground: var(--text);
-  }
 }
 
 body {
@@ -145,9 +145,15 @@ textarea {
   --card-radius: 18px;
   --card-bar-height: 15.1515%;
   --card-bar-center: calc(var(--card-bar-height) / 2);
-  --card-surface: var(--brand-surface);
+  /* ver0.3: the frame is now a white outline and the bar is light purple. */
+  --card-ring: var(--surface-ring);
+  --card-ring-w: 3px;
+  --card-surface: var(--brand-primary-light);
   --card-bg: var(--brand-bg-900);
   --card-secondary: var(--brand-secondary);
+  --card-track: var(--track);
+  --card-level-ring: clamp(1.4px, 0.58cqw, 2.4px);
+  --card-level-drop: clamp(1.4px, 0.58cqw, 2.4px);
   position: relative;
   container-type: inline-size;
   display: block;
@@ -184,6 +190,9 @@ textarea {
   position: relative;
   display: block;
   aspect-ratio: 594 / 396;
+  /* The filter runs on the already-masked children, so the shadow follows the
+     notched card silhouette instead of a plain rectangle. */
+  filter: drop-shadow(0 4px 9px rgba(var(--shadow-rgb), 0.22));
 }
 
 .aiment-session-card__frame {
@@ -191,37 +200,52 @@ textarea {
   inset: 0;
   z-index: 2;
   display: block;
-  background: var(--card-surface);
+  background: var(--card-ring);
   mask: url("/svg/session_container.svg") center / 100% 100% no-repeat;
   -webkit-mask: url("/svg/session_container.svg") center / 100% 100% no-repeat;
   pointer-events: none;
 }
 
+.aiment-session-card__frame::before {
+  position: absolute;
+  inset: var(--card-ring-w);
+  display: block;
+  content: "";
+  background: var(--card-surface);
+  mask: url("/svg/session_container.svg") center / 100% 100% no-repeat;
+  -webkit-mask: url("/svg/session_container.svg") center / 100% 100% no-repeat;
+}
+
 .aiment-session-card__bar {
   position: absolute;
-  left: 0;
-  top: 0;
+  left: var(--card-ring-w);
+  top: var(--card-ring-w);
   z-index: 2;
-  height: var(--card-bar-height);
-  width: 100%;
+  height: calc(var(--card-bar-height) - var(--card-ring-w));
+  width: calc(100% - var(--card-ring-w) * 2);
   background: var(--card-surface);
-  border-radius: 14px 22px 0 0;
-  clip-path: polygon(0 0, calc(100% - 42px) 0, calc(100% - 8px) 100%, 0 100%);
+  border-radius: 12px 20px 0 0;
+  clip-path: polygon(0 0, calc(100% - 44px) 0, calc(100% - 8px) 100%, 0 100%);
 }
 
 .aiment-session-card__level {
   position: absolute;
   left: clamp(8px, 2.6cqw, 10px);
-  top: var(--card-bar-center);
+  /* Centre on the purple band, not on the bar box — the bar box includes the
+     card's white ring, which would push the badge onto the card edge. */
+  top: calc(var(--card-bar-center) + var(--card-ring-w) / 2);
   z-index: 4;
   display: grid;
-  height: clamp(20px, 8.5cqw, 32px);
-  width: clamp(20px, 8.5cqw, 32px);
+  height: clamp(14px, 5.86cqw, 22px);
+  width: clamp(14px, 5.86cqw, 22px);
   place-items: center;
-  border-radius: clamp(4px, 1.3cqw, 6px);
-  background: var(--card-secondary);
-  color: var(--card-bg);
-  font-size: clamp(12px, 4.6cqw, 20px);
+  border-radius: clamp(3px, 1.15cqw, 5px);
+  background: var(--level-face, var(--card-secondary));
+  box-shadow:
+    0 0 0 var(--card-level-ring) var(--card-ring),
+    0 var(--card-level-drop) 0 var(--card-level-ring) var(--level-drop, var(--card-secondary));
+  color: #ffffff;
+  font-size: clamp(9px, 3.6cqw, 13px);
   font-weight: 700;
   line-height: 1;
   transform: translateY(-50%);
@@ -237,7 +261,7 @@ textarea {
   max-width: none;
   overflow: hidden;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--card-surface) 28%, var(--card-bg) 72%);
+  background: var(--card-track);
   transition: opacity 150ms ease;
   transform: translateY(-50%);
 }
@@ -277,7 +301,7 @@ textarea {
 
 .aiment-session-card__ajl-label {
   overflow: hidden;
-  color: var(--card-secondary);
+  color: #ffffff;
   font-size: clamp(12px, 4cqw, 16px);
   font-weight: 700;
   line-height: 1.1;
@@ -286,7 +310,7 @@ textarea {
 }
 
 .aiment-session-card__spots {
-  color: var(--brand-text);
+  color: #ffffff;
   font-size: clamp(12px, 4.4cqw, 18px);
   font-weight: 700;
   line-height: 1.1;
@@ -304,16 +328,32 @@ textarea {
   height: var(--card-bar-height);
   width: 26%;
   place-items: center;
-  background: var(--brand-primary-dark);
+  background: var(--card-ring);
   mask: url("/svg/session_detail.svg") center / 100% 100% no-repeat;
   -webkit-mask: url("/svg/session_detail.svg") center / 100% 100% no-repeat;
-  color: var(--brand-text);
+  color: #ffffff;
   font-size: clamp(12px, 4.3cqw, 17px);
   font-weight: 600;
   line-height: 1;
   opacity: 1;
   transition: opacity 150ms ease, transform 180ms ease;
   transform: translateY(100%);
+}
+
+.aiment-session-card__detail::before {
+  position: absolute;
+  inset: var(--card-ring-w);
+  display: block;
+  content: "";
+  background: var(--brand-primary-dark);
+  mask: url("/svg/session_detail.svg") center / 100% 100% no-repeat;
+  -webkit-mask: url("/svg/session_detail.svg") center / 100% 100% no-repeat;
+}
+
+/* The ::before is positioned, so the label needs its own layer to stay on top. */
+.aiment-session-card__detail-label {
+  position: relative;
+  z-index: 1;
 }
 
 .aiment-session-card:hover .aiment-session-card__detail,
@@ -323,16 +363,17 @@ textarea {
 }
 
 .aiment-session-card__image {
-  position: relative;
+  position: absolute;
   display: block;
   z-index: 3;
+  left: var(--card-ring-w);
+  right: var(--card-ring-w);
+  top: var(--card-bar-height);
+  bottom: var(--card-ring-w);
   overflow: hidden;
   border-radius: 0 var(--card-radius) var(--card-radius) var(--card-radius);
   clip-path: inset(0 round 0 var(--card-radius) var(--card-radius) var(--card-radius));
-  background: var(--card-surface);
-  aspect-ratio: 16 / 9;
-  width: 100%;
-  top: var(--card-bar-height);
+  background: var(--placeholder);
   isolation: isolate;
 }
 
@@ -384,8 +425,8 @@ textarea {
   overflow: hidden;
   border-radius: 999px;
   appearance: none;
-  background: var(--brand-surface-soft);
-  color: var(--card-bg);
+  background: var(--placeholder);
+  color: #ffffff;
   font-size: 16px;
   font-weight: 700;
   transition: transform 150ms ease;
@@ -428,12 +469,6 @@ textarea {
 @media (min-width: 1280px) {
   .aiment-session-card {
     --card-radius: 20px;
-  }
-
-  .aiment-session-card__level {
-    height: 24px;
-    width: 24px;
-    font-size: 14px;
   }
 
 }
@@ -491,71 +526,274 @@ textarea::placeholder {
 
 .ui-input:focus-visible,
 .ui-select:focus-visible,
-.ui-textarea:focus-visible,
-.ui-btn:focus-visible {
+.ui-textarea:focus-visible {
   box-shadow: var(--ui-focus);
 }
 
-.ui-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 0;
-  border-radius: var(--ui-radius-sm);
-  font-weight: 700;
-  transition: filter 0.15s ease, opacity 0.15s ease, background-color 0.15s ease;
-}
+/* ==========================================================================
+   ver0.3 button system
+   --------------------------------------------------------------------------
+   Every button is one flat rounded shape. Its "thickness" is faked with a
+   shadow underneath; pressing collapses that shadow while the shape drops
+   onto it, so the button reads as being pushed into the page.
 
-.ui-btn:hover {
-  filter: brightness(1.08);
-}
+   Two flavours, both lifted from the ver0.3 button sheet:
+     .ui-btn  soft edge — white ring + blurred shadow (pills, CTAs)
+     .ui-ctl  hard edge — solid darker slab (mic / cam / chat / leave chips)
 
-.ui-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+   Kept in @layer components so page-level Tailwind utilities still win.
+   ========================================================================== */
+@layer components {
+  .ui-btn {
+    --btn-face: var(--brand-primary);
+    --btn-ink: #ffffff;
+    --btn-ring: var(--ui-btn-ring);
+    --btn-ring-w: var(--ui-btn-ring-w);
+    --btn-lift: var(--ui-btn-lift);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 0;
+    border-radius: var(--ui-radius-pill);
+    background: var(--btn-face);
+    color: var(--btn-ink);
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow:
+      0 0 0 var(--btn-ring-w) var(--btn-ring),
+      0 calc(var(--btn-lift) + 4px) 12px rgba(var(--shadow-rgb), 0.28);
+    transform: translateY(0);
+    transition:
+      transform 90ms ease,
+      box-shadow 90ms ease,
+      filter 0.15s ease,
+      opacity 0.15s ease,
+      background-color 0.15s ease;
+  }
 
-.ui-btn-md {
-  height: 42px;
-  padding: 0 16px;
-  font-size: 0.9375rem;
-}
+  .ui-btn:hover:not(:disabled) {
+    filter: brightness(1.05);
+  }
 
-.ui-btn-sm {
-  height: 36px;
-  padding: 0 12px;
-  font-size: 0.875rem;
-}
+  .ui-btn:active:not(:disabled),
+  .ui-btn[data-pressed="true"] {
+    transform: translateY(var(--btn-lift));
+    box-shadow:
+      0 0 0 var(--btn-ring-w) var(--btn-ring),
+      0 1px 4px rgba(var(--shadow-rgb), 0.24);
+  }
 
-.ui-btn-primary {
-  background: var(--brand-primary);
-  color: #fff;
-}
+  .ui-btn:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 var(--btn-ring-w) var(--btn-ring),
+      0 0 0 calc(var(--btn-ring-w) + 3px) color-mix(in srgb, var(--brand-primary) 45%, transparent),
+      0 calc(var(--btn-lift) + 4px) 12px rgba(var(--shadow-rgb), 0.28);
+  }
 
-.ui-btn-secondary {
-  background: var(--brand-secondary);
-  color: #000;
-}
+  .ui-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow:
+      0 0 0 var(--btn-ring-w) var(--btn-ring),
+      0 2px 6px rgba(var(--shadow-rgb), 0.16);
+  }
 
-.ui-btn-ghost {
-  background: var(--brand-bg-900);
-  color: var(--brand-text-muted);
-}
+  .ui-btn-lg {
+    height: 52px;
+    padding: 0 28px;
+    font-size: 1rem;
+  }
 
-.ui-btn-soft {
-  background: color-mix(in srgb, var(--brand-primary) 18%, transparent);
-  color: var(--brand-primary);
-}
+  .ui-btn-md {
+    height: 42px;
+    padding: 0 20px;
+    font-size: 0.9375rem;
+  }
 
-.ui-btn-danger {
-  background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
-  color: var(--brand-accent);
-}
+  .ui-btn-sm {
+    height: 34px;
+    padding: 0 14px;
+    font-size: 0.875rem;
+  }
 
-.ui-btn-success {
-  background: color-mix(in srgb, #22c55e 85%, #16a34a 15%);
-  color: #fff;
+  /* icon-only: keep it square-ish instead of a stadium */
+  .ui-btn-square {
+    padding: 0;
+    aspect-ratio: 1;
+    border-radius: var(--ui-radius-md);
+  }
+
+  .ui-btn-primary {
+    --btn-face: var(--brand-primary);
+    --btn-ink: #ffffff;
+  }
+
+  .ui-btn-secondary {
+    --btn-face: #ffffff;
+    --btn-ink: var(--brand-primary);
+    --btn-ring: var(--brand-primary);
+  }
+
+  .ui-btn-ghost {
+    --btn-face: #ffffff;
+    --btn-ink: var(--brand-text-muted);
+    --btn-ring: var(--track);
+  }
+
+  .ui-btn-soft {
+    --btn-face: color-mix(in srgb, var(--brand-primary) 14%, #ffffff);
+    --btn-ink: var(--brand-primary);
+  }
+
+  .ui-btn-danger {
+    --btn-face: var(--brand-accent);
+    --btn-ink: #ffffff;
+  }
+
+  .ui-btn-success {
+    --btn-face: var(--brand-secondary);
+    --btn-ink: var(--brand-text);
+  }
+
+  /* --- hard-edge control chips ------------------------------------------ */
+  .ui-ctl {
+    --ctl-face: var(--brand-primary);
+    --ctl-edge: var(--brand-primary-dark);
+    --ctl-ink: #ffffff;
+    --ctl-lift: var(--ui-ctl-lift);
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 0;
+    border-radius: var(--ui-radius-md);
+    background: var(--ctl-face);
+    color: var(--ctl-ink);
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 var(--ctl-lift) 0 0 var(--ctl-edge);
+    transform: translateY(0);
+    transition: transform 80ms ease, box-shadow 80ms ease, background-color 0.15s ease;
+  }
+
+  .ui-ctl:hover:not(:disabled) {
+    filter: brightness(1.05);
+  }
+
+  .ui-ctl:active:not(:disabled),
+  .ui-ctl[data-pressed="true"] {
+    transform: translateY(var(--ctl-lift));
+    box-shadow: 0 0 0 0 var(--ctl-edge);
+  }
+
+  .ui-ctl:focus-visible {
+    outline: none;
+    box-shadow:
+      0 var(--ctl-lift) 0 0 var(--ctl-edge),
+      0 0 0 3px color-mix(in srgb, var(--brand-primary) 45%, transparent);
+  }
+
+  .ui-ctl:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .ui-ctl-primary {
+    --ctl-face: var(--brand-primary);
+    --ctl-edge: var(--brand-primary-dark);
+    --ctl-ink: #ffffff;
+  }
+
+  .ui-ctl-neutral {
+    --ctl-face: var(--neutral);
+    --ctl-edge: var(--neutral-dark);
+    --ctl-ink: #ffffff;
+  }
+
+  .ui-ctl-danger {
+    --ctl-face: var(--brand-accent);
+    --ctl-edge: var(--accent-dark);
+    --ctl-ink: #ffffff;
+  }
+
+  .ui-ctl-sm {
+    height: 40px;
+    padding: 0 12px;
+    font-size: 0.875rem;
+  }
+
+  .ui-ctl-md {
+    height: 48px;
+    padding: 0 16px;
+    font-size: 0.9375rem;
+  }
+
+  .ui-ctl-icon {
+    width: 48px;
+    padding: 0;
+  }
+
+  /* A split control (action + chevron) has to sink as one block. */
+  .ui-ctl-group {
+    display: inline-flex;
+    align-items: stretch;
+    transform: translateY(0);
+    transition: transform 80ms ease;
+  }
+
+  .ui-ctl-group > .ui-ctl {
+    border-radius: 0;
+  }
+
+  .ui-ctl-group > .ui-ctl:first-child {
+    border-radius: var(--ui-radius-md) 0 0 var(--ui-radius-md);
+  }
+
+  .ui-ctl-group > .ui-ctl:last-child {
+    border-radius: 0 var(--ui-radius-md) var(--ui-radius-md) 0;
+  }
+
+  .ui-ctl-group > .ui-ctl:only-child {
+    border-radius: var(--ui-radius-md);
+  }
+
+  .ui-ctl-group > .ui-ctl:active:not(:disabled) {
+    transform: none;
+  }
+
+  .ui-ctl-group:has(> .ui-ctl:active:not(:disabled)) {
+    transform: translateY(var(--ui-ctl-lift));
+  }
+
+  .ui-ctl-group:has(> .ui-ctl:active:not(:disabled)) > .ui-ctl {
+    box-shadow: 0 0 0 0 var(--ctl-edge);
+  }
+
+  /* Oversized tile (the profile square on the button sheet). */
+  .ui-tile {
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 30px;
+    background: var(--brand-primary);
+    color: #ffffff;
+    cursor: pointer;
+    box-shadow:
+      0 0 0 var(--ui-btn-ring-w) var(--ui-btn-ring),
+      0 12px 20px rgba(var(--shadow-rgb), 0.26);
+    transform: translateY(0);
+    transition: transform 90ms ease, box-shadow 90ms ease;
+  }
+
+  .ui-tile:active {
+    transform: translateY(5px);
+    box-shadow:
+      0 0 0 var(--ui-btn-ring-w) var(--ui-btn-ring),
+      0 3px 8px rgba(var(--shadow-rgb), 0.22);
+  }
 }
 
 .account-settings-page .text-sm {
@@ -579,7 +817,7 @@ textarea::placeholder {
 .lp-page {
   --lp-navy: #444444;
   --lp-cream: #fff4cd;
-  --lp-bg: #fffdf9;
+  --lp-bg: #fff9f4;
   position: relative;
   min-height: 100vh;
   padding-top: 82px;
@@ -1944,4 +2182,119 @@ textarea::placeholder {
   .hero-art::before {
     opacity: 0.08;
   }
+}
+
+/* ==========================================================================
+   ver0.2 preview scope
+   Only /dev/design-guideline uses this, so the retired dark system can still
+   be shown next to ver0.3. Nothing in the product should carry .ui-v02.
+   ========================================================================== */
+.ui-v02 {
+  --bg: #252423;
+  --surface: #494746;
+  --surface-ring: transparent;
+  --primary: #7c6ae6;
+  --primary-light: #ac9eff;
+  --primary-dark: #6248f7;
+  --secondary: #00e5ff;
+  --accent: #ff3b5c;
+  --accent-dark: #c62742;
+  --neutral: #6b6867;
+  --neutral-dark: #514f4e;
+  --track: #3a3837;
+  --placeholder: #5f5d5c;
+  --text: #ededed;
+  --text-sub: #a3a09e;
+  --shadow-rgb: 0, 0, 0;
+
+  --background: var(--bg);
+  --foreground: var(--text);
+  --brand-bg-900: var(--bg);
+  --brand-bg-800: color-mix(in srgb, var(--bg) 72%, var(--surface) 28%);
+  --brand-surface: var(--surface);
+  --brand-surface-soft: color-mix(in srgb, var(--surface) 82%, #ffffff 18%);
+  --brand-primary: var(--primary);
+  --brand-primary-light: var(--primary-light);
+  --brand-primary-dark: var(--primary-dark);
+  --brand-secondary: var(--secondary);
+  --brand-accent: var(--accent);
+  --brand-text: var(--text);
+  --brand-text-muted: var(--text-sub);
+  --ui-shadow-1: 0 8px 24px rgba(0, 0, 0, 0.2);
+  --ui-shadow-2: 0 14px 36px rgba(0, 0, 0, 0.28);
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* ver0.2 buttons were flat: no ring, no thickness, no press travel. */
+.ui-v02 .ui-btn {
+  border-radius: var(--ui-radius-sm);
+  box-shadow: none;
+  transform: none;
+}
+
+.ui-v02 .ui-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.ui-v02 .ui-btn:active:not(:disabled),
+.ui-v02 .ui-btn:focus-visible,
+.ui-v02 .ui-btn:disabled {
+  transform: none;
+  box-shadow: none;
+}
+
+.ui-v02 .ui-btn-md { height: 42px; padding: 0 16px; }
+.ui-v02 .ui-btn-sm { height: 36px; padding: 0 12px; }
+.ui-v02 .ui-btn-primary { background: var(--brand-primary); color: #fff; }
+.ui-v02 .ui-btn-secondary { background: var(--brand-secondary); color: #000; }
+.ui-v02 .ui-btn-ghost { background: var(--brand-bg-900); color: var(--brand-text-muted); }
+.ui-v02 .ui-btn-soft { background: color-mix(in srgb, var(--brand-primary) 18%, transparent); color: var(--brand-primary); }
+.ui-v02 .ui-btn-danger { background: color-mix(in srgb, var(--brand-accent) 16%, transparent); color: var(--brand-accent); }
+.ui-v02 .ui-btn-success { background: color-mix(in srgb, #22c55e 85%, #16a34a 15%); color: #fff; }
+
+/* ver0.2 session card: dark frame, no white outline, no drop shadow. */
+.ui-v02 .aiment-session-card {
+  --card-ring: transparent;
+  --card-ring-w: 0px;
+  --card-surface: var(--brand-surface);
+  --card-track: color-mix(in srgb, var(--card-surface) 28%, var(--card-bg) 72%);
+}
+
+.ui-v02 .aiment-session-card__media-shell { filter: none; }
+.ui-v02 .aiment-session-card__frame { background: var(--card-surface); }
+.ui-v02 .aiment-session-card__frame::before { content: none; }
+.ui-v02 .aiment-session-card__bar { border-radius: 14px 22px 0 0; }
+.ui-v02 .aiment-session-card__level {
+  border-radius: clamp(4px, 1.3cqw, 6px);
+  background: var(--card-secondary);
+  box-shadow: none;
+  color: var(--card-bg);
+}
+.ui-v02 .aiment-session-card__ajl-label { color: var(--card-secondary); }
+.ui-v02 .aiment-session-card__spots,
+.ui-v02 .aiment-session-card__detail { color: var(--brand-text); }
+.ui-v02 .aiment-session-card__detail { background: var(--brand-primary-dark); }
+.ui-v02 .aiment-session-card__detail::before { content: none; }
+.ui-v02 .aiment-session-card__image { background: var(--card-surface); }
+.ui-v02 .aiment-session-card__avatar { background: var(--brand-surface-soft); color: var(--card-bg); }
+
+/* /dev/design-guideline forces the card hover state so both states can be
+   shown side by side, the same way the ver0.3 mockup presents them. */
+.card-hover-preview .aiment-session-card__progress {
+  opacity: 0;
+}
+
+.card-hover-preview .aiment-session-card__hover-meta {
+  opacity: 1;
+  transform: translateY(-50%);
+}
+
+.card-hover-preview .aiment-session-card__detail {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.card-hover-preview .aiment-session-card__image img {
+  transform: scale(1.025);
 }

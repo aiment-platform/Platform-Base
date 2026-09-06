@@ -10,7 +10,6 @@ import { useI18n } from "../../lib/i18n";
 import { useUserSession } from "../../lib/userSession";
 import { buttonClassName } from "../ui/Button";
 import { HomeSearchInput } from "./HomeSearchInput";
-import { ThemeToggle } from "./ThemeToggle";
 
 type NavItem = {
   labelJp: string;
@@ -102,7 +101,6 @@ export function TopNav({ mode = "default", searchQuery, onSearchChange }: TopNav
             )}
 
             <div className="flex items-center gap-2">
-              <ThemeToggle />
               <div className="flex items-center rounded-lg bg-[var(--brand-bg-900)] p-1">
                 <button
                   onClick={() => setLocale("jp")}
@@ -139,7 +137,7 @@ export function TopNav({ mode = "default", searchQuery, onSearchChange }: TopNav
                   onClick={() => {
                     router.push("/studio/pre-live");
                   }}
-                  className={`hidden shadow-[var(--ui-shadow-1)] sm:inline-flex ${buttonClassName({ variant: "primary", size: "md" })}`}
+                  className={`hidden sm:inline-flex ${buttonClassName({ variant: "primary", size: "md" })}`}
                 >
                   <VideoCameraIcon className="h-5 w-5" aria-hidden />
                   <span>{tx("配信を作成", "Create Stream")}</span>

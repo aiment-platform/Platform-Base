@@ -8,7 +8,7 @@ import {
   ArrowDownCircleIcon,
   ArrowTopRightOnSquareIcon,
   ChatBubbleLeftRightIcon,
-  ChevronDownIcon,
+  ChevronUpIcon,
   MicrophoneIcon,
   PaperAirplaneIcon,
   PlayIcon,
@@ -161,22 +161,20 @@ type CircleControlProps = {
   onToggle: () => void;
 };
 
-function CircleControl({ icon: Icon, offIcon: OffIcon, slashedWhenOff, on, onToggle }: CircleControlProps) {
+function CircleControl({ label, icon: Icon, offIcon: OffIcon, slashedWhenOff, on, onToggle }: CircleControlProps) {
   const CurrentIcon = on ? Icon : (OffIcon ?? Icon);
   return (
     <button
       onClick={onToggle}
-      className={`flex h-14 w-14 items-center justify-center rounded-full transition-colors ${
-        on
-          ? "bg-[var(--brand-primary)] text-white"
-          : "bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)]"
-      }`}
+      aria-pressed={on}
+      aria-label={label}
+      className={`ui-ctl ui-ctl-md ui-ctl-icon ${on ? "ui-ctl-primary" : "ui-ctl-neutral"}`}
     >
       <span className="relative flex h-6 w-6 items-center justify-center">
         <CurrentIcon className="h-6 w-6" aria-hidden />
         {!on && slashedWhenOff && (
           <>
-            <span className="pointer-events-none absolute h-7 w-[5px] -rotate-45 rounded-full bg-black" aria-hidden />
+            <span className="pointer-events-none absolute h-7 w-[5px] -rotate-45 rounded-full bg-[var(--ctl-face)]" aria-hidden />
             <span className="pointer-events-none absolute h-7 w-[2px] -rotate-45 rounded-full bg-current" aria-hidden />
           </>
         )}
@@ -390,7 +388,7 @@ function SpeakerOverlayLauncher({
         type="button"
         onClick={() => void openOverlay()}
         aria-label={tx("スピーカーパネルを開く", "Open speaker panel")}
-        className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--brand-secondary)] px-3 text-xs font-extrabold text-black transition-transform hover:-translate-y-0.5"
+        className="ui-btn ui-btn-sm ui-btn-primary text-xs"
       >
         <ArrowTopRightOnSquareIcon className="h-5 w-5" aria-hidden />
         <span>{tx("スピーカー一覧", "Speakers")}</span>
@@ -399,7 +397,7 @@ function SpeakerOverlayLauncher({
         </span>
       </button>
       {error ? (
-        <p className="absolute left-0 top-11 z-20 w-[280px] rounded-lg bg-[var(--brand-accent)]/15 px-3 py-2 text-xs text-[var(--brand-accent)] shadow-lg shadow-black/25">
+        <p className="absolute left-0 top-11 z-20 w-[280px] rounded-lg bg-[var(--brand-accent)]/15 px-3 py-2 text-xs text-[var(--brand-accent)] shadow-lg shadow-black/10">
           {error}
         </p>
       ) : null}
@@ -1222,7 +1220,7 @@ export default function StudioLiveSessionPage() {
         <main className="mx-auto flex max-w-[900px] flex-col items-center gap-4 px-4 py-16 text-center">
           <h1 className="text-2xl font-bold">{tx("枠が見つかりません", "Session not found")}</h1>
           <p className="text-sm text-[var(--brand-text-muted)]">{tx("配信枠を先に作成してください。", "Create a stream session first.")}</p>
-          <Link href="/studio/pre-live" className="rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white">
+          <Link href="/studio/pre-live" className="ui-btn ui-btn-md ui-btn-primary">
             {tx("枠作成へ", "Go to Pre-live")}
           </Link>
         </main>
@@ -1270,7 +1268,7 @@ export default function StudioLiveSessionPage() {
             </div>
           </div>
 
-          <section className="rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/25">
+          <section className="rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/10">
             {/* 配信モニタ: OBS接続中は「視聴者に見えている映像」を主表示にする */}
             <div className="relative mx-auto max-w-[640px] overflow-hidden rounded-xl bg-[var(--brand-bg-900)]" style={{ aspectRatio: "16/9" }}>
               {/* OBSモニタ（視聴者の見え方）。音声はミュート（自分の遅延音エコー防止）。
@@ -1292,10 +1290,10 @@ export default function StudioLiveSessionPage() {
               />
               {/* カメラオフのプレースホルダ（OBS仮想カメラのデフォルト画面を出さない）。 */}
               {!monitorActive && !camOn && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--brand-bg-900)]">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--placeholder)]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/logo/aiment_logo_white.svg" alt="aiment" className="h-10 w-auto opacity-30" />
-                  <span className="text-sm font-semibold text-white/40">{tx("カメラオフ", "Camera off")}</span>
+                  <img src="/logo/aiment_logo_white.svg" alt="aiment" className="h-10 w-auto opacity-70" />
+                  <span className="text-sm font-semibold text-white">{tx("カメラオフ", "Camera off")}</span>
                 </div>
               )}
               {monitorActive && (
@@ -1330,7 +1328,8 @@ export default function StudioLiveSessionPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center justify-center gap-2">
-                  <div className="relative inline-flex items-center rounded-full bg-[var(--brand-surface)]">
+                  <div className="relative">
+                    <div className="ui-ctl-group">
                     <CircleControl label="MIC" icon={MicrophoneIcon} slashedWhenOff on={micOn} onToggle={handleMicToggle} />
                     <button
                       type="button"
@@ -1339,12 +1338,13 @@ export default function StudioLiveSessionPage() {
                         setShowCamMenu(false);
                       }}
                       aria-label={tx("マイク入力を選択", "Select microphone input")}
-                      className="flex h-14 w-9 items-center justify-center rounded-r-full border-l border-black/20 text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+                      className="ui-ctl ui-ctl-md ui-ctl-neutral w-9 px-0"
                     >
-                      <ChevronDownIcon className="h-4 w-4" aria-hidden />
+                      <ChevronUpIcon className="h-4 w-4" aria-hidden />
                     </button>
+                    </div>
                     {showMicMenu ? (
-                      <div className="absolute bottom-16 left-0 z-20 min-w-[240px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/35">
+                      <div className="absolute bottom-16 left-0 z-20 min-w-[240px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/10 ring-1 ring-black/5">
                         {audioDevices.length === 0 ? (
                           <p className="px-3 py-2 text-sm text-[var(--brand-text-muted)]">{tx("マイクが見つかりません", "No microphone found")}</p>
                         ) : (
@@ -1370,7 +1370,8 @@ export default function StudioLiveSessionPage() {
                     ) : null}
                   </div>
 
-                  <div className="relative inline-flex items-center rounded-full bg-[var(--brand-surface)]">
+                  <div className="relative">
+                    <div className="ui-ctl-group">
                     <CircleControl label="CAM" icon={VideoCameraIcon} offIcon={VideoCameraSlashIcon} on={camOn} onToggle={handleCamToggle} />
                     <button
                       type="button"
@@ -1379,12 +1380,13 @@ export default function StudioLiveSessionPage() {
                         setShowMicMenu(false);
                       }}
                       aria-label={tx("カメラ入力を選択", "Select camera input")}
-                      className="flex h-14 w-9 items-center justify-center rounded-r-full border-l border-black/20 text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+                      className="ui-ctl ui-ctl-md ui-ctl-neutral w-9 px-0"
                     >
-                      <ChevronDownIcon className="h-4 w-4" aria-hidden />
+                      <ChevronUpIcon className="h-4 w-4" aria-hidden />
                     </button>
+                    </div>
                     {showCamMenu ? (
-                      <div className="absolute bottom-16 left-0 z-20 min-w-[240px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/35">
+                      <div className="absolute bottom-16 left-0 z-20 min-w-[240px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/10 ring-1 ring-black/5">
                         {videoDevices.length === 0 ? (
                           <p className="px-3 py-2 text-sm text-[var(--brand-text-muted)]">{tx("カメラが見つかりません", "No camera found")}</p>
                         ) : (
@@ -1421,11 +1423,7 @@ export default function StudioLiveSessionPage() {
                   }
                   disabled={!isLive && !obsConnected && connectionStatus === "idle"}
                   title={!isLive && !obsConnected ? tx("OBSを先に接続してください", "Connect OBS first") : undefined}
-                  className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-extrabold disabled:opacity-50 ${
-                    isLive
-                      ? "bg-[var(--brand-accent)] text-[var(--brand-text)] shadow-[0_10px_24px_rgba(255,59,92,0.25)]"
-                      : "bg-[var(--brand-primary)] text-white shadow-[0_10px_24px_rgba(124,106,230,0.4)]"
-                  }`}
+                  className={`ui-btn ui-btn-md ${isLive ? "ui-btn-danger" : "ui-btn-primary"}`}
                 >
                   {isLive ? <StopIcon className="h-4 w-4" aria-hidden /> : <PlayIcon className="h-4 w-4" aria-hidden />}
                   {isLive ? tx("配信終了", "Stop Stream") : tx("配信開始", "Start Stream")}
@@ -1435,7 +1433,7 @@ export default function StudioLiveSessionPage() {
             </div>
           </section>
 
-          <section className="rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/25">
+          <section className="rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/10">
             <h2 className="mb-2 text-xs font-semibold tracking-wide text-[var(--brand-text-muted)]">{tx("配信設定", "Stream Settings")}</h2>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
@@ -1463,7 +1461,7 @@ export default function StudioLiveSessionPage() {
         </section>
 
         <aside className="sticky top-4 max-h-[calc(100vh-88px)] self-start space-y-3 overflow-y-auto pr-1">
-          <section className="rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/25">
+          <section className="rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/10">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs font-semibold text-[var(--brand-text-muted)]">{tx("スピーカー予約", "Speaker Reservations")}</p>
               <span className="rounded-full bg-[var(--brand-primary)]/20 px-2 py-0.5 text-[10px] font-bold text-[var(--brand-primary)]">
@@ -1486,8 +1484,8 @@ export default function StudioLiveSessionPage() {
             )}
           </section>
 
-          <section className="flex h-[520px] flex-col overflow-hidden rounded-2xl bg-[var(--brand-surface)] shadow-lg shadow-black/25">
-            <div className="border-b border-black/20 px-3 py-2">
+          <section className="flex h-[520px] flex-col overflow-hidden rounded-2xl bg-[var(--brand-surface)] shadow-lg shadow-black/10">
+            <div className="border-b border-black/8 px-3 py-2">
               <p className="inline-flex items-center gap-1.5 text-sm font-semibold">
                 <ChatBubbleLeftRightIcon className="h-4 w-4" aria-hidden />
                 {tx("配信者チャット", "Host Chat")}
@@ -1506,7 +1504,7 @@ export default function StudioLiveSessionPage() {
                         <button
                           type="button"
                           onClick={() => retractChatMessage(m.id)}
-                          className="rounded-full bg-[var(--brand-surface)] px-2 py-0.5 text-[10px] font-bold text-[var(--brand-text-muted)] hover:text-[var(--brand-accent)]"
+                          className="rounded-full bg-[var(--brand-bg-900)] px-2 py-0.5 text-[10px] font-bold text-[var(--brand-text-muted)] ring-1 ring-black/5 hover:text-[var(--brand-accent)]"
                         >
                           {tx("取消", "Undo")}
                         </button>
@@ -1530,13 +1528,13 @@ export default function StudioLiveSessionPage() {
                   type="button"
                   onClick={() => scrollChatToBottom("smooth")}
                   aria-label={tx("最新コメントへ移動", "Jump to latest comments")}
-                  className="absolute bottom-3 right-3 z-10 rounded-full bg-[var(--brand-primary)] px-3 py-2 text-sm font-bold text-white shadow-lg shadow-black/25"
+                  className="ui-btn ui-btn-sm ui-btn-primary absolute bottom-3 right-3 z-10 h-10 w-10 rounded-full p-0"
                 >
                   <ArrowDownCircleIcon className="h-5 w-5" aria-hidden />
                 </button>
               )}
             </div>
-            <div className="border-t border-black/20 p-3">
+            <div className="border-t border-black/8 p-3">
               <div className="flex gap-2">
                 <input
                   value={chatInput}
@@ -1549,7 +1547,7 @@ export default function StudioLiveSessionPage() {
                   placeholder={tx("告知・案内を入力", "Type announcement")}
                   className="flex-1 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-sm text-[var(--brand-text)] outline-none placeholder:text-[var(--brand-text-muted)]"
                 />
-                <button onClick={sendChat} className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white">
+                <button onClick={sendChat} className="ui-btn ui-btn-sm ui-btn-primary">
                   <PaperAirplaneIcon className="h-4 w-4" aria-hidden />
                   {tx("送信", "Send")}
                 </button>
@@ -1566,7 +1564,7 @@ export default function StudioLiveSessionPage() {
 
       {showStopConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-[var(--brand-surface)] p-6 shadow-2xl shadow-black/50">
+          <div className="w-full max-w-sm rounded-2xl bg-[var(--brand-surface)] p-6 shadow-2xl shadow-black/20">
             <h2 className="text-base font-bold text-[var(--brand-text)]">
               {tx("配信を停止しますか？", "Stop the stream?")}
             </h2>
@@ -1579,7 +1577,7 @@ export default function StudioLiveSessionPage() {
             <div className="mt-5 flex gap-3">
               <button
                 onClick={() => setShowStopConfirm(false)}
-                className="flex-1 rounded-xl bg-[var(--brand-bg-900)] px-4 py-2.5 text-sm font-semibold text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+                className="ui-btn ui-btn-md ui-btn-ghost flex-1"
               >
                 {tx("キャンセル", "Cancel")}
               </button>
@@ -1588,7 +1586,7 @@ export default function StudioLiveSessionPage() {
                   setShowStopConfirm(false);
                   void stopBroadcast();
                 }}
-                className="flex-1 rounded-xl bg-[var(--brand-accent)] px-4 py-2.5 text-sm font-extrabold text-white"
+                className="ui-btn ui-btn-md ui-btn-danger flex-1"
               >
                 {tx("配信を停止する", "Stop Stream")}
               </button>

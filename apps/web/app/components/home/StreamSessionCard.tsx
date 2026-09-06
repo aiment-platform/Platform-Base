@@ -44,7 +44,15 @@ export function StreamSessionCard({
   return (
     <div
       className="aiment-session-card group text-left"
-      style={{ "--slot-progress": slotProgress, "--slot-color": slotColor } as CSSProperties & Record<"--slot-progress" | "--slot-color", string>}
+      style={
+        {
+          "--slot-progress": slotProgress,
+          "--slot-color": slotColor,
+          // 難易度バッジはレベルごとに色が変わる（面と、その下に覗く厚み）。
+          "--level-face": ajl.color,
+          "--level-drop": ajl.dropColor,
+        } as CSSProperties & Record<"--slot-progress" | "--slot-color" | "--level-face" | "--level-drop", string>
+      }
     >
       <button type="button" onClick={onOpen} className="aiment-session-card__hitbox">
         <span className="aiment-session-card__media-shell">
@@ -57,7 +65,9 @@ export function StreamSessionCard({
             <span className="aiment-session-card__ajl-label">{ajl.label}</span>
             <span className="aiment-session-card__spots">{slotsLeft}/{slotsTotal} left</span>
           </span>
-          <span className="aiment-session-card__detail">detail</span>
+          <span className="aiment-session-card__detail">
+            <span className="aiment-session-card__detail-label">detail</span>
+          </span>
           <span className="aiment-session-card__image">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={thumbnail} alt={title} />

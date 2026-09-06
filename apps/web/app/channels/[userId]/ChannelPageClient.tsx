@@ -64,7 +64,7 @@ function SessionCard({
         <h3 className="line-clamp-2 text-sm font-bold text-[var(--brand-text)]">{session.title}</h3>
         <div className="flex flex-wrap items-center gap-1.5">
           <p className="rounded-lg bg-[var(--brand-bg-900)] px-2 py-1 text-[10px] font-bold text-[var(--brand-text)]">{formatDate(session.startsAt)}</p>
-          <p className="rounded-lg bg-[var(--brand-secondary)]/20 px-2 py-1 text-[10px] font-black text-[var(--brand-secondary)]">AJL {ajl.level}</p>
+          <p className="rounded-lg bg-[var(--brand-secondary)]/40 px-2 py-1 text-[10px] font-black text-[var(--brand-text)]">AJL {ajl.level}</p>
           <p className="rounded-lg bg-[var(--brand-bg-900)] px-2 py-1 text-[10px] font-bold text-[var(--brand-text-muted)]">{spotsLeft}/{spotsTotal}</p>
         </div>
         <div className="flex items-center justify-between">

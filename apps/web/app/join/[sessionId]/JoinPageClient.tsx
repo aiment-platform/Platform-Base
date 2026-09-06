@@ -508,7 +508,7 @@ export function JoinPageClient() {
               <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-bg-900)] via-[var(--brand-bg-900)]/42 to-[var(--brand-bg-900)]/10" />
               <div className="absolute left-4 top-4 flex flex-wrap gap-2">
                 <span className="rounded-full bg-black/62 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-md">{tx("共有用レッスンページ", "Shareable lesson page")}</span>
-                <span className="rounded-full bg-[var(--brand-secondary)] px-3 py-1.5 text-xs font-black text-black">AJL {ajl.level}</span>
+                <span className="rounded-full bg-[var(--brand-secondary)] px-3 py-1.5 text-xs font-black text-[var(--brand-text)]">AJL {ajl.level}</span>
               </div>
               <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-7 lg:p-8">
                 <div className="max-w-4xl">
