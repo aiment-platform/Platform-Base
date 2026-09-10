@@ -430,7 +430,7 @@ export default function ChannelPage() {
                               </div>
                               <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
                                 active
-                                  ? "bg-[var(--brand-secondary)]/18 text-[var(--brand-secondary)]"
+                                  ? "bg-[var(--brand-secondary)]/40 text-[var(--brand-text)]"
                                   : "bg-[var(--brand-surface)] text-[var(--brand-text-muted)]"
                               }`}>
                                 {active ? tx("使用可能", "Active") : tx("使用済み", "Used")}

@@ -25,19 +25,19 @@ export default function AdminDashboardPage() {
   return (
     <div className="p-8">
       <h1 className="mb-1 text-2xl font-bold">ダッシュボード</h1>
-      <p className="mb-8 text-sm text-white/40">管理者メニュー</p>
+      <p className="mb-8 text-sm text-[var(--brand-text-muted)]">管理者メニュー</p>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {CARDS.map(({ href, icon, title, desc }) => (
           <Link
             key={href}
             href={href}
-            className="group flex flex-col gap-3 rounded-2xl border border-white/8 bg-white/4 p-5 transition-colors hover:border-purple-500/40 hover:bg-purple-500/8"
+            className="group flex flex-col gap-3 rounded-2xl border border-black/[0.06] bg-black/[0.03] p-5 transition-colors hover:border-[var(--brand-primary)]/40 hover:bg-[var(--brand-primary)]/10"
           >
             <span className="text-2xl leading-none">{icon}</span>
             <div>
-              <p className="font-semibold group-hover:text-purple-300">{title}</p>
-              <p className="mt-1 text-xs leading-relaxed text-white/40">{desc}</p>
+              <p className="font-semibold group-hover:text-[var(--brand-primary)]">{title}</p>
+              <p className="mt-1 text-xs leading-relaxed text-[var(--brand-text-muted)]">{desc}</p>
             </div>
           </Link>
         ))}

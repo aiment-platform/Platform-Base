@@ -112,7 +112,7 @@ export function MySessionsManager({ title, description, showCreateButton = true,
                   <span className="rounded-md bg-[var(--brand-bg-900)] px-2 py-0.5 text-[10px] font-bold text-[var(--brand-text)]">
                     {formatSessionStartTime(session.startsAt)}
                   </span>
-                  <span className="rounded-md bg-[var(--brand-secondary)]/20 px-2 py-0.5 text-[10px] font-black text-[var(--brand-secondary)]">
+                  <span className="rounded-md bg-[var(--brand-secondary)]/40 px-2 py-0.5 text-[10px] font-black text-[var(--brand-text)]">
                     AJL {ajl.level}
                   </span>
                   <span className="text-[10px] text-[var(--brand-text-muted)]">{session.category}</span>

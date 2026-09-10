@@ -46,7 +46,7 @@ export default function AdminReservationsPage() {
   return (
     <div className="p-8">
       <h1 className="mb-1 text-2xl font-bold">予約者一覧</h1>
-      <p className="mb-6 text-sm text-white/40">セッション ID で予約者を検索</p>
+      <p className="mb-6 text-sm text-[var(--brand-text-muted)]">セッション ID で予約者を検索</p>
 
       <div className="mb-6 flex gap-2">
         <input
@@ -54,25 +54,25 @@ export default function AdminReservationsPage() {
           onChange={(e) => setSessionId(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") void search(); }}
           placeholder="Session ID"
-          className="flex-1 rounded-xl bg-white/10 px-4 py-2.5 text-sm outline-none placeholder:text-white/30 focus:ring-2 focus:ring-purple-500"
+          className="flex-1 rounded-xl bg-black/[0.06] px-4 py-2.5 text-sm outline-none placeholder:text-[var(--brand-text-muted)] focus:ring-2 focus:ring-[var(--brand-primary)]"
         />
         <button
           type="button"
           onClick={() => void search()}
           disabled={loading || !sessionId.trim()}
-          className="rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50"
+          className="ui-btn ui-btn-md ui-btn-primary"
         >
           {loading ? "検索中..." : "検索"}
         </button>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-xl bg-red-500/15 px-4 py-3 text-sm text-red-400">{error}</div>
+        <div className="mb-4 rounded-xl bg-[var(--brand-accent)]/15 px-4 py-3 text-sm text-[var(--brand-accent)]">{error}</div>
       )}
 
       {searched && (
         <div className="space-y-4">
-          <p className="text-xs text-white/50">
+          <p className="text-xs text-[var(--brand-text-muted)]">
             スピーカー: {speakers.length} / リスナー: {listeners.length} / キャンセル: {cancelled.length}
           </p>
 
@@ -92,7 +92,7 @@ export default function AdminReservationsPage() {
             </Section>
           )}
           {reservations.length === 0 && (
-            <p className="rounded-xl bg-white/5 px-4 py-8 text-center text-sm text-white/40">
+            <p className="rounded-xl bg-black/[0.04] px-4 py-8 text-center text-sm text-[var(--brand-text-muted)]">
               予約者はまだいません。
             </p>
           )}
@@ -105,7 +105,7 @@ export default function AdminReservationsPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/40">{title}</p>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--brand-text-muted)]">{title}</p>
       <div className="space-y-1.5">{children}</div>
     </div>
   );
@@ -114,18 +114,18 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Row({ r }: { r: Reservation }) {
   const isPaid = Boolean(r.paymentIntentId);
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-white/5 px-4 py-2.5">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-sm font-bold text-purple-300">
+    <div className="flex items-center gap-3 rounded-xl bg-black/[0.04] px-4 py-2.5">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/15 text-sm font-bold text-[var(--brand-primary)]">
         {r.userName.charAt(0).toUpperCase()}
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold">{r.userName}</p>
-        <p className="font-mono text-[10px] text-white/30">{r.userId}</p>
+        <p className="font-mono text-[10px] text-[var(--brand-text-muted)]">{r.userId}</p>
       </div>
       <div className="shrink-0 text-right">
-        <p className="text-xs text-white/40">{formatDate(r.createdAt)}</p>
+        <p className="text-xs text-[var(--brand-text-muted)]">{formatDate(r.createdAt)}</p>
         {r.type === "speaker" && (
-          <span className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${isPaid ? "bg-green-500/20 text-green-400" : "bg-white/10 text-white/40"}`}>
+          <span className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${isPaid ? "bg-green-500/20 text-green-600" : "bg-black/[0.06] text-[var(--brand-text-muted)]"}`}>
             {isPaid ? "支払済" : "未払い"}
           </span>
         )}

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ChevronDownIcon,
+  ChevronUpIcon,
   MicrophoneIcon,
   VideoCameraIcon,
   VideoCameraSlashIcon,
@@ -232,10 +232,11 @@ export default function StudioPreLivePage() {
               <p className="text-xs text-[var(--brand-text-muted)]">{tx("配信前の設定を行ってください。", "Set up your stream before going live.")}</p>
             </div>
             <div className="relative flex items-center">
+              <div className="ui-btn-group">
               <button
                 onClick={() => void startBroadcastFlow()}
                 disabled={creating || uploadingThumbnail}
-                className="rounded-l-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-extrabold text-white shadow-[0_10px_26px_rgba(124,106,230,0.45)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                className="ui-btn ui-btn-md ui-btn-primary"
               >
                 {uploadingThumbnail
                   ? tx("画像アップロード中...", "Uploading image...")
@@ -248,13 +249,14 @@ export default function StudioPreLivePage() {
               <button
                 type="button"
                 onClick={() => setShowPublishMenu((v) => !v)}
-                className="rounded-r-xl border-l border-black/20 bg-[var(--brand-primary)] px-3 py-2.5 text-sm font-black text-white shadow-[0_10px_26px_rgba(124,106,230,0.45)]"
+                className="ui-btn ui-btn-md ui-btn-primary px-3"
                 aria-label={tx("配信モードを選択", "Select publish mode")}
               >
                 ▾
               </button>
+              </div>
               {showPublishMenu && (
-                <div className="absolute right-0 top-[44px] z-20 w-[220px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/40">
+                <div className="absolute right-0 top-[52px] z-20 w-[220px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/10 ring-1 ring-black/5">
                   <button
                     type="button"
                     onClick={() => { setPublishMode("go_live_now"); setShowPublishMenu(false); }}
@@ -280,7 +282,7 @@ export default function StudioPreLivePage() {
             </div>
           )}
 
-          <section className="min-h-0 flex-1 overflow-hidden rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/25">
+          <section className="min-h-0 flex-1 overflow-hidden rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/10">
             <h2 className="mb-2 text-xs font-semibold tracking-wide text-[var(--brand-text-muted)]">{tx("配信設定", "Stream Settings")}</h2>
             <div className="h-full overflow-y-auto pr-1">
               <div className="rounded-xl bg-[var(--brand-bg-900)]/28 p-3">
@@ -339,20 +341,19 @@ export default function StudioPreLivePage() {
                   <div className="grid gap-2 text-sm">
                     <span className="text-[var(--brand-text-muted)]">{tx("入力デバイス", "Input devices")}</span>
                     <div className="flex flex-wrap gap-2">
-                      <div className="relative inline-flex items-center rounded-full bg-[var(--brand-surface)]">
+                      <div className="relative">
+                        <div className="ui-ctl-group">
                         <button
                           type="button"
                           onClick={() => setMicOn((value) => !value)}
-                          className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors ${
-                            micOn ? "bg-[var(--brand-primary)] text-white" : "bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)]"
-                          }`}
+                          className={`ui-ctl ui-ctl-md ui-ctl-icon ${micOn ? "ui-ctl-primary" : "ui-ctl-neutral"}`}
                           aria-label={tx("マイクのオンオフ", "Toggle microphone")}
                         >
                           <span className="relative flex h-5 w-5 items-center justify-center">
                             <MicrophoneIcon className="h-5 w-5" aria-hidden />
                             {!micOn ? (
                               <>
-                                <span className="pointer-events-none absolute h-6 w-[5px] -rotate-45 rounded-full bg-black" aria-hidden />
+                                <span className="pointer-events-none absolute h-6 w-[5px] -rotate-45 rounded-full bg-[var(--ctl-face)]" aria-hidden />
                                 <span className="pointer-events-none absolute h-6 w-[2px] -rotate-45 rounded-full bg-current" aria-hidden />
                               </>
                             ) : null}
@@ -364,13 +365,14 @@ export default function StudioPreLivePage() {
                             setShowMicMenu((value) => !value);
                             setShowCamMenu(false);
                           }}
-                          className="flex h-11 w-8 items-center justify-center rounded-r-full border-l border-black/20 text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+                          className="ui-ctl ui-ctl-md ui-ctl-neutral w-8 px-0"
                           aria-label={tx("マイク入力を選択", "Select microphone input")}
                         >
-                          <ChevronDownIcon className="h-4 w-4" aria-hidden />
+                          <ChevronUpIcon className="h-4 w-4" aria-hidden />
                         </button>
+                        </div>
                         {showMicMenu ? (
-                          <div className="absolute left-0 top-12 z-20 min-w-[240px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/35">
+                          <div className="absolute left-0 top-[62px] z-20 min-w-[240px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/10 ring-1 ring-black/5">
                             {audioDevices.length === 0 ? (
                               <p className="px-3 py-2 text-sm text-[var(--brand-text-muted)]">{tx("マイクが見つかりません", "No microphone found")}</p>
                             ) : (
@@ -396,13 +398,12 @@ export default function StudioPreLivePage() {
                         ) : null}
                       </div>
 
-                      <div className="relative inline-flex items-center rounded-full bg-[var(--brand-surface)]">
+                      <div className="relative">
+                        <div className="ui-ctl-group">
                         <button
                           type="button"
                           onClick={() => setCamOn((value) => !value)}
-                          className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors ${
-                            camOn ? "bg-[var(--brand-primary)] text-white" : "bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)]"
-                          }`}
+                          className={`ui-ctl ui-ctl-md ui-ctl-icon ${camOn ? "ui-ctl-primary" : "ui-ctl-neutral"}`}
                           aria-label={tx("カメラのオンオフ", "Toggle camera")}
                         >
                           {camOn ? (
@@ -417,13 +418,14 @@ export default function StudioPreLivePage() {
                             setShowCamMenu((value) => !value);
                             setShowMicMenu(false);
                           }}
-                          className="flex h-11 w-8 items-center justify-center rounded-r-full border-l border-black/20 text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+                          className="ui-ctl ui-ctl-md ui-ctl-neutral w-8 px-0"
                           aria-label={tx("カメラ入力を選択", "Select camera input")}
                         >
-                          <ChevronDownIcon className="h-4 w-4" aria-hidden />
+                          <ChevronUpIcon className="h-4 w-4" aria-hidden />
                         </button>
+                        </div>
                         {showCamMenu ? (
-                          <div className="absolute left-0 top-12 z-20 min-w-[240px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/35">
+                          <div className="absolute left-0 top-[62px] z-20 min-w-[240px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/10 ring-1 ring-black/5">
                             {videoDevices.length === 0 ? (
                               <p className="px-3 py-2 text-sm text-[var(--brand-text-muted)]">{tx("カメラが見つかりません", "No camera found")}</p>
                             ) : (
@@ -502,10 +504,8 @@ export default function StudioPreLivePage() {
                               key={level.level}
                               type="button"
                               onClick={() => setJapaneseLevel(level.level)}
-                              className={`rounded-lg px-2 py-2 text-left transition-colors ${
-                                japaneseLevel === level.level
-                                  ? "bg-[var(--brand-primary)] text-white"
-                                  : "bg-[var(--brand-surface)] text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+                              className={`ui-btn ui-btn-sm h-auto flex-col items-start gap-0.5 rounded-[var(--ui-radius-md)] px-3 py-2 text-left ${
+                                japaneseLevel === level.level ? "ui-btn-primary" : "ui-btn-ghost"
                               }`}
                             >
                               <span className="block text-xs font-black">AJL {level.level}</span>
@@ -539,7 +539,7 @@ export default function StudioPreLivePage() {
 
         {/* Chat preview */}
         <aside className="flex min-h-0 flex-col overflow-hidden">
-          <section className="flex h-full min-h-[220px] flex-col overflow-hidden rounded-2xl bg-[var(--brand-surface)] shadow-lg shadow-black/25">
+          <section className="flex h-full min-h-[220px] flex-col overflow-hidden rounded-2xl bg-[var(--brand-surface)] shadow-lg shadow-black/10">
             <div className="border-b border-black/20 px-3 py-2">
               <p className="text-sm font-semibold">{tx("ライブチャット", "Live Chat")}</p>
             </div>
@@ -561,7 +561,7 @@ export default function StudioPreLivePage() {
                           <button
                             type="button"
                             onClick={() => retractNotice(notice.id)}
-                            className="rounded-full bg-[var(--brand-surface)] px-2 py-0.5 text-[10px] font-semibold text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+                            className="rounded-full bg-[var(--brand-bg-900)] px-2 py-0.5 text-[10px] font-semibold text-[var(--brand-text-muted)] ring-1 ring-black/5 hover:text-[var(--brand-accent)]"
                           >
                             {tx("取消", "Undo")}
                           </button>
@@ -579,7 +579,7 @@ export default function StudioPreLivePage() {
                 </div>
               )}
             </div>
-            <div className="border-t border-black/20 px-3 py-3">
+            <div className="border-t border-black/8 px-3 py-3">
               <div className="flex gap-2">
                 <input
                   value={chatInput}
@@ -592,7 +592,7 @@ export default function StudioPreLivePage() {
                   placeholder={tx("事前連絡を入力", "Type a pre-live notice")}
                   className="flex-1 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-sm text-[var(--brand-text)] outline-none placeholder:text-[var(--brand-text-muted)]"
                 />
-                <button onClick={sendNotice} className="rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white">
+                <button onClick={sendNotice} className="ui-btn ui-btn-sm ui-btn-primary">
                   {tx("送信", "Send")}
                 </button>
               </div>

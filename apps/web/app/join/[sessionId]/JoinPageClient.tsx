@@ -19,6 +19,7 @@ import { useI18n } from "../../lib/i18n";
 import { participationLabel } from "../../lib/labels";
 import { getStreamSession } from "../../lib/streamSessions";
 import { useUserSession } from "../../lib/userSession";
+import { useRouteTransition } from "../../components/ui/RouteTransition";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -184,6 +185,7 @@ function HelpTooltip({ label, body }: { label: string; body: string }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 export function JoinPageClient() {
   const router = useRouter();
+  const { navigate } = useRouteTransition();
   const { tx } = useI18n();
   const params = useParams<{ sessionId: string }>();
   const sessionId = params?.sessionId ?? "";
@@ -431,11 +433,12 @@ export function JoinPageClient() {
       mic: micOn ? "1" : "0",
       ...(selectedAudioDeviceId ? { micDeviceId: selectedAudioDeviceId } : {}),
     }).toString();
-    router.push(`/room/${roomId}?${query}`);
+    // 一覧ではなく別の文脈（配信ルーム）へ入るので、全画面で切り替える。
+    navigate(`/room/${roomId}?${query}`);
   };
 
   const watchNow = () => {
-    router.push(`/room/${encodeURIComponent(session.id)}?role=listener`);
+    navigate(`/room/${encodeURIComponent(session.id)}?role=listener`);
   };
 
   const session = useMemo<SessionMeta>(() => {
@@ -508,7 +511,7 @@ export function JoinPageClient() {
               <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-bg-900)] via-[var(--brand-bg-900)]/42 to-[var(--brand-bg-900)]/10" />
               <div className="absolute left-4 top-4 flex flex-wrap gap-2">
                 <span className="rounded-full bg-black/62 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-md">{tx("共有用レッスンページ", "Shareable lesson page")}</span>
-                <span className="rounded-full bg-[var(--brand-secondary)] px-3 py-1.5 text-xs font-black text-black">AJL {ajl.level}</span>
+                <span className="rounded-full bg-[var(--brand-secondary)] px-3 py-1.5 text-xs font-black text-[var(--brand-text)]">AJL {ajl.level}</span>
               </div>
               <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-7 lg:p-8">
                 <div className="max-w-4xl">
@@ -706,7 +709,7 @@ export function JoinPageClient() {
                 </p>
               </div>
               <button
-                onClick={() => router.push(`/room/${encodeURIComponent(session.id)}?role=speaker&mic=1`)}
+                onClick={() => navigate(`/room/${encodeURIComponent(session.id)}?role=speaker&mic=1`)}
                 className="w-full rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-bold text-white"
               >
                 {tx("スピーカーとして入室", "Enter as speaker")}

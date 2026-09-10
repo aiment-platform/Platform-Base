@@ -3,7 +3,7 @@
 import { ButtonHTMLAttributes, PropsWithChildren } from "react";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "soft" | "danger" | "success";
-type ButtonSize = "sm" | "md";
+type ButtonSize = "sm" | "md" | "lg";
 
 type UiButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
@@ -23,6 +23,7 @@ const VARIANT_CLASS: Record<ButtonVariant, string> = {
 const SIZE_CLASS: Record<ButtonSize, string> = {
   sm: "ui-btn-sm",
   md: "ui-btn-md",
+  lg: "ui-btn-lg",
 };
 
 export function buttonClassName({

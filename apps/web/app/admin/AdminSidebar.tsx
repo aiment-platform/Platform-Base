@@ -20,10 +20,10 @@ export default function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex w-52 shrink-0 flex-col border-r border-white/10 bg-[#0a0a10] p-4">
+    <aside className="flex w-52 shrink-0 flex-col border-r border-black/[0.08] bg-[var(--brand-surface)] p-4">
       <div className="mb-6">
-        <p className="text-xs font-bold uppercase tracking-widest text-purple-400">Admin</p>
-        <p className="text-[10px] text-white/30">Aiment Dashboard</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-[var(--brand-primary)]">Admin</p>
+        <p className="text-[10px] text-[var(--brand-text-muted)]">Aiment Dashboard</p>
       </div>
 
       <nav className="flex flex-col gap-0.5">
@@ -33,11 +33,11 @@ export default function AdminSidebar() {
             return (
               <span
                 key={href}
-                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-white/25"
+                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-[var(--brand-text-muted)]/70"
               >
                 <span className="text-base leading-none">{icon}</span>
                 {label}
-                <span className="ml-auto rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] text-white/30">
+                <span className="ml-auto rounded-full bg-black/[0.06] px-1.5 py-0.5 text-[9px] text-[var(--brand-text-muted)]">
                   準備中
                 </span>
               </span>
@@ -49,8 +49,8 @@ export default function AdminSidebar() {
               href={href}
               className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
                 active
-                  ? "bg-purple-600/20 font-semibold text-purple-300"
-                  : "text-white/60 hover:bg-white/5 hover:text-white"
+                  ? "bg-[var(--brand-primary)]/15 font-semibold text-[var(--brand-primary)]"
+                  : "text-[var(--brand-text-muted)] hover:bg-black/[0.04] hover:text-[var(--brand-text)]"
               }`}
             >
               <span className="text-base leading-none">{icon}</span>
