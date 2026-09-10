@@ -1,8 +1,10 @@
 "use client";
 
-import { ComponentType, SVGProps, useState, useSyncExternalStore } from "react";
+import { ComponentType, SVGProps, useEffect, useState, useSyncExternalStore } from "react";
 import { TopNav } from "../../components/home/TopNav";
 import { StreamSessionCard } from "../../components/home/StreamSessionCard";
+import { BrandProgressBar } from "../../components/ui/BrandProgressBar";
+import { BrandTransition } from "../../components/ui/BrandTransition";
 import { AJL_LEVELS } from "../../lib/ajl";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
@@ -244,6 +246,42 @@ function LevelBadgeShowcase() {
   );
 }
 
+function FullscreenTransition({ onDone }: { onDone: () => void }) {
+  useEffect(() => {
+    // demo は 入り→滞空→抜け でちょうど1周。抜けきってから畳む。
+    const timer = window.setTimeout(onDone, 5600);
+    return () => window.clearTimeout(timer);
+  }, [onDone]);
+
+  return (
+    <div className="fixed inset-0 z-[95] overflow-hidden" onClick={onDone} role="presentation">
+      <BrandTransition phase="demo" />
+    </div>
+  );
+}
+
+function TransitionShowcase() {
+  const [replayKey, setReplayKey] = useState(0);
+  const [fullscreen, setFullscreen] = useState(false);
+
+  return (
+    <>
+      <div className="h-[340px] overflow-hidden rounded-[var(--ui-radius-lg)]">
+        <BrandTransition key={replayKey} inline phase="demo" />
+      </div>
+      <div className="mt-3 flex flex-wrap gap-3">
+        <Button variant="secondary" onClick={() => setReplayKey((value) => value + 1)}>
+          頭から再生
+        </Button>
+        <Button variant="primary" onClick={() => setFullscreen(true)}>
+          全画面で確認
+        </Button>
+      </div>
+      {fullscreen ? <FullscreenTransition onDone={() => setFullscreen(false)} /> : null}
+    </>
+  );
+}
+
 function CardShowcase() {
   const noop = () => {};
   return (
@@ -264,6 +302,7 @@ function CardShowcase() {
 /* ver0.3                                                                      */
 /* -------------------------------------------------------------------------- */
 function GuidelineV03() {
+  const [segment, setSegment] = useState<"JP" | "EN">("JP");
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
   const [chatOn, setChatOn] = useState(true);
@@ -313,6 +352,42 @@ function GuidelineV03() {
               <Button variant="primary" disabled>
                 Disabled
               </Button>
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-text-muted)]">
+              Segmented（JP/EN などの切替）
+            </p>
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="ui-segment" role="group" aria-label="サンプル">
+                {(["JP", "EN"] as const).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setSegment(option)}
+                    aria-pressed={segment === option}
+                    className="ui-segment__option"
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-[var(--brand-text-muted)]">
+                実体は <span className="font-mono">LocaleSwitch</span>。溝の中で選択中のつまみだけが厚みを持つ
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-text-muted)]">Split（本体＋▾）</p>
+            <div className="ui-btn-group">
+              <button type="button" className="ui-btn ui-btn-md ui-btn-primary">
+                作成して開始
+              </button>
+              <button type="button" aria-label="モードを選択" className="ui-btn ui-btn-md ui-btn-primary px-3">
+                ▾
+              </button>
             </div>
           </div>
 
@@ -506,6 +581,38 @@ function GuidelineV03() {
           />
         </div>
       </Card>
+
+      <section className="lg:col-span-2">
+        <h2 className="text-lg font-bold">Page Transition</h2>
+        <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
+          ページ遷移のワイプ。紫の地に波と水玉を重ねた板が、右外から入り → しばらく滞空 → 左外へ抜けていく。
+        </p>
+        <div className="mt-4">
+          <TransitionShowcase />
+        </div>
+        <h3 className="mt-8 text-base font-bold">読み込みバー（画面を覆わない方）</h3>
+        <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
+          一覧から詳細へ移るときなど、元の画面が見えていた方が親切な遷移で使う。画面下に出るだけで操作も邪魔しない。
+        </p>
+        <div className="mt-3 h-[120px] overflow-hidden rounded-[var(--ui-radius-lg)]">
+          <BrandProgressBar inline />
+        </div>
+
+        <SectionNote
+          lines={[
+            "1. 入り 880ms / 滞空 / 抜け 590ms の3段。滞空はアニメを持たない状態なので待たせたいだけ待てる",
+            "2. 地・帯・水玉を1枚ずつ時間差で流す。ふちが波なので入り抜きの境目も波形になる",
+            "3. 地は左右のふちが波＋水玉のほつれ。静止位置では両ふちとも画面の外にあるのでべた塗りに見える",
+            "4. 帯 = Primary Light / Primary Dark / Primary+白の淡いラベンダー、地 = Primary",
+            "5. 水玉は帯がほどけたもの。ふち際は粒同士が重なってべた塗りになり、離れるほど分離して消える",
+            "6. 粒は1周でちょうど1マス送られ、奥で消えてふち側から補充される（無限に流れて見える）",
+            "7. ロゴはシンボルのみを白抜き（ロゴタイプは使わない）",
+            "8. RouteTransitionProvider がリンククリックを見て出す。コード側の遷移は useRouteTransition().navigate() から出す",
+            "9. 覆う wipe と、画面下だけの bar の2種類。bar は入り320ms / 抜け260msと短く、pointer-events も切ってある",
+            "10. prefers-reduced-motion では動きを止め、静止画として見せる",
+          ]}
+        />
+      </section>
 
       <section className="lg:col-span-2">
         <h2 className="text-lg font-bold">Stream Frame Style</h2>

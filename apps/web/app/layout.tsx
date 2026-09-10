@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { RouteTransitionProvider } from "./components/ui/RouteTransition";
 import { I18nProvider } from "./lib/i18n";
 import { UserSessionProvider } from "./lib/userSession";
 
@@ -44,7 +45,9 @@ export default function RootLayout({
     <html lang="ja" data-theme="light" style={{ colorScheme: "light" }}>
       <body className="antialiased">
         <UserSessionProvider>
-          <I18nProvider>{children}</I18nProvider>
+          <I18nProvider>
+            <RouteTransitionProvider>{children}</RouteTransitionProvider>
+          </I18nProvider>
         </UserSessionProvider>
       </body>
     </html>

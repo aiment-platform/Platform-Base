@@ -142,12 +142,19 @@ textarea {
 }
 
 .aiment-session-card {
-  --card-radius: 18px;
-  --card-bar-height: 15.1515%;
-  --card-bar-center: calc(var(--card-bar-height) / 2);
-  /* ver0.3: the frame is now a white outline and the bar is light purple. */
+  /* ver0.3: the frame is a white outline and the bar is light purple.
+     Everything below is derived from session_container.svg (594 x 396,
+     corner radius 24, right-hand section starts at y=60). The masked shape is
+     painted into the box inset by the ring, so the SVG landmarks must be
+     mapped through that inset — otherwise the thumbnail sits a couple of
+     pixels off the frame and its corners are rounded more than the card. */
   --card-ring: var(--surface-ring);
   --card-ring-w: 3px;
+  --card-inner-w: calc(100cqw - var(--card-ring-w) * 2);
+  --card-inner-h: calc(66.6667cqw - var(--card-ring-w) * 2);
+  --card-radius: calc(var(--card-inner-w) * 0.040404);
+  --card-bar-height: calc(var(--card-ring-w) + var(--card-inner-h) * 0.151515);
+  --card-bar-center: calc((var(--card-ring-w) + var(--card-bar-height)) / 2);
   --card-surface: var(--brand-primary-light);
   --card-bg: var(--brand-bg-900);
   --card-secondary: var(--brand-secondary);
@@ -216,24 +223,10 @@ textarea {
   -webkit-mask: url("/svg/session_container.svg") center / 100% 100% no-repeat;
 }
 
-.aiment-session-card__bar {
-  position: absolute;
-  left: var(--card-ring-w);
-  top: var(--card-ring-w);
-  z-index: 2;
-  height: calc(var(--card-bar-height) - var(--card-ring-w));
-  width: calc(100% - var(--card-ring-w) * 2);
-  background: var(--card-surface);
-  border-radius: 12px 20px 0 0;
-  clip-path: polygon(0 0, calc(100% - 44px) 0, calc(100% - 8px) 100%, 0 100%);
-}
-
 .aiment-session-card__level {
   position: absolute;
   left: clamp(8px, 2.6cqw, 10px);
-  /* Centre on the purple band, not on the bar box — the bar box includes the
-     card's white ring, which would push the badge onto the card edge. */
-  top: calc(var(--card-bar-center) + var(--card-ring-w) / 2);
+  top: var(--card-bar-center);
   z-index: 4;
   display: grid;
   height: clamp(14px, 5.86cqw, 22px);
@@ -466,13 +459,6 @@ textarea {
   white-space: nowrap;
 }
 
-@media (min-width: 1280px) {
-  .aiment-session-card {
-    --card-radius: 20px;
-  }
-
-}
-
 /* Enforce baseline typography: W6(SemiBold)+ across UI text */
 .font-thin,
 .font-extralight,
@@ -655,6 +641,96 @@ textarea::placeholder {
   .ui-btn-success {
     --btn-face: var(--brand-secondary);
     --btn-ink: var(--brand-text);
+  }
+
+  /* --- セグメント切替（JP/EN など） --------------------------------------
+     溝を掘った土台に、選択中のつまみだけが厚みを持って乗る。押すと沈む
+     ところまで .ui-ctl と同じ作法に揃えてある。 */
+  .ui-segment {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 3px;
+    border-radius: var(--ui-radius-pill);
+    background: var(--brand-bg-900);
+    box-shadow:
+      inset 0 2px 4px rgba(var(--shadow-rgb), 0.14),
+      0 0 0 var(--ui-btn-ring-w) var(--ui-btn-ring);
+  }
+
+  .ui-segment__option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 30px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: var(--ui-radius-pill);
+    background: transparent;
+    color: var(--brand-text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transform: translateY(0);
+    transition:
+      transform 90ms ease,
+      box-shadow 90ms ease,
+      background-color 140ms ease,
+      color 140ms ease;
+  }
+
+  .ui-segment__option:hover:not([aria-pressed="true"]) {
+    color: var(--brand-text);
+  }
+
+  .ui-segment__option[aria-pressed="true"] {
+    background: var(--brand-primary);
+    color: #ffffff;
+    box-shadow: 0 3px 0 0 var(--brand-primary-dark);
+    transform: translateY(-1px);
+  }
+
+  .ui-segment__option[aria-pressed="true"]:active {
+    box-shadow: 0 0 0 0 var(--brand-primary-dark);
+    transform: translateY(2px);
+  }
+
+  .ui-segment__option:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 45%, transparent);
+  }
+
+  /* --- 分割CTA（本体＋▾）。.ui-ctl-group のピル版 ------------------------ */
+  .ui-btn-group {
+    display: inline-flex;
+    align-items: stretch;
+    transform: translateY(0);
+    transition: transform 90ms ease;
+  }
+
+  .ui-btn-group > .ui-btn {
+    border-radius: 0;
+  }
+
+  .ui-btn-group > .ui-btn:first-child {
+    border-radius: var(--ui-radius-pill) 0 0 var(--ui-radius-pill);
+  }
+
+  .ui-btn-group > .ui-btn:last-child {
+    border-radius: 0 var(--ui-radius-pill) var(--ui-radius-pill) 0;
+    box-shadow:
+      inset 1px 0 0 rgba(255, 255, 255, 0.28),
+      0 0 0 var(--btn-ring-w) var(--btn-ring),
+      0 calc(var(--btn-lift) + 4px) 12px rgba(var(--shadow-rgb), 0.28);
+  }
+
+  .ui-btn-group > .ui-btn:active:not(:disabled) {
+    transform: none;
+  }
+
+  .ui-btn-group:has(> .ui-btn:active:not(:disabled)) {
+    transform: translateY(var(--ui-btn-lift));
   }
 
   /* --- hard-edge control chips ------------------------------------------ */
@@ -2264,7 +2340,6 @@ textarea::placeholder {
 .ui-v02 .aiment-session-card__media-shell { filter: none; }
 .ui-v02 .aiment-session-card__frame { background: var(--card-surface); }
 .ui-v02 .aiment-session-card__frame::before { content: none; }
-.ui-v02 .aiment-session-card__bar { border-radius: 14px 22px 0 0; }
 .ui-v02 .aiment-session-card__level {
   border-radius: clamp(4px, 1.3cqw, 6px);
   background: var(--card-secondary);
@@ -2297,4 +2372,322 @@ textarea::placeholder {
 
 .card-hover-preview .aiment-session-card__image img {
   transform: scale(1.025);
+}
+
+/* ==========================================================================
+   ver0.3 画面遷移トランジション（波形ワイプ）
+   四角い板ではなく、地・帯・水玉を1枚ずつ時間差で横に流す。ふちが波なので
+   入り抜きの境目も波形になり、パーツごとにばらけて動いて見える。
+   図形は BrandTransition.tsx 側が持っていて、ここでは色と時間だけを与える。
+   ========================================================================== */
+.brand-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  overflow: hidden;
+  place-items: center;
+  color: #ffffff;
+}
+
+.brand-transition--inline {
+  position: relative;
+  inset: auto;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+}
+
+.brand-transition--exit {
+  pointer-events: none;
+}
+
+.brand-transition__base,
+.brand-transition__decor {
+  position: absolute;
+  inset: -8%;
+  width: 116%;
+  height: 116%;
+}
+
+/* --- パーツごとの流し込み -------------------------------------------------
+   静止位置は 0。入りは右外(1750)から、抜けは左外(-2100)へ。
+   ディレイと尺をパーツごとに変えてあるので、動いている間はばらけ、
+   止まると設計どおりの絵に揃う。 */
+.bt-layer {
+  transform-box: view-box;
+  will-change: transform;
+}
+
+.bt-layer--base { --bt-in-delay: 0ms;   --bt-in-dur: 560ms; --bt-out-delay: 150ms; --bt-out-dur: 420ms; }
+.bt-layer--far  { --bt-in-delay: 70ms;  --bt-in-dur: 620ms; --bt-out-delay: 0ms;   --bt-out-dur: 330ms; }
+.bt-layer--mid  { --bt-in-delay: 120ms; --bt-in-dur: 660ms; --bt-out-delay: 20ms;  --bt-out-dur: 320ms; }
+.bt-layer--dark { --bt-in-delay: 150ms; --bt-in-dur: 640ms; --bt-out-delay: 40ms;  --bt-out-dur: 330ms; }
+.bt-layer--back { --bt-in-delay: 180ms; --bt-in-dur: 680ms; --bt-out-delay: 60ms;  --bt-out-dur: 350ms; }
+
+.brand-transition--enter .bt-layer {
+  animation: btLayerIn var(--bt-in-dur) cubic-bezier(0.22, 1, 0.36, 1) var(--bt-in-delay) both;
+}
+
+.brand-transition--exit .bt-layer {
+  animation: btLayerOut var(--bt-out-dur) cubic-bezier(0.55, 0, 1, 0.45) var(--bt-out-delay) both;
+}
+
+/* 確認用: 入り → 滞空 → 抜け → 少し空けて、を繰り返す */
+.brand-transition--demo .bt-layer {
+  animation: btLayerCycle 6s var(--bt-in-delay) infinite;
+}
+
+@keyframes btLayerIn {
+  from { transform: translateX(1750px); }
+  to { transform: translateX(0); }
+}
+
+@keyframes btLayerOut {
+  from { transform: translateX(0); }
+  to { transform: translateX(-2100px); }
+}
+
+@keyframes btLayerCycle {
+  0% {
+    transform: translateX(1750px);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  11% {
+    transform: translateX(0);
+    animation-timing-function: linear;
+  }
+  73% {
+    transform: translateX(0);
+    animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
+  }
+  81%, 100% {
+    transform: translateX(-2100px);
+  }
+}
+
+.bt-fill--base { fill: var(--brand-primary); }
+
+.bt-layer--far { opacity: 0.5; }
+
+.bt-fill--far { fill: color-mix(in srgb, var(--brand-primary) 20%, #ffffff); }
+
+.bt-fill--mid { fill: var(--brand-primary-light); }
+.bt-fill--dark { fill: var(--brand-primary-dark); }
+.bt-fill--back { fill: color-mix(in srgb, var(--brand-primary) 32%, #ffffff); }
+
+/* 滞空中も水玉だけは生きている。1周でちょうど1マスぶん隣へ送られ、同時に
+   隣のマスの大きさになる。1周後の絵は始まりの絵と一致するので、模様は
+   止まったまま粒だけが無限に流れていくように見える。
+   マス送りは全粒が同じ拍で動く必要があるので、ここではディレイを付けない。 */
+.bt-dot {
+  /* 粒は帯がほどけたものなので、必ず帯と同じ色にする。色が違うと
+     「繋がっている」ように見えない。 */
+  fill: var(--brand-primary-light);
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: btDotMarch var(--bt-dot-dur, 2.2s) linear infinite;
+}
+
+.bt-dot--far {
+  fill: color-mix(in srgb, var(--brand-primary) 20%, #ffffff);
+  --bt-dot-dur: 2.8s;
+}
+
+/* 地のふちのほつれ。地と同じ色にして、面が粒に分解していくように見せる。 */
+.bt-dot--fringe {
+  fill: var(--brand-primary);
+  --bt-dot-dur: 2.4s;
+}
+
+@keyframes btDotMarch {
+  from { transform: translateX(0) scale(1); }
+  to { transform: translateX(var(--bt-dx, 0px)) scale(var(--bt-to, 1)); }
+}
+
+/* ロゴは波より少し遅れて出ることで、波→中身の順に着地して見える。 */
+.brand-transition__center {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 20px;
+}
+
+.brand-transition--enter .brand-transition__center,
+.brand-transition--demo .brand-transition__center {
+  animation: btCenterIn 520ms cubic-bezier(0.2, 0.8, 0.2, 1) 260ms both;
+}
+
+.brand-transition--demo .brand-transition__center {
+  animation: btCenterCycle 6s 260ms infinite;
+}
+
+.brand-transition--exit .brand-transition__center {
+  animation: btCenterOut 240ms ease-in both;
+}
+
+@keyframes btCenterIn {
+  from { opacity: 0; transform: translateX(56px) scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes btCenterOut {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateX(-44px) scale(0.96); }
+}
+
+@keyframes btCenterCycle {
+  0% { opacity: 0; transform: translateX(56px) scale(0.94); }
+  12% { opacity: 1; transform: none; }
+  71% { opacity: 1; transform: none; }
+  78%, 100% { opacity: 0; transform: translateX(-44px) scale(0.96); }
+}
+
+.brand-transition__mark {
+  display: grid;
+  place-items: center;
+  animation: btBreathe 2.8s ease-in-out infinite;
+}
+
+.brand-transition__mark img {
+  display: block;
+  width: clamp(84px, 15vmin, 132px);
+  height: auto;
+  filter: brightness(0) invert(1);
+}
+
+@keyframes btBreathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.brand-transition__label {
+  display: inline-flex;
+  align-items: baseline;
+  margin: 0;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+.brand-transition__ellipsis {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 4px;
+}
+
+.brand-transition__ellipsis i {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.35;
+  animation: btDot 1.2s ease-in-out infinite;
+}
+
+.brand-transition__ellipsis i:nth-child(2) { animation-delay: 0.16s; }
+.brand-transition__ellipsis i:nth-child(3) { animation-delay: 0.32s; }
+
+@keyframes btDot {
+  0%, 60%, 100% { opacity: 0.35; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-transition .bt-layer,
+  .brand-transition .bt-dot,
+  .brand-transition__center,
+  .brand-transition__mark {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .brand-transition__ellipsis i {
+    animation: none !important;
+    opacity: 0.7;
+  }
+}
+
+/* ==========================================================================
+   ver0.3 読み込みバー（画面下）
+   全画面ワイプと違って覆わない。紫の帯の上ふちが波で、そこから水玉が
+   ほどけて上へ消えていく。帯ごと1周期ぶん横に流して先頭に戻すので、
+   模様は途切れず流れ続ける。
+   ========================================================================== */
+.route-bar {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 85;
+  height: clamp(72px, 7vw, 140px);
+  overflow: hidden;
+  /* 覆わないだけでなく、下にある要素の操作も邪魔しない */
+  pointer-events: none;
+}
+
+.route-bar--inline {
+  position: relative;
+  inset: auto;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--ui-radius-lg);
+}
+
+.route-bar--enter {
+  animation: rbIn 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.route-bar--exit {
+  animation: rbOut 260ms cubic-bezier(0.55, 0, 1, 0.45) both;
+}
+
+@keyframes rbIn {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes rbOut {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+
+.route-bar__scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* 1周期(600)ぶん流して先頭に戻す。巻き戻り位置が元の絵と一致するので継ぎ目なし。 */
+.rb-marquee {
+  transform-box: view-box;
+}
+
+.rb-marquee--back {
+  animation: rbFlow 5.2s linear infinite;
+}
+
+.rb-marquee--front {
+  animation: rbFlow 3.8s linear infinite;
+}
+
+@keyframes rbFlow {
+  from { transform: translateX(0); }
+  to { transform: translateX(-600px); }
+}
+
+.rb-fill--back { fill: var(--brand-primary-light); }
+.rb-fill--front { fill: var(--brand-primary); }
+
+@media (prefers-reduced-motion: reduce) {
+  .route-bar,
+  .route-bar .rb-marquee {
+    animation: none !important;
+    transform: none !important;
+  }
 }
