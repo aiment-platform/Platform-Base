@@ -2732,6 +2732,197 @@ textarea::placeholder {
   letter-spacing: 0.16em;
 }
 
+/* 縦のリズム。区画の余白はこの3つだけで決め、区画ごとに独自の値を持たない。
+   section-y … 区画の上下（隣り合う区画の間はこの2倍）
+   head-gap  … 見出しと本文の間
+   item-gap  … 本文の中の段落・項目の間 */
+.for-vtubers {
+  --fv-section-y: clamp(40px, 5vw, 80px);
+  --fv-head-gap: clamp(24px, 3vw, 44px);
+  --fv-item-gap: clamp(12px, 1.2vw, 20px);
+  /* 補足文の色。共通の --text-sub (#999) は白地で 2.85:1 しかなく本文には薄すぎるので、
+     このページでは本文色を少し薄めた色（約 4.6:1）を使う。 */
+  --fv-ink-soft: color-mix(in srgb, var(--brand-text) 78%, #ffffff);
+  /* 面の縁取り。浮かせる影は使わず、細い線1本だけで面を区切る。 */
+  --fv-line: color-mix(in srgb, var(--brand-text) 10%, transparent);
+}
+
+/* 段落の折り返しを整える（対応ブラウザだけ効き、未対応でも無害）。 */
+.for-vtubers p {
+  text-wrap: pretty;
+}
+
+/* まだ中身がないボタンに付ける小さな札。文字色から作るので、白でも紫でも馴染む。 */
+.for-vtubers-soon {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--ui-radius-pill);
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+}
+
+/* セッション映像の置き場。映像が入るまでの仮の枠。 */
+.for-vtubers-video {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  max-width: 960px;
+  margin-inline: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--ui-radius-lg);
+  background: color-mix(in srgb, var(--brand-text) 8%, var(--brand-surface));
+  color: color-mix(in srgb, var(--brand-text) 40%, transparent);
+}
+
+.for-vtubers-video > svg {
+  width: clamp(48px, 7vw, 80px);
+  height: clamp(48px, 7vw, 80px);
+}
+
+.for-vtubers-video > .for-vtubers-soon {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  color: var(--brand-text-muted);
+}
+
+/* 「お願いすること / 必要ないこと」の2枚。 */
+.for-vtubers-panel {
+  padding: clamp(20px, 2.4vw, 32px);
+  border: 1px solid var(--fv-line);
+  border-radius: var(--ui-radius-lg);
+  background: var(--brand-surface);
+}
+
+.for-vtubers-panel > h3 {
+  font-size: clamp(17px, 1.6vw, 22px);
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.for-vtubers-panel > ul {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 0;
+  list-style: none;
+}
+
+.for-vtubers-panel li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: clamp(14px, 1.2vw, 17px);
+  font-weight: 700;
+  line-height: 1.7;
+}
+
+.for-vtubers-panel li > svg {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  margin-top: 0.15em;
+}
+
+/* 「事務所ではありません」の但し書き。淡い紫の面。
+   狭い画面では中央揃えだと行頭が毎回ずれて読みづらいので、左揃えにする。 */
+.for-vtubers-callout {
+  padding: clamp(24px, 3vw, 40px) clamp(20px, 3vw, 48px);
+  border-radius: var(--ui-radius-lg);
+  background: color-mix(in srgb, var(--brand-primary) 14%, #ffffff);
+}
+
+@media (min-width: 640px) {
+  .for-vtubers-callout {
+    text-align: center;
+  }
+}
+
+/* 報酬の流れ。参加ユーザー → aiment → VTuber を横一列に。狭い画面では縦に積む。 */
+.for-vtubers-flow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  list-style: none;
+}
+
+.for-vtubers-flow > li:not(.for-vtubers-flow__arrow) {
+  min-width: 128px;
+  padding: 12px 18px;
+  border: 1px solid var(--fv-line);
+  border-radius: var(--ui-radius-pill);
+  background: var(--brand-surface);
+  font-size: clamp(13px, 1.1vw, 16px);
+  font-weight: 800;
+  text-align: center;
+}
+
+.for-vtubers-flow__arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: var(--brand-primary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.for-vtubers-flow__arrow > svg {
+  width: 22px;
+  height: 22px;
+  transform: rotate(90deg);
+}
+
+@media (min-width: 640px) {
+  .for-vtubers-flow {
+    flex-direction: row;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .for-vtubers-flow__arrow {
+    padding: 0 4px;
+  }
+
+  .for-vtubers-flow__arrow > svg {
+    transform: none;
+  }
+}
+
+/* 「準備中」のボタン。透明度で薄くすると文字が読めず「壊れている」ように
+   見えるので、色で無効を表す。平ら・灰文字・準備中の札、の3点セット。 */
+.for-vtubers .ui-btn:disabled {
+  --btn-face: color-mix(in srgb, var(--brand-text) 5%, #ffffff);
+  --btn-ink: color-mix(in srgb, var(--brand-text) 70%, #ffffff);
+  --btn-ring: var(--track);
+  opacity: 1;
+  box-shadow: 0 0 0 var(--btn-ring-w) var(--btn-ring);
+}
+
+/* ガイドラインの置き場。中身が揃うまでの「予約席」を面で見せる。 */
+.for-vtubers-shelf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 960px;
+  margin-inline: auto;
+  padding: clamp(24px, 3vw, 36px);
+  border-radius: var(--ui-radius-lg);
+  background: color-mix(in srgb, var(--brand-primary) 8%, #ffffff);
+}
+
 /* FAQ。<details> なのでJSなしで開閉でき、中身も検索エンジンに読まれる。 */
 .for-vtubers-faq {
   overflow: hidden;
@@ -2742,9 +2933,7 @@ textarea::placeholder {
 }
 
 .for-vtubers-faq[open] {
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--brand-primary) 26%, transparent),
-    0 10px 24px rgba(var(--shadow-rgb), 0.12);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand-primary) 30%, transparent);
 }
 
 .for-vtubers-faq > summary {
@@ -2795,8 +2984,8 @@ textarea::placeholder {
 .for-vtubers-faq > p {
   margin: 0;
   padding: 0 clamp(18px, 2vw, 28px) 22px;
-  color: var(--brand-text-muted);
-  font-size: clamp(13px, 1.1vw, 15px);
+  color: var(--fv-ink-soft, var(--brand-text));
+  font-size: clamp(14px, calc(12px + 0.25vw), 15.5px);
   font-weight: 700;
   line-height: 2;
 }

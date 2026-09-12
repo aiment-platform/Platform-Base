@@ -2,9 +2,13 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import {
+  ArrowRightIcon,
   BanknotesIcon,
   ChatBubbleOvalLeftEllipsisIcon,
+  CheckCircleIcon,
   GlobeAltIcon,
+  MinusCircleIcon,
+  PlayIcon,
   SparklesIcon,
 } from "@heroicons/react/24/outline";
 
@@ -13,11 +17,16 @@ import {
  *
  * 採用系ランディングページの定石に合わせて、ヘッダーのナビゲーションは置かず
  * ロゴだけにしてある（選択肢を減らして1アクションに集中させるため）。
- * 同じCTAをヒーローと末尾の2箇所に置き、間に「手順 → メリット → FAQ」で
- * 不安をつぶしていく並びにしている。
+ * 並びは「問題提起 → 解決策 → 証拠（映像） → 手順 → 頼むこと/頼まないこと
+ * → お金 → メリット → 運営の透明性 → 安全 → FAQ → CTA」。上から読むほど
+ * 不安が減っていき、最後に行動できるようにしている。
  *
  * いまはアーリーアクセスなので、行き先はサインアップではなく運営の公式X。
  * 一度お話ししてから参加してもらう流れなので、CTAは「相談する」に寄せてある。
+ *
+ * まだ中身がないもの（経営者情報・各ガイドライン・セッション映像）は、
+ * 消さずに「準備中」の無効状態で置いてある。そこに何が来るのかを先に
+ * 見せておくと、ページの信頼感が下がりにくい。
  *
  * 挿絵は後入れ。各手順は2カラムにしてあり、右側が空いているので
  * そこに画像を差すだけで収まる（コメントで位置を示している）。
@@ -33,11 +42,11 @@ const X_HANDLE = "@aiment_japan";
 export const metadata: Metadata = {
   title: "VTuberのみなさまへ",
   description:
-    "aimentは日本語学習者がVTuberから楽しく日本語を学べるサービスです。日本語教師の経験や特別な授業準備は必要ありません。いつもの配信が、誰かの日本語を話すきっかけになります。",
+    "aimentは、海外の日本語学習者と日本人VTuberが、ゲームや雑談を通して直接会話できるサービスです。日本語を教える必要も、英語を話す必要もありません。いつものVTuber活動の延長で参加できます。",
   openGraph: {
     title: "VTuberのみなさまへ | aiment",
     description:
-      "いつもの配信が、誰かの日本語を話すきっかけに。日本語教師の経験や特別な授業準備は必要ありません。",
+      "いつもの配信が、誰かの日本語を話すきっかけに。日本語を教える必要も、英語を話す必要もありません。",
   },
 };
 
@@ -104,7 +113,7 @@ function WaveEdge({ flip = false }: { flip?: boolean }) {
   return (
     <svg
       viewBox={`0 0 ${EDGE_W} ${EDGE_H}`}
-      className={`block w-full ${flip ? "-scale-y-100" : ""}`.trim()}
+      className={`block w-full ${flip ? "-mb-px -scale-y-100" : "-mt-px"}`}
       aria-hidden
       focusable="false"
     >
@@ -122,6 +131,43 @@ function XMark({ className = "" }: { className?: string }) {
     </svg>
   );
 }
+
+
+/* ==========================================================================
+   文言
+   --------------------------------------------------------------------------
+   本文の改行位置はモックに合わせてある。配列の1要素が1行で、広い画面では
+   その位置で改行し、狭い画面では自然に折り返す（Lines コンポーネント参照）。
+   ========================================================================== */
+
+const HERO_LEAD = [
+  "aimentは、海外の日本語学習者と日本人VTuberが、",
+  "ゲームや雑談を通して直接会話できるサービスです。",
+  "日本語を教える必要も、英語を話す必要もありません。",
+  "いつものVTuber活動の延長で参加できます。",
+];
+
+const WHAT_IS = {
+  statement: ["VTuberと話すこと自体を、", "日本語を使う体験に。"],
+  paragraphs: [
+    [
+      "日本語を勉強していても、実際に日本人と話す機会は多くありません。",
+      "一方で、日本のVTuberやゲーム、アニメをきっかけに日本語を",
+      "学んでいる海外ファンはたくさんいます。",
+    ],
+    [
+      "aimentは、そんな日本語学習者と日本人VTuberをつなぎ、",
+      "「勉強するための会話」ではなく、",
+      "「好きな人と楽しむために日本語を使う時間」をつくるサービスです。",
+    ],
+  ],
+};
+
+const SESSION_VIDEO_NOTE = [
+  "aimentには、VTuber、リスナーの他に「スピーカー」というロールが存在します。",
+  "aimentをメインで体験していただく方達で、カメラはOFF、マイクONの状態で",
+  "セッションに参加します。1セッションあたり平均5名です。",
+];
 
 const STEPS = [
   {
@@ -141,28 +187,61 @@ const STEPS = [
   },
 ];
 
+const ASKS = ["日本語で参加者と会話する", "ゲームや雑談を一緒に楽しむ", "初心者には少しゆっくり話す", "基本的な参加ルールを守る"];
+const NOT_NEEDED = ["日本語教師の資格", "教材づくり", "英語での進行", "aimentへの所属", "毎週の参加"];
+
+const NOT_AGENCY = {
+  title: "これは事務所への勧誘ではありません",
+  paragraphs: [
+    ["aimentはVTuber事務所ではありません。", "aimentへの所属や専属契約、企業勢への転向をお願いするサービスではありません。"],
+    ["普段のYouTube・X・配信活動を続けながら、", "参加したいときにaimentのセッションへ出演するという関係です。"],
+  ],
+};
+
+const REWARD = [
+  "セッションに参加するユーザーさんから参加費をいただき、",
+  "その一部を出演VTuberさんへの報酬としてお支払いします。",
+  "広告案件のように商品を紹介していただくのではなく、",
+  "VTuberさんとの交流体験そのものが",
+  "価値になる仕組みです。",
+];
+
 const MERITS = [
   {
     icon: GlobeAltIcon,
-    title: "海外のファンと、もっと近く。",
-    body: "日本語を学びたい海外ユーザーと、コメント欄を越えて会話できます。",
+    title: "海外のファンとの接点",
+    body: "日本語を学びたい海外ユーザーから新たなファン層を獲得できます。",
   },
   {
     icon: ChatBubbleOvalLeftEllipsisIcon,
-    title: "“見るだけ”から、“話したことがある”へ。",
+    title: "ファンとの交流の深さ",
     body: "少人数だからこそ、名前や会話が記憶に残る交流ができます。",
   },
   {
     icon: SparklesIcon,
-    title: "いつもの配信に、新しい掛け合いを。",
+    title: "新しい配信体験",
     body: "ゲームでも雑談でも、参加者が変わるだけで新しい企画になります。",
   },
   {
     icon: BanknotesIcon,
-    title: "配信そのものを、新しい収益に。",
-    body: "参加型セッションという体験そのものに価値を持たせられます。",
+    title: "新たな収益",
+    body: "普段のスタイルのまま比較的安定した収益をうむことができます。",
   },
 ];
+
+const STAGE = {
+  paragraphs: [
+    [
+      "aimentは、ビジネスを学ぶ学生が立ち上げ、現在開発・運営しているサービスです。",
+      "すでにVTuberさんとのセッションを実施しながら、",
+      "2026年10月頃の本格始動に向けて、",
+      "参加VTuberと海外ユーザーを少しずつ増やしています。",
+    ],
+    ["だから今参加していただく方は、単なる出演者ではなく、", "最初のaimentを一緒につくるメンバーでもあります。"],
+  ],
+};
+
+const GUIDELINES = ["迷惑行為等へのガイドライン", "配信ガイドライン", "アーカイブ公開ガイドライン"];
 
 /**
  * 14問あるので、そのまま並べると探しづらい。知りたいことの種類で
@@ -253,6 +332,67 @@ const FAQ_GROUPS = [
   },
 ];
 
+/* ==========================================================================
+   部品
+   ========================================================================== */
+
+/**
+ * 行の配列を1つの段落にする。広い画面ではモックどおりの位置で改行し、
+ * 狭い画面では <br> を消して自然に折り返す（短い行なら alwaysBreak で固定できる）。
+ */
+function Lines({
+  lines,
+  className = "",
+  alwaysBreak = false,
+}: {
+  lines: string[];
+  className?: string;
+  alwaysBreak?: boolean;
+}) {
+  return (
+    <p className={className}>
+      {lines.map((line, index) => (
+        <span key={line}>
+          {line}
+          {index < lines.length - 1 ? <br className={alwaysBreak ? undefined : "hidden sm:block"} /> : null}
+        </span>
+      ))}
+    </p>
+  );
+}
+
+/**
+ * ページの1区画。縦の余白はここで一律に決めていて、区画ごとに勝手な
+ * 余白を足さない。隣り合う区画の間はこの値の2倍になる。
+ */
+function Section({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <section className={`mx-auto w-full max-w-[1180px] px-6 py-[var(--fv-section-y)] lg:px-10 ${className}`.trim()}>
+      {children}
+    </section>
+  );
+}
+
+function SectionTitle({ children, align = "center" }: { children: React.ReactNode; align?: "center" | "left" }) {
+  return (
+    <h2
+      className={`text-[clamp(24px,calc(14px_+_1.7vw),38px)] font-extrabold leading-tight ${align === "center" ? "text-center" : ""}`.trim()}
+    >
+      {children}
+    </h2>
+  );
+}
+
+/** 中身がまだないボタン。消さずに「ここに来る」ことだけ見せておく。 */
+function SoonButton({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <button type="button" disabled title="準備中" className={`ui-btn ${className}`.trim()}>
+      {children}
+      <span className="for-vtubers-soon">準備中</span>
+    </button>
+  );
+}
+
 /**
  * ヒーローと末尾で共用するCTA。
  * 主役は公式Xへの導線、副えとして「まずは観てみる」を置いている。
@@ -263,12 +403,12 @@ function CtaButtons({ className = "" }: { className?: string }) {
     <div className={`flex flex-col items-stretch gap-4 ${className}`.trim()}>
       <a href={X_URL} target="_blank" rel="noopener noreferrer" className="for-vtubers-cta ui-btn ui-btn-lg">
         <XMark className="h-[17px] w-[17px]" />
-        公式Xに相談する
+        参加について相談する
       </a>
       <Link href="/" className="for-vtubers-cta for-vtubers-cta--ghost ui-btn ui-btn-lg">
         まずは観てみる
       </Link>
-      <p className="mt-1 text-center text-[13px] font-bold leading-[1.9] text-white/80">
+      <p className="mt-1 text-center text-[14px] font-bold leading-[1.9] text-white/90">
         現在アーリーアクセス中です。
         <br />
         ご参加は{X_HANDLE}のDMから承ります。
@@ -297,9 +437,13 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   );
 }
 
+/* 本文の共通スタイル。モックの「太め・行間広め」をそのまま使う。 */
+const BODY = "text-[clamp(15px,calc(12px_+_0.42vw),18px)] font-bold leading-[2]";
+const BODY_SUB = "text-[clamp(14px,calc(12px_+_0.25vw),15.5px)] font-bold leading-[1.9] text-[var(--fv-ink-soft)]";
+
 export default function ForVTubersPage() {
   return (
-    <main className="min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
+    <main className="for-vtubers min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
       {/* ================= ヒーロー ================= */}
       <section className="bg-[var(--brand-primary)] pb-[clamp(56px,7vw,96px)] text-white [--brand-logo-filter:brightness(0)_invert(1)]">
         <div className="mx-auto w-full max-w-[1180px] px-6 lg:px-10">
@@ -321,21 +465,17 @@ export default function ForVTubersPage() {
 
           <div className="mt-[clamp(48px,7vw,104px)] grid items-start gap-12 lg:grid-cols-[minmax(0,1fr)_300px]">
             <div>
-              <h1 className="text-[clamp(25px,3.2vw,42px)] font-extrabold leading-[1.45]">
+              <h1 className="text-[clamp(26px,calc(15px_+_1.9vw),42px)] font-extrabold leading-[1.45]">
                 “あなたの配信”が、
                 <br />
-                誰かの日本語を話すきっかけになる。
+                誰かの日本語を
+                <br className="sm:hidden" />
+                話すきっかけになる。
               </h1>
-              <p className="mt-[clamp(28px,3.5vw,56px)] text-[clamp(14px,1.25vw,18px)] font-bold leading-[2]">
-                aimentは日本語学習者の方がVTuberから楽しく日本語を
-                <br className="hidden sm:block" />
-                学べるサービスを運営しています。
-                <br />
-                日本語教師の経験や特別な授業準備は必要ありません。
-              </p>
+              <Lines lines={HERO_LEAD} className={`mt-[clamp(28px,3.5vw,56px)] ${BODY}`} />
             </div>
 
-            <CtaButtons className="w-full max-w-[320px] lg:mt-4 lg:max-w-none" />
+            <CtaButtons className="w-full max-w-[320px] sm:max-w-[400px] lg:mt-4 lg:max-w-none" />
           </div>
         </div>
       </section>
@@ -343,71 +483,194 @@ export default function ForVTubersPage() {
       {/* 紫 → クリーム。濃い波の裏から淡い波がのぞく。 */}
       <WaveEdge />
 
-      {/* ================= 手順 01 / 02 / 03 ================= */}
-      <section className="mx-auto w-full max-w-[1180px] px-6 pt-[clamp(40px,5vw,80px)] lg:px-10">
-        {STEPS.map((step) => (
-          <div
-            key={step.no}
-            className="grid items-center gap-10 py-[clamp(40px,6vw,96px)] lg:min-h-[380px] lg:grid-cols-2"
-          >
-            <div>
-              <h2 className="flex flex-wrap items-baseline gap-x-5 gap-y-2">
-                <span className="text-[clamp(46px,6vw,86px)] font-extrabold leading-none tracking-tight">
-                  {step.no}
-                </span>
-                <span className="text-[clamp(22px,2.8vw,38px)] font-extrabold leading-tight">{step.title}</span>
-              </h2>
-              <p className="mt-[clamp(24px,3vw,48px)] text-[clamp(14px,1.25vw,18px)] font-bold leading-[2]">
-                {step.body.map((line, index) => (
-                  <span key={line}>
-                    {line}
-                    {index < step.body.length - 1 ? <br /> : null}
-                  </span>
-                ))}
-              </p>
-            </div>
+      {/* ================= aimentって何？ ================= */}
+      <Section className="pt-[calc(var(--fv-section-y)*0.5)]">
+        <SectionTitle align="left">aimentって何？</SectionTitle>
+        <Lines
+          lines={WHAT_IS.statement}
+          alwaysBreak
+          className="mt-[var(--fv-head-gap)] text-[clamp(21px,calc(12px_+_1.5vw),34px)] font-extrabold leading-[1.5]"
+        />
+        <div className="mt-[var(--fv-head-gap)] space-y-[var(--fv-item-gap)]">
+          {WHAT_IS.paragraphs.map((lines) => (
+            <Lines key={lines[0]} lines={lines} className={BODY} />
+          ))}
+        </div>
+      </Section>
 
-            {/* 挿絵の置き場。画像が入るまでは余白として空けておく。 */}
-            <div aria-hidden className="hidden lg:block" />
+      {/* ================= 実際のセッション映像 =================
+          映像はまだない。枠だけ先に置いて「ここに映像が入る」と分かるようにしている。 */}
+      <Section>
+        <SectionTitle>実際のセッション映像</SectionTitle>
+        <div className="for-vtubers-video mt-[var(--fv-head-gap)]" role="img" aria-label="セッション映像（準備中）">
+          <PlayIcon aria-hidden />
+          <span className="for-vtubers-soon">準備中</span>
+        </div>
+        <Lines
+          lines={SESSION_VIDEO_NOTE}
+          className={`mx-auto mt-[var(--fv-head-gap)] max-w-[880px] text-left sm:text-center ${BODY}`}
+        />
+      </Section>
+
+      {/* ================= 3STEPS ================= */}
+      <Section>
+        <SectionTitle>aimentで始める3STEPS</SectionTitle>
+        {/* 挿絵の高さぶん（lg:min-h）を先に確保してある。画像が入ればそのまま収まる。 */}
+        <div className="mt-[var(--fv-head-gap)] grid gap-[clamp(40px,6vw,80px)]">
+          {STEPS.map((step) => (
+            <div key={step.no} className="grid items-center gap-10 lg:min-h-[280px] lg:grid-cols-2">
+              <div>
+                <h3 className="flex flex-wrap items-baseline gap-x-5 gap-y-2">
+                  <span className="text-[clamp(46px,6vw,86px)] font-medium leading-none tracking-tight">
+                    {step.no}
+                  </span>
+                  <span className="text-[clamp(24px,calc(14px_+_1.7vw),38px)] font-extrabold leading-tight">
+                    {step.title}
+                  </span>
+                </h3>
+                <Lines lines={step.body} className={`mt-[var(--fv-head-gap)] ${BODY}`} />
+              </div>
+
+              {/* 挿絵の置き場。画像が入るまでは余白として空けておく。 */}
+              <div aria-hidden className="hidden lg:block" />
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* ================= お願いすること / しないこと ================= */}
+      <Section>
+        <SectionTitle>
+          VTuberさんに<span className="inline-block">お願いすること</span> /{" "}
+          <span className="inline-block">しないこと</span>
+        </SectionTitle>
+
+        <div className="mx-auto mt-[var(--fv-head-gap)] grid max-w-[960px] gap-5 sm:grid-cols-2">
+          <div className="for-vtubers-panel">
+            <h3>お願いすること</h3>
+            <ul>
+              {ASKS.map((item) => (
+                <li key={item}>
+                  <CheckCircleIcon className="text-[var(--brand-primary)]" aria-hidden />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-        ))}
-      </section>
+          <div className="for-vtubers-panel">
+            <h3>必要ないこと</h3>
+            <ul>
+              {NOT_NEEDED.map((item) => (
+                <li key={item}>
+                  <MinusCircleIcon className="text-[var(--fv-ink-soft)]" aria-hidden />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="for-vtubers-callout mx-auto mt-[var(--fv-head-gap)] max-w-[960px]">
+          <h3 className="text-[clamp(17px,1.6vw,22px)] font-extrabold leading-snug">{NOT_AGENCY.title}</h3>
+          <div className="mt-5 space-y-4">
+            {NOT_AGENCY.paragraphs.map((lines) => (
+              <Lines key={lines[0]} lines={lines} className={BODY_SUB} />
+            ))}
+          </div>
+        </div>
+      </Section>
+
+      {/* ================= セッション報酬について ================= */}
+      <Section>
+        <SectionTitle>セッション報酬について</SectionTitle>
+
+        <div className="mt-[var(--fv-head-gap)] grid gap-10 lg:grid-cols-2 lg:items-center">
+          <Lines lines={REWARD} className={BODY} />
+
+          {/* 本文の内容を図にしたもの。お金の向きが一目で分かるように。挿絵の位置に置く。 */}
+          <ol className="for-vtubers-flow" aria-label="報酬の流れ">
+            <li>参加ユーザー</li>
+            <li className="for-vtubers-flow__arrow" aria-hidden>
+              <span>参加費</span>
+              <ArrowRightIcon />
+            </li>
+            <li>aiment</li>
+            <li className="for-vtubers-flow__arrow" aria-hidden>
+              <span>報酬</span>
+              <ArrowRightIcon />
+            </li>
+            <li>出演VTuber</li>
+          </ol>
+        </div>
+      </Section>
 
       {/* ================= 4つのメリット ================= */}
-      <section className="mx-auto w-full max-w-[1180px] px-6 pb-[clamp(56px,7vw,110px)] pt-[clamp(48px,6vw,96px)] lg:px-10">
-        <h2 className="text-center text-[clamp(22px,2.8vw,38px)] font-extrabold leading-tight">
-          VTuberにとっての4つのメリット
-        </h2>
+      <Section>
+        <SectionTitle>VTuberにとっての4つのメリット</SectionTitle>
 
-        <ul className="mt-[clamp(32px,4vw,64px)] grid gap-5 sm:grid-cols-2">
+        <ul className="mt-[var(--fv-head-gap)] grid gap-5 sm:grid-cols-2">
           {MERITS.map((merit) => {
             const Icon = merit.icon;
             return (
               <li
                 key={merit.title}
-                className="rounded-[var(--ui-radius-lg)] bg-[var(--brand-surface)] p-6 shadow-[0_0_0_4px_var(--surface-ring),0_10px_24px_rgba(var(--shadow-rgb),0.14)]"
+                className="rounded-[var(--ui-radius-lg)] border border-[color:var(--fv-line)] bg-[var(--brand-surface)] p-6"
               >
-                <span className="grid h-12 w-12 place-items-center rounded-[var(--ui-radius-md)] bg-[var(--brand-primary)] text-white shadow-[0_4px_0_0_var(--brand-primary-dark)]">
+                <span className="grid h-12 w-12 place-items-center rounded-[var(--ui-radius-md)] bg-[var(--brand-primary)] text-white">
                   <Icon className="h-6 w-6" aria-hidden />
                 </span>
                 <h3 className="mt-5 text-[clamp(17px,1.5vw,21px)] font-extrabold leading-snug">{merit.title}</h3>
-                <p className="mt-2.5 text-[clamp(13px,1.1vw,15px)] font-bold leading-[1.9] text-[var(--brand-text-muted)]">
-                  {merit.body}
-                </p>
+                <p className={`mt-2.5 ${BODY_SUB}`}>{merit.body}</p>
               </li>
             );
           })}
         </ul>
-      </section>
+      </Section>
+
+      {/* ================= 今、aimentはどんな段階？ ================= */}
+      <Section>
+        <SectionTitle>今、aimentはどんな段階？</SectionTitle>
+        <div className="mx-auto mt-[var(--fv-head-gap)] max-w-[880px] space-y-[var(--fv-item-gap)] text-left sm:text-center">
+          {STAGE.paragraphs.map((lines) => (
+            <Lines key={lines[0]} lines={lines} className={BODY} />
+          ))}
+        </div>
+
+        {/* 経営者情報はまだ用意がない。押せる方を先に・紫にして、押せない方は準備中の灰色で添える。 */}
+        <div className="mt-[var(--fv-head-gap)] flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <a
+            href={X_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ui-btn ui-btn-lg ui-btn-primary w-full max-w-[320px] sm:w-auto"
+          >
+            <XMark className="h-[16px] w-[16px]" />
+            参加について相談する
+          </a>
+          <SoonButton className="ui-btn-lg ui-btn-ghost w-full max-w-[320px] sm:w-auto">経営者情報を見る</SoonButton>
+        </div>
+      </Section>
+
+      {/* ================= 安心して参加できるために ================= */}
+      <Section>
+        <SectionTitle>安心して参加できるために</SectionTitle>
+        <div className="for-vtubers-shelf mt-[var(--fv-head-gap)]">
+          {GUIDELINES.map((label) => (
+            <SoonButton key={label} className="ui-btn-md ui-btn-ghost w-full max-w-[320px] sm:w-auto">
+              {label}
+            </SoonButton>
+          ))}
+        </div>
+      </Section>
 
       {/* ================= FAQ ================= */}
-      <section className="mx-auto w-full max-w-[1180px] px-6 pb-[clamp(48px,6vw,90px)] lg:px-10">
-        <h2 className="text-[clamp(22px,2.6vw,34px)] font-extrabold leading-tight">FAQ - よくある質問</h2>
+      <Section>
+        <SectionTitle align="left">FAQ - よくある質問</SectionTitle>
 
-        <div className="mt-[clamp(24px,3vw,48px)] space-y-[clamp(28px,3.5vw,52px)]">
+        <div className="mt-[var(--fv-head-gap)] space-y-8 sm:space-y-10">
           {FAQ_GROUPS.map((group) => (
             <section key={group.label}>
-              <h3 className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-text-muted)]">
+              <h3 className="mb-3 text-[13px] font-bold tracking-[0.16em] text-[var(--fv-ink-soft)]">
                 {group.label}
               </h3>
               <div className="space-y-3">
@@ -418,7 +681,7 @@ export default function ForVTubersPage() {
             </section>
           ))}
         </div>
-      </section>
+      </Section>
 
       {/* クリーム → 紫。ヒーロー側の波を上下反転して対にする。 */}
       <WaveEdge flip />
@@ -449,9 +712,9 @@ export default function ForVTubersPage() {
               className="for-vtubers-cta ui-btn ui-btn-lg w-full max-w-[320px]"
             >
               <XMark className="h-[17px] w-[17px]" />
-              公式Xに相談する
+              参加について相談する
             </a>
-            <p className="text-[13px] font-bold text-white/75">{X_HANDLE}／DMを開放しています</p>
+            <p className="text-[14px] font-bold text-white/90">{X_HANDLE}／DMを開放しています</p>
           </div>
         </div>
       </section>
