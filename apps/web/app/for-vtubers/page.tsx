@@ -12,6 +12,20 @@ import {
   SparklesIcon,
 } from "@heroicons/react/24/outline";
 
+import { WaveEdge } from "../components/landing/WaveEdge";
+import {
+  BODY,
+  BODY_SUB,
+  FaqItem,
+  Lines,
+  Section,
+  SectionTitle,
+  SoonButton,
+  X_HANDLE,
+  X_URL,
+  XMark,
+} from "../components/landing/primitives";
+import { LevelHelpButton, LevelHelpPanel } from "../components/landing/LevelHelp";
 import { SceneCreate, SceneLive, SceneWelcome } from "./StepScenes";
 
 /**
@@ -37,10 +51,6 @@ import { SceneCreate, SceneLive, SceneWelcome } from "./StepScenes";
  * JSなしで開閉でき、検索エンジンにも中身が読まれる。
  */
 
-/** アーリーアクセス中の唯一の窓口。 */
-const X_URL = "https://x.com/aiment_japan";
-const X_HANDLE = "@aiment_japan";
-
 export const metadata: Metadata = {
   title: "VTuberのみなさまへ",
   description:
@@ -51,89 +61,6 @@ export const metadata: Metadata = {
       "いつもの配信が、誰かの日本語を話すきっかけに。日本語を教える必要も、英語を話す必要もありません。",
   },
 };
-
-/* ==========================================================================
-   紫の面のふち（波）
-   --------------------------------------------------------------------------
-   モックの波をそのまま写し取っている。濃い紫の波の裏に、それより少しだけ
-   振幅が大きく・山が右にずれた淡い紫の波が隠れていて、そのずれの分だけ
-   下からチラ見えする。だから覗く幅が場所によって太くなったり細くなったりする。
-
-   数字は VTuber用CTA.png の実測値。横1440pxを48px刻みで拾った波の高さで、
-   画像の y=900 を 0 とした座標系（＝このSVGのviewBox座標）。
-   ========================================================================== */
-const EDGE_W = 1440;
-const EDGE_H = 152;
-
-/** 手前の濃い紫の波。 */
-const EDGE_FRONT = [
-  10, 26, 43, 58, 73, 86, 97, 106, 113, 117, 118, 117, 113, 107, 99, 90,
-  82, 74, 66, 61, 57, 57, 59, 63, 69, 76, 85, 96, 108, 120, 132,
-];
-
-/** 裏の淡い紫の波。手前より下にあり、山と谷の位置も少しずれている。 */
-const EDGE_BACK = [
-  33, 45, 57, 70, 83, 96, 109, 121, 131, 138, 142, 143, 141, 136, 129, 119,
-  108, 98, 90, 83, 78, 74, 72, 73, 79, 86, 95, 105, 116, 130, 147,
-];
-
-/**
- * 等間隔に並んだ高さの列を「なめらかな1本の波」に変え、その上を全部塗る形にする。
- *
- * 点を直線でつなぐとカクカクした折れ線になってしまう。そこで Catmull-Rom
- * （前後の点を結んだ向きを、その点での曲線の傾きとして使うやり方）で
- * 3次ベジェ曲線の制御点を作り、全部の点をきれいに通る曲線にしている。
- * 両端は前後の点がないので、自分自身で代用する。
- */
-function fillAbove(ys: number[]) {
-  const step = EDGE_W / (ys.length - 1);
-  const at = (i: number) => ys[Math.min(ys.length - 1, Math.max(0, i))];
-
-  let d = `M 0 ${at(0)}`;
-  for (let i = 0; i < ys.length - 1; i++) {
-    const x = i * step;
-    const c1 = at(i) + (at(i + 1) - at(i - 1)) / 6;
-    const c2 = at(i + 1) - (at(i + 2) - at(i)) / 6;
-    d += ` C ${(x + step / 3).toFixed(1)} ${c1.toFixed(2)}`;
-    d += ` ${(x + (step * 2) / 3).toFixed(1)} ${c2.toFixed(2)}`;
-    d += ` ${(x + step).toFixed(1)} ${at(i + 1)}`;
-  }
-  // 波の上を、SVGの外まではみ出させて塗る。継ぎ目に隙間が出ないようにするため。
-  return `${d} L ${EDGE_W} -40 L 0 -40 Z`;
-}
-
-const EDGE_FRONT_PATH = fillAbove(EDGE_FRONT);
-const EDGE_BACK_PATH = fillAbove(EDGE_BACK);
-
-/**
- * flip = true で上下反転。クリーム→紫の向きになるので、ページ末尾側に使う。
- *
- * 幅100% + 高さautoにして viewBox の比率をそのまま保つ。画面幅が変わっても
- * 波が切り取られたり、縦に潰れて別の形になったりしない。
- */
-function WaveEdge({ flip = false }: { flip?: boolean }) {
-  return (
-    <svg
-      viewBox={`0 0 ${EDGE_W} ${EDGE_H}`}
-      className={`block w-full ${flip ? "-mb-px -scale-y-100" : "-mt-px"}`}
-      aria-hidden
-      focusable="false"
-    >
-      <path fill="var(--brand-primary-light)" d={EDGE_BACK_PATH} />
-      <path fill="var(--brand-primary)" d={EDGE_FRONT_PATH} />
-    </svg>
-  );
-}
-
-/** X（旧Twitter）のロゴ。ブランドマークなのでheroiconsにはない。 */
-function XMark({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden focusable="false">
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.657l-5.214-6.817-5.966 6.817H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-    </svg>
-  );
-}
-
 
 /* ==========================================================================
    文言
@@ -175,7 +102,14 @@ const STEPS = [
   {
     no: "01",
     title: "枠を作る",
-    body: ["日本語レベル・テーマ・日時を選んで、", "サムネを設定。"],
+    body: [
+      <>
+        日本語レベル
+        <LevelHelpButton id="level-help-steps" lang="ja" />
+        ・テーマ・日時を選んで、
+      </>,
+      "サムネを設定。",
+    ],
     Scene: SceneCreate,
   },
   {
@@ -337,66 +271,10 @@ const FAQ_GROUPS = [
   },
 ];
 
-/* ==========================================================================
-   部品
-   ========================================================================== */
 
-/**
- * 行の配列を1つの段落にする。広い画面ではモックどおりの位置で改行し、
- * 狭い画面では <br> を消して自然に折り返す（短い行なら alwaysBreak で固定できる）。
- */
-function Lines({
-  lines,
-  className = "",
-  alwaysBreak = false,
-}: {
-  lines: string[];
-  className?: string;
-  alwaysBreak?: boolean;
-}) {
-  return (
-    <p className={className}>
-      {lines.map((line, index) => (
-        <span key={line}>
-          {line}
-          {index < lines.length - 1 ? <br className={alwaysBreak ? undefined : "hidden sm:block"} /> : null}
-        </span>
-      ))}
-    </p>
-  );
-}
 
-/**
- * ページの1区画。縦の余白はここで一律に決めていて、区画ごとに勝手な
- * 余白を足さない。隣り合う区画の間はこの値の2倍になる。
- */
-function Section({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return (
-    <section className={`mx-auto w-full max-w-[1180px] px-6 py-[var(--fv-section-y)] lg:px-10 ${className}`.trim()}>
-      {children}
-    </section>
-  );
-}
 
-function SectionTitle({ children, align = "center" }: { children: React.ReactNode; align?: "center" | "left" }) {
-  return (
-    <h2
-      className={`text-[clamp(24px,calc(14px_+_1.7vw),38px)] font-extrabold leading-tight ${align === "center" ? "text-center" : ""}`.trim()}
-    >
-      {children}
-    </h2>
-  );
-}
 
-/** 中身がまだないボタン。消さずに「ここに来る」ことだけ見せておく。 */
-function SoonButton({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return (
-    <button type="button" disabled title="準備中" className={`ui-btn ${className}`.trim()}>
-      {children}
-      <span className="for-vtubers-soon">準備中</span>
-    </button>
-  );
-}
 
 /**
  * ヒーローと末尾で共用するCTA。
@@ -406,11 +284,11 @@ function SoonButton({ children, className = "" }: { children: React.ReactNode; c
 function CtaButtons({ className = "" }: { className?: string }) {
   return (
     <div className={`flex flex-col items-stretch gap-4 ${className}`.trim()}>
-      <a href={X_URL} target="_blank" rel="noopener noreferrer" className="for-vtubers-cta ui-btn ui-btn-lg">
+      <a href={X_URL} target="_blank" rel="noopener noreferrer" className="landing-cta ui-btn ui-btn-lg">
         <XMark className="h-[17px] w-[17px]" />
         参加について相談する
       </a>
-      <Link href="/" className="for-vtubers-cta for-vtubers-cta--ghost ui-btn ui-btn-lg">
+      <Link href="/" className="landing-cta landing-cta--ghost ui-btn ui-btn-lg">
         まずは観てみる
       </Link>
       <p className="mt-1 text-center text-[14px] font-bold leading-[1.9] text-white/90">
@@ -422,33 +300,11 @@ function CtaButtons({ className = "" }: { className?: string }) {
   );
 }
 
-function FaqItem({ q, a }: { q: string; a: string }) {
-  return (
-    <details className="for-vtubers-faq">
-      <summary>
-        <span>{q}</span>
-        <svg viewBox="0 0 20 20" fill="none" aria-hidden focusable="false">
-          <path
-            d="M5 7.5 10 12.5 15 7.5"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </summary>
-      <p>{a}</p>
-    </details>
-  );
-}
 
-/* 本文の共通スタイル。モックの「太め・行間広め」をそのまま使う。 */
-const BODY = "text-[clamp(15px,calc(12px_+_0.42vw),18px)] font-bold leading-[2]";
-const BODY_SUB = "text-[clamp(14px,calc(12px_+_0.25vw),15.5px)] font-bold leading-[1.9] text-[var(--fv-ink-soft)]";
 
 export default function ForVTubersPage() {
   return (
-    <main className="for-vtubers min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
+    <main className="landing-page min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
       {/* ================= ヒーロー ================= */}
       <section className="bg-[var(--brand-primary)] pb-[clamp(56px,7vw,96px)] text-white [--brand-logo-filter:brightness(0)_invert(1)]">
         <div className="mx-auto w-full max-w-[1180px] px-6 lg:px-10">
@@ -489,14 +345,14 @@ export default function ForVTubersPage() {
       <WaveEdge />
 
       {/* ================= aimentって何？ ================= */}
-      <Section className="pt-[calc(var(--fv-section-y)*0.5)]">
+      <Section className="pt-[calc(var(--ld-section-y)*0.5)]">
         <SectionTitle align="left">aimentって何？</SectionTitle>
         <Lines
           lines={WHAT_IS.statement}
           alwaysBreak
-          className="mt-[var(--fv-head-gap)] text-[clamp(21px,calc(12px_+_1.5vw),34px)] font-extrabold leading-[1.5]"
+          className="mt-[var(--ld-head-gap)] text-[clamp(21px,calc(12px_+_1.5vw),34px)] font-extrabold leading-[1.5]"
         />
-        <div className="mt-[var(--fv-head-gap)] space-y-[var(--fv-item-gap)]">
+        <div className="mt-[var(--ld-head-gap)] space-y-[var(--ld-item-gap)]">
           {WHAT_IS.paragraphs.map((lines) => (
             <Lines key={lines[0]} lines={lines} className={BODY} />
           ))}
@@ -507,20 +363,21 @@ export default function ForVTubersPage() {
           映像はまだない。枠だけ先に置いて「ここに映像が入る」と分かるようにしている。 */}
       <Section>
         <SectionTitle>実際のセッション映像</SectionTitle>
-        <div className="for-vtubers-video mt-[var(--fv-head-gap)]" role="img" aria-label="セッション映像（準備中）">
+        <div className="landing-video mt-[var(--ld-head-gap)]" role="img" aria-label="セッション映像（準備中）">
           <PlayIcon aria-hidden />
-          <span className="for-vtubers-soon">準備中</span>
+          <span className="landing-soon">準備中</span>
         </div>
         <Lines
           lines={SESSION_VIDEO_NOTE}
-          className={`mx-auto mt-[var(--fv-head-gap)] max-w-[880px] text-left sm:text-center ${BODY}`}
+          className={`mx-auto mt-[var(--ld-head-gap)] max-w-[880px] text-left sm:text-center ${BODY}`}
         />
       </Section>
 
       {/* ================= 3STEPS ================= */}
       <Section>
         <SectionTitle>aimentで始める3STEPS</SectionTitle>
-        <div className="mt-[var(--fv-head-gap)] grid gap-[clamp(40px,6vw,80px)]">
+        <LevelHelpPanel id="level-help-steps" lang="ja" />
+        <div className="mt-[var(--ld-head-gap)] grid gap-[clamp(40px,6vw,80px)]">
           {STEPS.map((step) => (
             <div key={step.no} className="grid items-center gap-10 lg:grid-cols-2">
               <div>
@@ -532,7 +389,7 @@ export default function ForVTubersPage() {
                     {step.title}
                   </span>
                 </h3>
-                <Lines lines={step.body} className={`mt-[var(--fv-head-gap)] ${BODY}`} />
+                <Lines lines={step.body} className={`mt-[var(--ld-head-gap)] ${BODY}`} />
               </div>
 
               {/* 挿絵。狭い画面では本文の下、広い画面では右に寄せる。 */}
@@ -551,8 +408,8 @@ export default function ForVTubersPage() {
           <span className="inline-block">しないこと</span>
         </SectionTitle>
 
-        <div className="mx-auto mt-[var(--fv-head-gap)] grid max-w-[960px] gap-5 sm:grid-cols-2">
-          <div className="for-vtubers-panel">
+        <div className="mx-auto mt-[var(--ld-head-gap)] grid max-w-[960px] gap-5 sm:grid-cols-2">
+          <div className="landing-panel">
             <h3>お願いすること</h3>
             <ul>
               {ASKS.map((item) => (
@@ -563,12 +420,12 @@ export default function ForVTubersPage() {
               ))}
             </ul>
           </div>
-          <div className="for-vtubers-panel">
+          <div className="landing-panel">
             <h3>必要ないこと</h3>
             <ul>
               {NOT_NEEDED.map((item) => (
                 <li key={item}>
-                  <MinusCircleIcon className="text-[var(--fv-ink-soft)]" aria-hidden />
+                  <MinusCircleIcon className="text-[var(--ld-ink-soft)]" aria-hidden />
                   <span>{item}</span>
                 </li>
               ))}
@@ -576,7 +433,7 @@ export default function ForVTubersPage() {
           </div>
         </div>
 
-        <div className="for-vtubers-callout mx-auto mt-[var(--fv-head-gap)] max-w-[960px]">
+        <div className="landing-callout mx-auto mt-[var(--ld-head-gap)] max-w-[960px]">
           <h3 className="text-[clamp(17px,1.6vw,22px)] font-extrabold leading-snug">{NOT_AGENCY.title}</h3>
           <div className="mt-5 space-y-4">
             {NOT_AGENCY.paragraphs.map((lines) => (
@@ -590,18 +447,18 @@ export default function ForVTubersPage() {
       <Section>
         <SectionTitle>セッション報酬について</SectionTitle>
 
-        <div className="mt-[var(--fv-head-gap)] grid gap-10 lg:grid-cols-2 lg:items-center">
+        <div className="mt-[var(--ld-head-gap)] grid gap-10 lg:grid-cols-2 lg:items-center">
           <Lines lines={REWARD} className={BODY} />
 
           {/* 本文の内容を図にしたもの。お金の向きが一目で分かるように。挿絵の位置に置く。 */}
-          <ol className="for-vtubers-flow" aria-label="報酬の流れ">
+          <ol className="landing-flow" aria-label="報酬の流れ">
             <li>参加ユーザー</li>
-            <li className="for-vtubers-flow__arrow" aria-hidden>
+            <li className="landing-flow__arrow" aria-hidden>
               <span>参加費</span>
               <ArrowRightIcon />
             </li>
             <li>aiment</li>
-            <li className="for-vtubers-flow__arrow" aria-hidden>
+            <li className="landing-flow__arrow" aria-hidden>
               <span>報酬</span>
               <ArrowRightIcon />
             </li>
@@ -614,13 +471,13 @@ export default function ForVTubersPage() {
       <Section>
         <SectionTitle>VTuberにとっての4つのメリット</SectionTitle>
 
-        <ul className="mt-[var(--fv-head-gap)] grid gap-5 sm:grid-cols-2">
+        <ul className="mt-[var(--ld-head-gap)] grid gap-5 sm:grid-cols-2">
           {MERITS.map((merit) => {
             const Icon = merit.icon;
             return (
               <li
                 key={merit.title}
-                className="rounded-[var(--ui-radius-lg)] border border-[color:var(--fv-line)] bg-[var(--brand-surface)] p-6"
+                className="rounded-[var(--ui-radius-lg)] border border-[color:var(--ld-line)] bg-[var(--brand-surface)] p-6"
               >
                 <span className="grid h-12 w-12 place-items-center rounded-[var(--ui-radius-md)] bg-[var(--brand-primary)] text-white">
                   <Icon className="h-6 w-6" aria-hidden />
@@ -636,14 +493,14 @@ export default function ForVTubersPage() {
       {/* ================= 今、aimentはどんな段階？ ================= */}
       <Section>
         <SectionTitle>今、aimentはどんな段階？</SectionTitle>
-        <div className="mx-auto mt-[var(--fv-head-gap)] max-w-[880px] space-y-[var(--fv-item-gap)] text-left sm:text-center">
+        <div className="mx-auto mt-[var(--ld-head-gap)] max-w-[880px] space-y-[var(--ld-item-gap)] text-left sm:text-center">
           {STAGE.paragraphs.map((lines) => (
             <Lines key={lines[0]} lines={lines} className={BODY} />
           ))}
         </div>
 
         {/* 経営者情報はまだ用意がない。押せる方を先に・紫にして、押せない方は準備中の灰色で添える。 */}
-        <div className="mt-[var(--fv-head-gap)] flex flex-col items-center justify-center gap-4 sm:flex-row">
+        <div className="mt-[var(--ld-head-gap)] flex flex-col items-center justify-center gap-4 sm:flex-row">
           <a
             href={X_URL}
             target="_blank"
@@ -660,7 +517,7 @@ export default function ForVTubersPage() {
       {/* ================= 安心して参加できるために ================= */}
       <Section>
         <SectionTitle>安心して参加できるために</SectionTitle>
-        <div className="for-vtubers-shelf mt-[var(--fv-head-gap)]">
+        <div className="landing-shelf mt-[var(--ld-head-gap)]">
           {GUIDELINES.map((label) => (
             <SoonButton key={label} className="ui-btn-md ui-btn-ghost w-full max-w-[320px] sm:w-auto">
               {label}
@@ -673,10 +530,10 @@ export default function ForVTubersPage() {
       <Section>
         <SectionTitle align="left">FAQ - よくある質問</SectionTitle>
 
-        <div className="mt-[var(--fv-head-gap)] space-y-8 sm:space-y-10">
+        <div className="mt-[var(--ld-head-gap)] space-y-8 sm:space-y-10">
           {FAQ_GROUPS.map((group) => (
             <section key={group.label}>
-              <h3 className="mb-3 text-[13px] font-bold tracking-[0.16em] text-[var(--fv-ink-soft)]">
+              <h3 className="mb-3 text-[13px] font-bold tracking-[0.16em] text-[var(--ld-ink-soft)]">
                 {group.label}
               </h3>
               <div className="space-y-3">
@@ -697,7 +554,7 @@ export default function ForVTubersPage() {
           アーリーアクセス中なので、行き先は公式Xの一本に絞っている。 */}
       <section className="bg-[var(--brand-primary)] text-white">
         <div className="mx-auto w-full max-w-[1180px] px-6 pb-[clamp(64px,8vw,120px)] pt-[clamp(16px,3vw,40px)] text-center lg:px-10">
-          <span className="for-vtubers-badge">EARLY ACCESS</span>
+          <span className="landing-badge">EARLY ACCESS</span>
 
           <h2 className="mt-6 text-[clamp(22px,2.8vw,38px)] font-extrabold leading-[1.5]">
             いつもの配信のまま、
@@ -715,7 +572,7 @@ export default function ForVTubersPage() {
               href={X_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="for-vtubers-cta ui-btn ui-btn-lg w-full max-w-[320px]"
+              className="landing-cta ui-btn ui-btn-lg w-full max-w-[320px]"
             >
               <XMark className="h-[17px] w-[17px]" />
               参加について相談する
