@@ -12,6 +12,8 @@ import {
   SparklesIcon,
 } from "@heroicons/react/24/outline";
 
+import { SceneCreate, SceneLive, SceneWelcome } from "./StepScenes";
+
 /**
  * VTuber向けのCTAページ。
  *
@@ -28,8 +30,8 @@ import {
  * 消さずに「準備中」の無効状態で置いてある。そこに何が来るのかを先に
  * 見せておくと、ページの信頼感が下がりにくい。
  *
- * 挿絵は後入れ。各手順は2カラムにしてあり、右側が空いているので
- * そこに画像を差すだけで収まる（コメントで位置を示している）。
+ * 3STEPSの挿絵は StepScenes.tsx。ページで使っている本物の部品を並べて
+ * CSSで動かしているので、絵を描き直さなくても部品の変更に追従する。
  *
  * サーバーコンポーネントのまま置けるよう、FAQは <details> で作っている。
  * JSなしで開閉でき、検索エンジンにも中身が読まれる。
@@ -174,16 +176,19 @@ const STEPS = [
     no: "01",
     title: "枠を作る",
     body: ["日本語レベル・テーマ・日時を選んで、", "サムネを設定。"],
+    Scene: SceneCreate,
   },
   {
     no: "02",
     title: "スピーカーを迎える",
     body: ["まずは自己紹介から。", "名前や好きなことを話して、ゆっくり", "会話を始めます。"],
+    Scene: SceneWelcome,
   },
   {
     no: "03",
     title: "あとは、いつもの配信",
     body: ["ゲームでも雑談でも企画でも。", "普段のスタイルで一緒に楽しむだけ。"],
+    Scene: SceneLive,
   },
 ];
 
@@ -515,10 +520,9 @@ export default function ForVTubersPage() {
       {/* ================= 3STEPS ================= */}
       <Section>
         <SectionTitle>aimentで始める3STEPS</SectionTitle>
-        {/* 挿絵の高さぶん（lg:min-h）を先に確保してある。画像が入ればそのまま収まる。 */}
         <div className="mt-[var(--fv-head-gap)] grid gap-[clamp(40px,6vw,80px)]">
           {STEPS.map((step) => (
-            <div key={step.no} className="grid items-center gap-10 lg:min-h-[280px] lg:grid-cols-2">
+            <div key={step.no} className="grid items-center gap-10 lg:grid-cols-2">
               <div>
                 <h3 className="flex flex-wrap items-baseline gap-x-5 gap-y-2">
                   <span className="text-[clamp(46px,6vw,86px)] font-medium leading-none tracking-tight">
@@ -531,8 +535,10 @@ export default function ForVTubersPage() {
                 <Lines lines={step.body} className={`mt-[var(--fv-head-gap)] ${BODY}`} />
               </div>
 
-              {/* 挿絵の置き場。画像が入るまでは余白として空けておく。 */}
-              <div aria-hidden className="hidden lg:block" />
+              {/* 挿絵。狭い画面では本文の下、広い画面では右に寄せる。 */}
+              <div className="flex justify-center lg:justify-end">
+                <step.Scene />
+              </div>
             </div>
           ))}
         </div>

@@ -2996,3 +2996,568 @@ textarea::placeholder {
     transition: none;
   }
 }
+
+/* ==========================================================================
+   /for-vtubers 3STEPS の挿絵（StepScenes.tsx）
+   --------------------------------------------------------------------------
+   本物の部品を並べて CSS キーフレームで動かす。1シーン = --fv-cycle（6秒）の
+   ループで、各要素は「何%の時点で出るか」をクラスで持つ（fv-in-22 など）。
+   すべての寸法は cqw（舞台の幅に対する%）なので、どの幅でも同じ構図。
+   ========================================================================== */
+.fv-scene {
+  --fv-cycle: 6s;
+  position: relative;
+  container-type: inline-size;
+  width: 100%;
+  max-width: 460px;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  border-radius: var(--ui-radius-lg);
+  background: color-mix(in srgb, var(--brand-primary) 6%, #ffffff);
+  isolation: isolate;
+  user-select: none;
+}
+
+/* 時系列を持つ要素は全部同じ周期で回す。 */
+.fv-scene [class*="fv-in-"],
+.fv-scene [class*="fv-win-"],
+.fv-scene [class*="fv-float-"],
+.fv-scene .fv-slide-48,
+.fv-scene .fv-press-62,
+.fv-scene .fv-pop-66 {
+  animation-duration: var(--fv-cycle);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+/* 出たり消えたりする要素（発話チップ・レベルバー・吹き出し）は、
+   出番のクラスが付いていないか動きが止まっているときは隠しておく
+   （fv-rm-on を付けたものだけ「最後のコマ」として見せる）。 */
+.fv-scene [class*="fv-win-"],
+.fv-scene [class*="fv-float-"],
+.fv-scene .fv-talk,
+.fv-scene .fv-row__level > i {
+  opacity: 0;
+}
+
+/* --- 共通の小物 ----------------------------------------------------------- */
+.fv-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1.2cqw 2.6cqw;
+  border-radius: var(--ui-radius-pill);
+  background: color-mix(in srgb, var(--brand-primary) 12%, #ffffff);
+  color: var(--brand-primary);
+  font-size: 3cqw;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+/* レベルバッジ。カードの __level と同じ作り（面＋白リング＋同系色の厚み）。 */
+.fv-level {
+  display: grid;
+  width: 6.5cqw;
+  height: 6.5cqw;
+  place-items: center;
+  border-radius: 1.4cqw;
+  background: var(--level-face);
+  box-shadow:
+    0 0 0 0.6cqw #ffffff,
+    0 0.6cqw 0 0.6cqw var(--level-drop);
+  color: #ffffff;
+  font-size: 3.4cqw;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.fv-tile {
+  position: absolute;
+  left: 5cqw;
+  top: 7cqw;
+  display: grid;
+  width: 52cqw;
+  aspect-ratio: 16 / 9;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 3cqw;
+  background: color-mix(in srgb, var(--brand-primary) 14%, #ffffff);
+}
+
+.fv-tile__mark {
+  width: 34%;
+  height: auto;
+  animation: fv-bob 3s ease-in-out infinite;
+}
+
+.fv-tile__tag {
+  position: absolute;
+  left: 2.4cqw;
+  top: 2.4cqw;
+  font-size: 2.6cqw;
+  background: #ffffff;
+}
+
+.fv-live {
+  position: absolute;
+  left: 2.4cqw;
+  top: 2.4cqw;
+  display: inline-flex;
+  align-items: center;
+  gap: 1.2cqw;
+  padding: 1cqw 2.4cqw;
+  border-radius: var(--ui-radius-pill);
+  background: var(--brand-accent);
+  color: #ffffff;
+  font-size: 2.6cqw;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.3;
+}
+
+.fv-live > i {
+  width: 1.6cqw;
+  height: 1.6cqw;
+  border-radius: 50%;
+  background: #ffffff;
+  animation: fv-blink 1.2s ease-in-out infinite;
+}
+
+/* スピーカー欄 */
+.fv-list {
+  position: absolute;
+  right: 5cqw;
+  top: 6cqw;
+  display: grid;
+  width: 36cqw;
+  gap: 1.8cqw;
+}
+
+.fv-list__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1cqw;
+  color: var(--fv-ink-soft);
+  font-size: 2.8cqw;
+  font-weight: 700;
+}
+
+.fv-dots {
+  display: flex;
+  gap: 1cqw;
+}
+
+.fv-dots > span {
+  position: relative;
+  width: 2cqw;
+  height: 2cqw;
+  border-radius: 50%;
+  background: var(--track);
+}
+
+.fv-dots > span > i {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--brand-primary);
+}
+
+.fv-slot {
+  position: relative;
+  height: 9cqw;
+}
+
+.fv-slot__empty {
+  position: absolute;
+  inset: 0;
+  border: 0.4cqw dashed color-mix(in srgb, var(--brand-text) 18%, transparent);
+  border-radius: 2.4cqw;
+}
+
+.fv-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2cqw;
+  height: 9cqw;
+  padding: 0 2cqw;
+  border: 1px solid var(--fv-line);
+  border-radius: 2.4cqw;
+  background: #ffffff;
+}
+
+.fv-row__avatar {
+  display: grid;
+  width: 6cqw;
+  height: 6cqw;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--brand-primary) 16%, #ffffff);
+  color: var(--brand-primary);
+  font-size: 2.8cqw;
+  font-weight: 800;
+}
+
+.fv-row__meta {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 1.4cqw;
+}
+
+.fv-row__name {
+  display: block;
+  width: 60%;
+  height: 2.2cqw;
+  border-radius: var(--ui-radius-pill);
+  background: var(--placeholder);
+}
+
+.fv-row__level {
+  display: block;
+  height: 1.4cqw;
+  overflow: hidden;
+  border-radius: var(--ui-radius-pill);
+  background: color-mix(in srgb, var(--brand-text) 8%, transparent);
+}
+
+.fv-row__level > i {
+  display: block;
+  width: 62%;
+  height: 100%;
+  border-radius: var(--ui-radius-pill);
+  background: var(--brand-primary);
+}
+
+/* 「発話中」の3本バー。ライブ画面の発話チップと同じ形。 */
+.fv-talk {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 0.6cqw;
+  height: 3cqw;
+  flex-shrink: 0;
+  padding: 0 1.4cqw;
+  border-radius: var(--ui-radius-pill);
+  background: color-mix(in srgb, var(--brand-primary) 20%, #ffffff);
+}
+
+.fv-talk > i {
+  width: 0.7cqw;
+  height: 100%;
+  border-radius: var(--ui-radius-pill);
+  background: var(--brand-primary);
+  transform-origin: bottom;
+  animation: fv-bars 0.9s ease-in-out infinite;
+}
+
+.fv-talk > i:nth-child(2) {
+  animation-delay: -0.3s;
+}
+
+.fv-talk > i:nth-child(3) {
+  animation-delay: -0.6s;
+}
+
+.fv-bubble,
+.fv-chat {
+  position: absolute;
+  padding: 1.6cqw 3cqw;
+  border: 1px solid var(--fv-line);
+  border-radius: var(--ui-radius-pill);
+  background: #ffffff;
+  color: var(--brand-text);
+  font-size: 3.2cqw;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+/* --- 01 枠を作る ----------------------------------------------------------- */
+.fv-form {
+  position: absolute;
+  left: 5cqw;
+  top: 7cqw;
+  display: grid;
+  width: 38cqw;
+  gap: 3.2cqw;
+  padding: 4cqw;
+  border: 1px solid var(--fv-line);
+  border-radius: 3.5cqw;
+  background: #ffffff;
+}
+
+.fv-form__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 7cqw;
+}
+
+.fv-form__label {
+  color: var(--fv-ink-soft);
+  font-size: 3cqw;
+  font-weight: 700;
+}
+
+/* 本物の .ui-btn を舞台の大きさに合わせる。 */
+.fv-scene .fv-form__submit {
+  --btn-lift: 1.2cqw;
+  height: 8.5cqw;
+  margin-top: 1cqw;
+  padding: 0 4cqw;
+  font-size: 3.2cqw;
+  cursor: default;
+}
+
+/* 本物の配信カードを舞台の右半分に置く。影はこのページの方針に合わせて外す。 */
+.fv-scene .aiment-session-card {
+  --fv-ty: 0;
+  position: absolute;
+  right: 5cqw;
+  top: 6cqw;
+  width: 50cqw;
+  max-width: none;
+  cursor: default;
+}
+
+.fv-scene .aiment-session-card__media-shell {
+  filter: none;
+}
+
+.fv-scene .aiment-session-card__level {
+  --fv-ty: -50%;
+}
+
+.fv-scene .aiment-session-card__time {
+  right: 6%;
+  bottom: 6%;
+  padding: 2cqw 3.4cqw;
+  font-size: 5cqw;
+}
+
+.fv-scene .aiment-session-card__body {
+  grid-template-columns: 14cqw minmax(0, 1fr);
+  gap: 4cqw;
+  padding-top: 4cqw;
+}
+
+.fv-scene .aiment-session-card__avatar {
+  width: 14cqw;
+  height: 14cqw;
+}
+
+.fv-scene .aiment-session-card__title {
+  font-size: 6cqw;
+}
+
+.fv-bar--channel {
+  display: block;
+  width: 55%;
+  height: 3cqw;
+  margin-top: 2.5cqw;
+  border-radius: var(--ui-radius-pill);
+  background: var(--placeholder);
+}
+
+.fv-thumb {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--brand-primary) 18%, #ffffff);
+}
+
+.fv-thumb > img {
+  width: 42%;
+  height: auto;
+}
+
+/* --- 02 スピーカーを迎える ------------------------------------------------- */
+.fv-scene--welcome .fv-bubble {
+  left: 8cqw;
+  top: 40cqw;
+}
+
+/* --- 03 あとは、いつもの配信 ----------------------------------------------- */
+.fv-scene--live .fv-tile {
+  top: 6cqw;
+  width: 56cqw;
+}
+
+.fv-scene--live .fv-list {
+  top: 6cqw;
+  width: 32cqw;
+}
+
+.fv-chat {
+  left: 40cqw;
+  top: 30cqw;
+}
+
+.fv-controls {
+  position: absolute;
+  left: 5cqw;
+  top: 42cqw;
+  display: flex;
+  gap: 2cqw;
+}
+
+/* 本物の .ui-ctl を舞台の大きさに合わせる。 */
+.fv-scene .fv-controls .ui-ctl {
+  --ctl-lift: 1.2cqw;
+  width: 9cqw;
+  height: 9cqw;
+  padding: 0;
+  border-radius: 2.4cqw;
+  cursor: default;
+}
+
+.fv-scene .fv-controls .ui-ctl > svg {
+  width: 4.6cqw;
+  height: 4.6cqw;
+}
+
+/* --- キーフレーム ----------------------------------------------------------- */
+/* 現れる（P%で出て、94%で全員一緒に消える → きれいに頭へ戻る） */
+@keyframes fv-in-8 {
+  0%, 8% { opacity: 0; transform: translateY(var(--fv-ty, 0)) scale(0.85); }
+  13%, 94% { opacity: 1; transform: translateY(var(--fv-ty, 0)) scale(1); }
+  100% { opacity: 0; transform: translateY(var(--fv-ty, 0)) scale(1); }
+}
+@keyframes fv-in-12 {
+  0%, 12% { opacity: 0; transform: translateY(var(--fv-ty, 0)) scale(0.85); }
+  17%, 94% { opacity: 1; transform: translateY(var(--fv-ty, 0)) scale(1); }
+  100% { opacity: 0; transform: translateY(var(--fv-ty, 0)) scale(1); }
+}
+@keyframes fv-in-22 {
+  0%, 22% { opacity: 0; transform: translateY(var(--fv-ty, 0)) scale(0.85); }
+  27%, 94% { opacity: 1; transform: translateY(var(--fv-ty, 0)) scale(1); }
+  100% { opacity: 0; transform: translateY(var(--fv-ty, 0)) scale(1); }
+}
+@keyframes fv-in-26 {
+  0%, 26% { opacity: 0; transform: translateY(var(--fv-ty, 0)) scale(0.85); }
+  31%, 94% { opacity: 1; transform: translateY(var(--fv-ty, 0)) scale(1); }
+  100% { opacity: 0; transform: translateY(var(--fv-ty, 0)) scale(1); }
+}
+@keyframes fv-in-36 {
+  0%, 36% { opacity: 0; transform: translateY(var(--fv-ty, 0)) scale(0.85); }
+  41%, 94% { opacity: 1; transform: translateY(var(--fv-ty, 0)) scale(1); }
+  100% { opacity: 0; transform: translateY(var(--fv-ty, 0)) scale(1); }
+}
+@keyframes fv-in-40 {
+  0%, 40% { opacity: 0; transform: translateY(var(--fv-ty, 0)) scale(0.85); }
+  45%, 94% { opacity: 1; transform: translateY(var(--fv-ty, 0)) scale(1); }
+  100% { opacity: 0; transform: translateY(var(--fv-ty, 0)) scale(1); }
+}
+@keyframes fv-in-54 {
+  0%, 54% { opacity: 0; transform: translateY(var(--fv-ty, 0)) scale(0.85); }
+  59%, 94% { opacity: 1; transform: translateY(var(--fv-ty, 0)) scale(1); }
+  100% { opacity: 0; transform: translateY(var(--fv-ty, 0)) scale(1); }
+}
+@keyframes fv-in-68 {
+  0%, 68% { opacity: 0; transform: translateY(var(--fv-ty, 0)) scale(0.85); }
+  73%, 94% { opacity: 1; transform: translateY(var(--fv-ty, 0)) scale(1); }
+  100% { opacity: 0; transform: translateY(var(--fv-ty, 0)) scale(1); }
+}
+.fv-in-8 { animation-name: fv-in-8; }
+.fv-in-12 { animation-name: fv-in-12; }
+.fv-in-22 { animation-name: fv-in-22; }
+.fv-in-26 { animation-name: fv-in-26; }
+.fv-in-36 { animation-name: fv-in-36; }
+.fv-in-40 { animation-name: fv-in-40; }
+.fv-in-54 { animation-name: fv-in-54; }
+.fv-in-68 { animation-name: fv-in-68; }
+
+/* サムネが右から滑り込む */
+@keyframes fv-slide-48 {
+  0%, 48% { transform: translateX(105%); }
+  56%, 94% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(0); opacity: 0; }
+}
+.fv-slide-48 { animation-name: fv-slide-48; }
+
+/* ボタンが押されて沈む（.ui-btn の :active と同じ動き） */
+@keyframes fv-press-62 {
+  0%, 61% { transform: translateY(0); }
+  63%, 67% {
+    transform: translateY(var(--btn-lift));
+    box-shadow:
+      0 0 0 var(--btn-ring-w) var(--btn-ring),
+      0 1px 4px rgba(var(--shadow-rgb), 0.24);
+  }
+  69%, 100% { transform: translateY(0); }
+}
+.fv-press-62 { animation-name: fv-press-62; }
+
+/* カードがポンと弾む */
+@keyframes fv-pop-66 {
+  0%, 65% { transform: scale(1); }
+  68% { transform: scale(1.035); }
+  73%, 100% { transform: scale(1); }
+}
+.fv-pop-66 { animation-name: fv-pop-66; }
+
+/* A%〜B%の間だけ見える */
+@keyframes fv-win-30-50 { 0%, 30% { opacity: 0; } 33%, 50% { opacity: 1; } 53%, 100% { opacity: 0; } }
+@keyframes fv-win-56-66 { 0%, 56% { opacity: 0; } 59%, 66% { opacity: 1; } 69%, 100% { opacity: 0; } }
+@keyframes fv-win-74-92 { 0%, 74% { opacity: 0; } 77%, 92% { opacity: 1; } 95%, 100% { opacity: 0; } }
+@keyframes fv-win-4-30 { 0%, 4% { opacity: 0; } 7%, 30% { opacity: 1; } 33%, 100% { opacity: 0; } }
+@keyframes fv-win-33-60 { 0%, 33% { opacity: 0; } 36%, 60% { opacity: 1; } 63%, 100% { opacity: 0; } }
+@keyframes fv-win-63-92 { 0%, 63% { opacity: 0; } 66%, 92% { opacity: 1; } 95%, 100% { opacity: 0; } }
+.fv-win-30-50 { animation-name: fv-win-30-50; }
+.fv-win-56-66 { animation-name: fv-win-56-66; }
+.fv-win-74-92 { animation-name: fv-win-74-92; }
+.fv-win-4-30 { animation-name: fv-win-4-30; }
+.fv-win-33-60 { animation-name: fv-win-33-60; }
+.fv-win-63-92 { animation-name: fv-win-63-92; }
+
+/* チャットが浮かび上がって消える */
+@keyframes fv-float-8 {
+  0%, 8% { opacity: 0; transform: translateY(0); }
+  12% { opacity: 1; }
+  30% { opacity: 1; transform: translateY(-12cqw); }
+  36%, 100% { opacity: 0; transform: translateY(-16cqw); }
+}
+@keyframes fv-float-36 {
+  0%, 36% { opacity: 0; transform: translateY(0); }
+  40% { opacity: 1; }
+  58% { opacity: 1; transform: translateY(-12cqw); }
+  64%, 100% { opacity: 0; transform: translateY(-16cqw); }
+}
+@keyframes fv-float-62 {
+  0%, 62% { opacity: 0; transform: translateY(0); }
+  66% { opacity: 1; }
+  84% { opacity: 1; transform: translateY(-12cqw); }
+  90%, 100% { opacity: 0; transform: translateY(-16cqw); }
+}
+.fv-float-8 { animation-name: fv-float-8; }
+.fv-float-36 { animation-name: fv-float-36; }
+.fv-float-62 { animation-name: fv-float-62; }
+
+/* 短い周期で回り続けるもの */
+@keyframes fv-bars {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
+}
+@keyframes fv-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+@keyframes fv-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3%); }
+}
+
+/* 動きを減らす設定では止めて、最後のコマだけ見せる。 */
+@media (prefers-reduced-motion: reduce) {
+  .fv-scene,
+  .fv-scene * {
+    animation: none !important;
+  }
+
+  .fv-scene .fv-rm-on {
+    opacity: 1;
+  }
+}
