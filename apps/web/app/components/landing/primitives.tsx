@@ -24,6 +24,11 @@ export function XMark({ className = "" }: { className?: string }) {
  * 行の配列を1つの段落にする。広い画面ではモックどおりの位置で改行し、
  * 狭い画面では <br> を消して自然に折り返す（短い行なら alwaysBreak で固定できる）。
  */
+/** 次の行が日本語（かな・漢字・全角記号）で始まるなら、行の間に空白は要らない */
+function startsWithJapanese(line: React.ReactNode) {
+  return typeof line === "string" && /^[\u3000-\u9fff\uff00-\uffef]/.test(line);
+}
+
 export function Lines({
   lines,
   className = "",
@@ -39,10 +44,10 @@ export function Lines({
       {lines.map((line, index) => (
         <span key={index}>
           {line}
-          {/* 行の間の空白は、<br> が消える狭い画面で英文がくっつかないためのもの */}
+          {/* 英文は <br> が消える狭い画面で単語がくっつくので空白を挟む。日本語には挟まない */}
           {index < lines.length - 1 ? (
             <>
-              {" "}
+              {startsWithJapanese(lines[index + 1]) ? null : " "}
               <br className={alwaysBreak ? undefined : "hidden sm:block"} />
             </>
           ) : null}
