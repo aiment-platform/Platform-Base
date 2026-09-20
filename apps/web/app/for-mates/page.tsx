@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { PlayIcon } from "@heroicons/react/24/outline";
 
+import { RoleDiagram } from "../components/landing/RoleDiagram";
 import { WaveEdge } from "../components/landing/WaveEdge";
 import { BODY, FaqItem, Lines as BreakLines, Section, SectionTitle, X_HANDLE, X_URL, XMark } from "../components/landing/primitives";
 import { MembershipCard } from "./MembershipCard";
@@ -67,6 +68,14 @@ const SESSION_VIDEO_NOTE = [
   "aimentには、VTuber、リスナーの他に「スピーカー」というロールが存在します。",
   "aimentをメインで体験していただく方達で、カメラはOFF、マイクONの状態で",
   "セッションに参加します。1セッションあたり平均5名です。",
+];
+
+/** 関係図の下の4行 */
+const ROLES = [
+  { key: "vtuber", name: "VTuber", body: "セッションを開いて、進行する。" },
+  { key: "learner", name: "学習者", body: "海外の日本語学習者。声で参加して、日本語を使う。" },
+  { key: "mate", name: "メイト", body: "日本のファン。コメントで参加し、必要なときや後半は声で中へ。" },
+  { key: "listener", name: "リスナー", body: "配信を見て、コメントする。" },
 ];
 
 const CAN_DO = [
@@ -256,19 +265,33 @@ export default function ForSupportersPage() {
       <section id="supporter" className="sp-band scroll-mt-6">
         <div className="mx-auto w-full max-w-[1180px] px-6 lg:px-10">
           <p className="sp-kicker">日本のファンはメイトとして参加</p>
-          <div className="mt-2 grid gap-8 lg:grid-cols-2 lg:items-start">
-            <h2 className="text-[clamp(26px,calc(14px_+_1.9vw),40px)] font-extrabold leading-[1.4]">
-              メイトとして、
-              <br />
-              少し内側から。
-            </h2>
+          <div className="mt-2 grid gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-center">
             <div>
-              <Lines lines={["メイトは、", "そのVTuberのaimentでの活動に参加できる月額メンバーシップです。"]} className="sp-lead" />
+              <h2 className="text-[clamp(26px,calc(14px_+_1.9vw),40px)] font-extrabold leading-[1.4]">
+                メイトとして、
+                <br />
+                少し内側から。
+              </h2>
+              <Lines lines={["メイトは、", "そのVTuberのaimentでの活動に参加できる月額メンバーシップです。"]} className="sp-lead mt-5" />
               <Lines
                 lines={["開始前に少し早く集まったり、", "本編をコメントしながら見たり、", "必要なときに少し手を貸したり。"]}
                 className="sp-lead mt-4"
               />
               <p className="sp-lead mt-4">回によっては、ゲームや会話にも参加します。</p>
+            </div>
+            <div>
+              <RoleDiagram />
+              <ul className="rd-legend">
+                {ROLES.map((role) => (
+                  <li key={role.key}>
+                    <i className={`is-${role.key}`} aria-hidden />
+                    <span>
+                      <b>{role.name}</b>
+                      {role.body}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </div>
