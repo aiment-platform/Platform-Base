@@ -36,6 +36,7 @@ import { useI18n } from "../../lib/i18n";
 import { getStreamSession, listActiveStreamSessions, type StreamSession } from "../../lib/streamSessions";
 import { useWatchTimeTracker } from "../../hooks/useWatchTimeTracker";
 import { useUserSession } from "../../lib/userSession";
+import { useRouteTransition } from "../../components/ui/RouteTransition";
 
 type Role = "host" | "listener" | "speaker" | "unknown";
 type RequestedRole = "host" | "listener" | "speaker";
@@ -444,6 +445,7 @@ function SpeakerParticipantDock({
 
 export default function RoomPage() {
   const router = useRouter();
+  const { navigate } = useRouteTransition();
   const { tx } = useI18n();
   const { user } = useUserSession();
   const params = useParams<{ roomId: string }>();
@@ -1212,7 +1214,7 @@ export default function RoomPage() {
     <div className="flex h-screen flex-col overflow-hidden bg-[var(--brand-bg-900)] text-[var(--brand-text)]">
       <header className="shrink-0 bg-[var(--brand-bg-900)]">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between px-8 py-3 lg:px-12">
-          <button onClick={() => router.push("/")} className="flex items-center">
+          <button onClick={() => navigate("/")} className="flex items-center">
             <Image src="/logo/aiment_logotype.svg" alt="aiment" width={150} height={50} className="h-10 w-auto object-contain brightness-0 invert" />
           </button>
           <div className="flex items-center gap-2">
@@ -1345,7 +1347,7 @@ export default function RoomPage() {
                     </div>
                   </div>
                 )}
-                <button onClick={() => router.push("/")} className="mx-auto mt-5 block rounded-xl bg-[var(--brand-primary)] px-6 py-2.5 text-sm font-bold text-white">
+                <button onClick={() => navigate("/")} className="mx-auto mt-5 block rounded-xl bg-[var(--brand-primary)] px-6 py-2.5 text-sm font-bold text-white">
                   {tx("ホームへ", "Go Home")}
                 </button>
               </div>
@@ -1655,7 +1657,7 @@ export default function RoomPage() {
             <button
               onClick={() => {
                 cleanup();
-                router.push("/");
+                navigate("/");
               }}
               className="ui-ctl ui-ctl-md ui-ctl-danger"
             >

@@ -31,7 +31,7 @@ export function Footer() {
  <li>{tx("コミュニティ", "Community")}</li>
  <li>
    <Link href="/supporter-guidelines" className="transition hover:text-[var(--brand-text)]">
-     {tx("サポーター規約", "Supporter Guidelines")}
+     {tx("メイト規約", "Mate Guidelines")}
    </Link>
  </li>
  </ul>

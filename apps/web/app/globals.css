@@ -1050,11 +1050,13 @@ textarea::placeholder {
   will-change: transform;
 }
 
-.bt-layer--base { --bt-in-delay: 0ms;   --bt-in-dur: 560ms; --bt-out-delay: 150ms; --bt-out-dur: 420ms; }
-.bt-layer--far  { --bt-in-delay: 70ms;  --bt-in-dur: 620ms; --bt-out-delay: 0ms;   --bt-out-dur: 330ms; }
-.bt-layer--mid  { --bt-in-delay: 120ms; --bt-in-dur: 660ms; --bt-out-delay: 20ms;  --bt-out-dur: 320ms; }
-.bt-layer--dark { --bt-in-delay: 150ms; --bt-in-dur: 640ms; --bt-out-delay: 40ms;  --bt-out-dur: 330ms; }
-.bt-layer--back { --bt-in-delay: 180ms; --bt-in-dur: 680ms; --bt-out-delay: 60ms;  --bt-out-dur: 350ms; }
+/* 合計は「いちばん遅いパーツ」で決まる。入り 130+490=620ms、抜け 110+300=410ms。
+   RouteTransition.tsx の TIMING.wipe と揃えること。 */
+.bt-layer--base { --bt-in-delay: 0ms;   --bt-in-dur: 400ms; --bt-out-delay: 110ms; --bt-out-dur: 300ms; }
+.bt-layer--far  { --bt-in-delay: 50ms;  --bt-in-dur: 450ms; --bt-out-delay: 0ms;   --bt-out-dur: 240ms; }
+.bt-layer--mid  { --bt-in-delay: 85ms;  --bt-in-dur: 480ms; --bt-out-delay: 15ms;  --bt-out-dur: 230ms; }
+.bt-layer--dark { --bt-in-delay: 110ms; --bt-in-dur: 460ms; --bt-out-delay: 30ms;  --bt-out-dur: 240ms; }
+.bt-layer--back { --bt-in-delay: 130ms; --bt-in-dur: 490ms; --bt-out-delay: 45ms;  --bt-out-dur: 250ms; }
 
 .brand-transition--enter .bt-layer {
   animation: btLayerIn var(--bt-in-dur) cubic-bezier(0.22, 1, 0.36, 1) var(--bt-in-delay) both;
@@ -1147,7 +1149,7 @@ textarea::placeholder {
 
 .brand-transition--enter .brand-transition__center,
 .brand-transition--demo .brand-transition__center {
-  animation: btCenterIn 520ms cubic-bezier(0.2, 0.8, 0.2, 1) 260ms both;
+  animation: btCenterIn 360ms cubic-bezier(0.2, 0.8, 0.2, 1) 180ms both;
 }
 
 .brand-transition--demo .brand-transition__center {
@@ -1155,7 +1157,7 @@ textarea::placeholder {
 }
 
 .brand-transition--exit .brand-transition__center {
-  animation: btCenterOut 240ms ease-in both;
+  animation: btCenterOut 200ms ease-in both;
 }
 
 @keyframes btCenterIn {
@@ -1259,6 +1261,13 @@ textarea::placeholder {
   pointer-events: none;
 }
 
+/* スマホの下固定ナビ（TopNav）がある画面では、帯をその上に出す */
+@media (max-width: 767px) {
+  html[data-bottom-nav] .route-bar {
+    bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 .route-bar--inline {
   position: relative;
   inset: auto;
@@ -1269,11 +1278,11 @@ textarea::placeholder {
 }
 
 .route-bar--enter {
-  animation: rbIn 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: rbIn 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .route-bar--exit {
-  animation: rbOut 260ms cubic-bezier(0.55, 0, 1, 0.45) both;
+  animation: rbOut 220ms cubic-bezier(0.55, 0, 1, 0.45) both;
 }
 
 @keyframes rbIn {
@@ -1638,6 +1647,7 @@ textarea::placeholder {
 .sc-scene {
   --sc-cycle: 6s;
   position: relative;
+  color: var(--brand-text);
   container-type: inline-size;
   width: 100%;
   max-width: 460px;
@@ -2862,225 +2872,827 @@ textarea::placeholder {
 }
 .sc-pop-74 { animation-name: sc-pop-74; }
 
+
 /* ==========================================================================
-   /for-supporters（日本の既存ファン向け Supporter ページ）固有の部分。
-   共通部品は .landing-* と .sc-*（挿絵）を使う。
+   /for-mates（日本のファン向け メイト（Mate）ページ）
+   イベントの案内ページとして組む。紫・淡紫・白の面を切り替え、
+   文章は短く、場面は挿絵（.sc-*）で見せる。
    ========================================================================== */
 
-/* --- できること（カード） --------------------------------------------------- */
-.sp-cards {
-  display: grid;
-  gap: 16px;
-  padding: 0;
-  list-style: none;
+/* 区画の小見出し。大見出しの代わりに、小さく紫で置く */
+.sp-kicker {
+  margin: 0;
+  color: var(--brand-primary);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
 }
 
-.sp-cards > li {
-  padding: 22px;
-  border: 1px solid var(--ld-line);
-  border-radius: var(--ui-radius-lg);
-  background: var(--brand-surface);
+.sp-kicker--light {
+  color: rgba(255, 255, 255, 0.85);
 }
 
-.sp-cards__icon {
+.sp-h2 {
+  margin-top: 8px;
+  font-size: clamp(26px, calc(14px + 1.9vw), 40px);
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+/* 見出しの下の短い本文 */
+.sp-lead {
+  max-width: 34em;
+  color: var(--ld-ink-soft);
+  font-size: clamp(14px, calc(12px + 0.3vw), 16px);
+  font-weight: 700;
+  line-height: 2;
+}
+
+/* 淡い紫の面。白の区画と交互に */
+.sp-band {
+  padding: var(--ld-section-y) 0;
+  background: color-mix(in srgb, var(--brand-primary) 8%, #ffffff);
+}
+
+/* --- Hero の挿絵。少し大きめに ---------------------------------------------- */
+.sp-hero-art {
+  display: flex;
+  justify-content: center;
+}
+
+.sp-hero-art .sc-scene {
+  max-width: 600px;
+}
+
+/* --- 毎回の体験：文字と挿絵を左右に、段ごとに入れ替える ---------------------- */
+.sp-cando {
   display: grid;
-  width: 44px;
-  height: 44px;
-  place-items: center;
-  border-radius: var(--ui-radius-md);
+  gap: clamp(40px, 6vw, 88px);
+  margin-top: var(--ld-head-gap);
+}
+
+.sp-cando__row {
+  display: grid;
+  align-items: center;
+  gap: clamp(24px, 4vw, 64px);
+}
+
+.sp-cando__label {
+  margin: 0;
+  color: var(--brand-primary);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+}
+
+.sp-cando__text > h2 {
+  margin-top: 10px;
+  font-size: clamp(26px, calc(14px + 1.9vw), 40px);
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.sp-cando__text > p:last-child {
+  margin-top: 14px;
+  max-width: 34em;
+  color: var(--ld-ink-soft);
+  font-size: clamp(14px, calc(12px + 0.25vw), 15.5px);
+  font-weight: 700;
+  line-height: 1.9;
+}
+
+.sp-cando__art {
+  display: flex;
+  justify-content: center;
+}
+
+@media (min-width: 1024px) {
+  .sp-cando__row {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  }
+
+  .sp-cando__row.is-flip .sp-cando__text {
+    order: 2;
+  }
+
+  .sp-cando__art {
+    justify-content: flex-end;
+  }
+
+  .sp-cando__row.is-flip .sp-cando__art {
+    justify-content: flex-start;
+  }
+}
+
+/* --- 1回の例：濃い紫の面に、ゲーム名を大きく。下に5つの場面 --------------------- */
+.sp-example {
+  padding: var(--ld-section-y) 0;
   background: var(--brand-primary);
   color: #ffffff;
 }
 
-.sp-cards__icon > svg {
-  width: 24px;
-  height: 24px;
+.sp-example__game {
+  margin-top: 10px;
+  font-size: clamp(34px, calc(16px + 3.4vw), 72px);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
 }
 
-.sp-cards > li > h3 {
-  margin-top: 14px;
+.sp-example__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 0;
+  list-style: none;
+}
+
+.sp-example__meta > li {
+  padding: 6px 14px;
+  border-radius: var(--ui-radius-pill);
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+/* 5つの場面。狭い画面では横にスクロール、広い画面では5列 */
+.sp-moments {
+  display: flex;
+  gap: 16px;
+  margin: var(--ld-head-gap) 0 0;
+  padding: 0 24px;
+  overflow-x: auto;
+  list-style: none;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 24px;
+  scrollbar-width: none;
+}
+
+.sp-moments::-webkit-scrollbar {
+  display: none;
+}
+
+.sp-moment {
+  flex: 0 0 min(78vw, 360px);
+  scroll-snap-align: start;
+}
+
+.sp-moment__art .sc-scene {
+  max-width: none;
+}
+
+.sp-moment__time {
+  margin: 14px 0 0;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.85);
+  font-variant-numeric: tabular-nums;
+}
+
+/* できることの下：サポーターがいる意味 */
+.sp-why {
+  max-width: 760px;
+  margin: clamp(40px, 6vw, 88px) auto 0;
+  padding: clamp(22px, 3vw, 36px) clamp(20px, 3vw, 40px);
+  border-radius: var(--ui-radius-lg);
+  background: color-mix(in srgb, var(--brand-primary) 10%, #ffffff);
+}
+
+.sp-why > p {
+  margin: 0;
+  font-size: clamp(15px, calc(12px + 0.42vw), 18px);
+  font-weight: 700;
+  line-height: 2;
+}
+
+
+
+.sp-moment > h3 {
+  margin-top: 4px;
   font-size: 17px;
   font-weight: 800;
   line-height: 1.4;
 }
 
-.sp-cards > li > p {
-  margin-top: 8px;
+.sp-moment__body {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+@media (min-width: 1024px) {
+  .sp-moments {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    max-width: 1180px;
+    margin-inline: auto;
+    padding: 0 40px;
+    overflow: visible;
+  }
+
+  .sp-moment {
+    flex: none;
+  }
+}
+
+/* --- 3つのスタイル：帯の図 ----------------------------------------------------- */
+.sp-styles {
+  display: grid;
+  gap: 20px;
+}
+
+.sp-style {
+  padding: 22px 22px 20px;
+  border: 1px solid var(--ld-line);
+  border-radius: var(--ui-radius-lg);
+  background: var(--brand-surface);
+}
+
+.sp-style > h3 {
+  color: var(--brand-primary-dark);
+  font-size: clamp(19px, 1.7vw, 23px);
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.sp-style > p:last-child {
+  margin-top: 14px;
+  color: var(--ld-ink-soft);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.8;
+}
+
+.sp-style-bar {
+  margin-top: 18px;
+}
+
+.sp-style-bar__track {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 40px;
+}
+
+.sp-style-bar__seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 100%;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.sp-style-bar__seg.is-listen {
+  background: color-mix(in srgb, var(--brand-text) 7%, #ffffff);
+  color: var(--ld-ink-soft);
+}
+
+.sp-style-bar__seg.is-open {
+  background: var(--brand-primary);
+  color: #ffffff;
+}
+
+.sp-style-bar__seg svg,
+.sp-style-bar__dot svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sp-style-bar__dot {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand-primary);
+  color: #ffffff;
+}
+
+.sp-style-bar__ticks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  color: var(--ld-ink-soft);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+@media (min-width: 768px) {
+  .sp-styles {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* --- 参加できる回：セッションカード ------------------------------------------- */
+.sp-slots {
+  display: grid;
+  gap: 18px;
+}
+
+.sp-slot {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--ld-line);
+  border-radius: var(--ui-radius-lg);
+  background: var(--brand-surface);
+}
+
+.sp-slot__head {
+  position: relative;
+  padding: 20px 20px 18px;
+  color: #ffffff;
+  background: var(--brand-primary);
+}
+
+.sp-slot__vtuber {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.sp-slot__avatar {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  font-size: 13px;
+}
+
+.sp-slot__game {
+  margin: 14px 0 0;
+  font-size: clamp(21px, 1.9vw, 25px);
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.sp-slot__when {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 800;
+  opacity: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+
+.sp-slot__sample {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  padding: 3px 9px;
+  border-radius: var(--ui-radius-pill);
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.sp-slot__body {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px;
+}
+
+.sp-slot__style {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--ui-radius-md);
+  background: color-mix(in srgb, var(--brand-primary) 10%, #ffffff);
+}
+
+.sp-slot__style-label {
+  color: var(--brand-primary);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.sp-slot__style-name {
+  color: var(--brand-primary-dark);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.sp-slot__facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0;
+}
+
+.sp-slot__facts > div {
+  padding: 8px 12px;
+  border: 1px solid var(--ld-line);
+  border-radius: var(--ui-radius-md);
+}
+
+.sp-slot__facts > div.is-wide {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.sp-slot__facts dt {
+  color: var(--ld-ink-soft);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.sp-slot__facts dd {
+  margin: 2px 0 0;
+  font-size: 16px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.sp-slot__facts > div.is-wide dd {
+  margin: 0;
+  font-size: 14px;
+}
+
+.sp-slot__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding: 14px 20px;
+  border-top: 1px solid var(--ld-line);
+}
+
+.sp-slot__left {
+  color: var(--brand-primary-dark);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.sp-slot__left.is-soldout {
+  color: var(--ld-ink-soft);
 }
 
 @media (min-width: 640px) {
-  .sp-cards {
+  .sp-slots {
     grid-template-columns: 1fr 1fr;
   }
 }
 
 @media (min-width: 1024px) {
-  .sp-cards {
-    grid-template-columns: repeat(4, 1fr);
+  .sp-slots {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
-/* --- 1回のセッション（タイムライン） ---------------------------------------- */
-.sp-timeline {
+/* --- Membership カード ---------------------------------------------------------- */
+.sp-member {
+  width: 100%;
+  max-width: 420px;
+  overflow: hidden;
+  border: 1px solid var(--ld-line);
+  border-radius: var(--ui-radius-lg);
+  background: var(--brand-surface);
+}
+
+.sp-member__head {
   position: relative;
+  padding: 22px 22px 20px;
+  color: #ffffff;
+  background: var(--brand-primary);
+}
+
+.sp-member__label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  opacity: 0.85;
+}
+
+.sp-member__head > h3 {
+  margin-top: 6px;
+  font-size: clamp(22px, 2vw, 26px);
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.sp-member__price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 12px 0 0;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.sp-member__tbd {
+  font-size: 22px;
+}
+
+.sp-member__per {
+  font-size: 13px;
+  font-weight: 800;
+  opacity: 0.85;
+}
+
+.sp-member__list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 20px 22px 0;
+  list-style: none;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.sp-member__list > li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sp-member__list svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--brand-primary);
+}
+
+.sp-member__note {
+  margin: 14px 22px 0;
+  color: var(--ld-ink-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sp-member > .ui-btn {
+  margin: 18px 22px 22px;
+  width: calc(100% - 44px);
+}
+
+/* --- 参加方法：大きな番号 ----------------------------------------------------- */
+.sp-steps {
+  display: grid;
+  gap: 28px;
+  margin: var(--ld-head-gap) 0 0;
   padding: 0;
   list-style: none;
 }
 
-.sp-timeline::before {
-  position: absolute;
-  left: 9px;
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
-  content: "";
-  background: color-mix(in srgb, var(--brand-primary) 30%, transparent);
-}
-
-.sp-timeline > li {
-  position: relative;
-  padding: 0 0 30px 34px;
-}
-
-.sp-timeline > li:last-child {
-  padding-bottom: 0;
-}
-
-.sp-timeline > li::before {
-  position: absolute;
-  left: 4px;
-  top: 5px;
-  width: 12px;
-  height: 12px;
-  content: "";
-  border-radius: 50%;
-  background: var(--brand-primary);
-  box-shadow: 0 0 0 4px var(--bg);
-}
-
-.sp-timeline__when {
+.sp-steps__no {
   display: block;
   color: var(--brand-primary);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  line-height: 1.6;
+  font-size: clamp(40px, 5vw, 64px);
+  font-weight: 500;
+  line-height: 1;
 }
 
-.sp-timeline > li > h3 {
-  margin-top: 4px;
+.sp-steps h3 {
+  margin-top: 8px;
   font-size: clamp(17px, 1.6vw, 22px);
   font-weight: 800;
   line-height: 1.4;
 }
 
-.sp-timeline > li > p {
-  margin-top: 8px;
+.sp-steps p {
+  margin-top: 6px;
+  color: var(--ld-ink-soft);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.8;
 }
 
-/* 広い画面では横一列。線は上を走り、点は各項目の左上 */
-@media (min-width: 1024px) {
-  .sp-timeline--row {
-    display: grid;
+@media (min-width: 768px) {
+  .sp-steps {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+  }
+
+  .sp-steps--four {
     grid-template-columns: repeat(4, 1fr);
-    gap: 28px;
-  }
-
-  .sp-timeline--row::before {
-    left: 8px;
-    right: 8px;
-    top: 9px;
-    bottom: auto;
-    width: auto;
-    height: 2px;
-  }
-
-  .sp-timeline--row > li {
-    padding: 32px 0 0;
-  }
-
-  .sp-timeline--row > li::before {
-    left: 4px;
-    top: 4px;
   }
 }
 
-/* --- 参加までの3歩（紫の面の上） ----------------------------------------------- */
-.sp-join {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  padding: 0;
-  list-style: none;
+/* ==========================================================================
+   挿絵（このページ固有の配置）
+   ========================================================================== */
+/* Learner / Supporter の札。Supporter は紫、Learner は緑 */
+.sc-you--learner .sc-you__tag {
+  background: color-mix(in srgb, var(--brand-secondary) 70%, #1c3a20);
 }
 
-.sp-join > li {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px 8px 8px;
-  border-radius: var(--ui-radius-pill);
-  background: rgba(255, 255, 255, 0.14);
-  font-size: 13px;
-  font-weight: 800;
+.sc-you--learner .sc-row {
+  border-color: color-mix(in srgb, var(--brand-secondary) 60%, transparent);
 }
 
-.sp-join > li > span {
+/* マイクの札。ON は紫、OFF は灰色に斜線 */
+.sc-you.has-mic .sc-row {
+  padding-right: 7cqw;
+}
+
+.sc-mic {
+  position: absolute;
+  right: 1.4cqw;
+  top: 50%;
   display: grid;
-  width: 22px;
-  height: 22px;
+  width: 4.4cqw;
+  height: 4.4cqw;
   place-items: center;
   border-radius: 50%;
-  background: #ffffff;
-  color: var(--brand-primary);
-  font-size: 12px;
+  transform: translateY(-50%);
 }
 
-/* --- 挿絵：Supporter Lounge ---------------------------------------------------- */
-/* 配信の枠の右上に乗せる札（「開始前」「チーム戦」など） */
+.sc-mic > svg {
+  width: 2.6cqw;
+  height: 2.6cqw;
+}
+
+.sc-mic--on {
+  background: var(--brand-primary);
+  color: #ffffff;
+}
+
+.sc-mic--off {
+  background: color-mix(in srgb, var(--brand-text) 10%, #ffffff);
+  color: var(--ld-ink-soft);
+}
+
+.sc-mic--off::after {
+  position: absolute;
+  width: 0.5cqw;
+  height: 3.6cqw;
+  content: "";
+  border-radius: 1cqw;
+  background: var(--ld-ink-soft);
+  transform: rotate(45deg);
+}
+
+/* 切り替わる札は同じ場所に重ねる（OFF が消え、ON が出る） */
+.sc-mic.sc-out-40,
+.sc-mic.sc-in-40 {
+  animation-fill-mode: both;
+}
+
+/* 配信の枠の右上に乗せる札（時刻など） */
 .sc-tilechip {
   position: absolute;
   right: 45cqw;
   top: 9.4cqw;
   background: #ffffff;
+  font-variant-numeric: tabular-nums;
 }
 
-.sc-lounge__topic {
+.sc-tilechip--mix {
+  background: var(--brand-primary);
+  color: #ffffff;
+  letter-spacing: 0.08em;
+}
+
+/* Hero：配信の枠の下に参加者4人、右にチャット */
+.sc-scene--hero .sc-tile {
+  top: 4cqw;
+  width: 46cqw;
+}
+
+.sc-list.sc-hero__roster {
+  left: 5cqw;
+  right: auto;
+  top: 30cqw;
+  width: 46cqw;
+  gap: 1cqw;
+}
+
+.sc-scene--hero .sc-row,
+.sc-scene--hero .sc-slot {
+  height: 6.2cqw;
+}
+
+.sc-scene--hero .sc-you__tag {
+  top: -1.2cqw;
+  font-size: 1.9cqw;
+}
+
+.sc-hero__host {
   left: 8cqw;
+  top: 22cqw;
+  z-index: 2;
+}
+
+.sc-scene--hero .sc-schat {
+  right: 4cqw;
+  top: 4cqw;
+  bottom: 4cqw;
+  width: 43cqw;
+}
+
+/* 開始5分前：Supporter 3人、全員マイクON */
+.sc-gather__b1 { left: 8cqw; top: 41cqw; }
+.sc-gather__b2 { left: 14cqw; top: 50cqw; }
+.sc-gather__b3 { left: 22cqw; top: 41cqw; }
+
+/* 本編スタート：6人がそろう */
+.sc-scene--start .sc-list {
+  top: 4cqw;
+  gap: 1cqw;
+}
+
+.sc-scene--start .sc-row,
+.sc-scene--start .sc-slot {
+  height: 6.2cqw;
+}
+
+.sc-scene--start .sc-you__tag {
+  top: -1.2cqw;
+  font-size: 1.9cqw;
+}
+
+.sc-start__hello {
+  left: 10cqw;
   top: 41cqw;
 }
 
-.sc-lounge__topic--2 {
-  left: 16cqw;
-  top: 51cqw;
-}
-
-/* --- 挿絵：Supporter Chat ------------------------------------------------------ */
-.sc-scene--chat .sc-tile {
-  top: 6cqw;
+/* Learner中心／バックアップ：枠の下に参加者2人、右にチャット */
+.sc-scene--watch .sc-tile,
+.sc-scene--backup .sc-tile {
+  top: 5cqw;
   width: 42cqw;
 }
 
+.sc-list.sc-watch__roster,
+.sc-list.sc-backup__roster {
+  left: 5cqw;
+  right: auto;
+  top: 32cqw;
+  width: 42cqw;
+  gap: 1.4cqw;
+}
+
+.sc-scene--watch .sc-row,
+.sc-scene--backup .sc-row {
+  height: 8cqw;
+}
+
+
+.sc-scene--watch .sc-schat,
+.sc-scene--backup .sc-schat {
+  right: 4cqw;
+  top: 5cqw;
+  bottom: 5cqw;
+  width: 46cqw;
+}
+
+.sc-watch__reply,
+.sc-backup__reply {
+  left: 12cqw;
+  top: 22cqw;
+  z-index: 2;
+}
+
+/* 枠が 42cqw 幅なので、札の右端もそれに合わせる */
+.sc-scene--watch .sc-tilechip,
+.sc-scene--backup .sc-tilechip {
+  right: 55cqw;
+}
+
+/* Native Mix：40% で Supporter のマイクが開く */
+.sc-scene--mix .sc-list {
+  top: 6cqw;
+}
+
+.sc-mix__b1 { left: 8cqw; top: 41cqw; }
+.sc-mix__b2 { left: 16cqw; top: 50cqw; border-color: var(--brand-primary); }
+.sc-mix__b3 { left: 30cqw; top: 41cqw; }
+
+/* 終了：吹き出しが順に */
+.sc-end__b1 { left: 8cqw; top: 41cqw; }
+.sc-end__b2 { left: 60cqw; top: 8cqw; }
+.sc-end__b3 { left: 64cqw; top: 22cqw; }
+.sc-end__b4 { left: 58cqw; top: 36cqw; }
+
+/* --- 共通：参加者一覧のチャット欄 --------------------------------------------- */
 .sc-chat-main {
   position: absolute;
   left: 5cqw;
-  top: 33cqw;
+  top: 34cqw;
   width: 42cqw;
-}
-
-.sc-chat-main__tag {
-  position: absolute;
-  right: 2cqw;
-  top: -1.6cqw;
-  z-index: 2;
-  padding: 0.3cqw 1.4cqw;
-  border-radius: var(--ui-radius-pill);
-  background: var(--brand-primary);
-  color: #ffffff;
-  font-size: 2.2cqw;
-  font-weight: 800;
-  line-height: 1.4;
 }
 
 .sc-schat {
@@ -3104,23 +3716,6 @@ textarea::placeholder {
   font-size: 2.6cqw;
   font-weight: 800;
   white-space: nowrap;
-}
-
-.sc-schat__lock {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.8cqw;
-  padding: 0.6cqw 1.6cqw;
-  border-radius: var(--ui-radius-pill);
-  background: color-mix(in srgb, var(--brand-text) 6%, #ffffff);
-  color: var(--ld-ink-soft);
-  font-size: 2.1cqw;
-  font-weight: 800;
-}
-
-.sc-schat__lock > svg {
-  width: 2.4cqw;
-  height: 2.4cqw;
 }
 
 .sc-schat__list {
@@ -3160,6 +3755,15 @@ textarea::placeholder {
   padding-top: 0.3cqw;
 }
 
+.sc-schat__msg--lrn {
+  background: color-mix(in srgb, var(--brand-secondary) 18%, #ffffff);
+}
+
+.sc-schat__msg--lrn > .sc-schat__who {
+  background: color-mix(in srgb, var(--brand-secondary) 40%, #ffffff);
+  color: var(--brand-text);
+}
+
 .sc-schat__input {
   display: flex;
   flex: 1;
@@ -3178,12 +3782,6 @@ textarea::placeholder {
   background: var(--placeholder);
 }
 
-.sc-chat__reply {
-  left: 18cqw;
-  top: 21cqw;
-  z-index: 2;
-}
-
 .sc-schat__foot {
   display: flex;
   align-items: center;
@@ -3191,22 +3789,9 @@ textarea::placeholder {
   margin-top: auto;
 }
 
-.sc-schat__foot .ui-ctl {
-  --ctl-lift: 1cqw;
-  width: 6cqw;
-  height: 6cqw;
-  padding: 0;
-  border-radius: 2cqw;
-  cursor: default;
+/* 40% で消える（マイクの札の切り替えに使う） */
+@keyframes sc-out-40 {
+  0%, 40% { opacity: 1; }
+  43%, 100% { opacity: 0; }
 }
-
-.sc-schat__foot .ui-ctl > svg {
-  width: 3.6cqw;
-  height: 3.6cqw;
-}
-
-/* --- 挿絵：ゲーム・企画に参加 ------------------------------------------------ */
-.sc-game__call {
-  left: 10cqw;
-  top: 40cqw;
-}
+.sc-out-40 { animation-name: sc-out-40; }

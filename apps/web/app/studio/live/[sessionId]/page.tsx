@@ -41,6 +41,7 @@ import {
 import { useUserSession } from "../../../lib/userSession";
 import { ObsStreamPanel } from "./ObsStreamPanel";
 import { TroubleshootPanel, type Diagnostics } from "./TroubleshootPanel";
+import { useRouteTransition } from "../../../components/ui/RouteTransition";
 
 type ParticipantItem = {
   id: string;
@@ -407,6 +408,7 @@ function SpeakerOverlayLauncher({
 
 export default function StudioLiveSessionPage() {
   const router = useRouter();
+  const { navigate } = useRouteTransition();
   const searchParams = useSearchParams();
   const { tx } = useI18n();
   const { user, isVtuber, hydrated: sessionHydrated } = useUserSession();
@@ -1131,7 +1133,7 @@ export default function StudioLiveSessionPage() {
     }).catch(() => null);
     const endedSession = await setStreamSessionStatus(session.sessionId, "ended");
     if (endedSession) {
-      router.push(`/studio/live/${encodeURIComponent(session.sessionId)}/post`);
+      navigate(`/studio/live/${encodeURIComponent(session.sessionId)}/post`);
     }
   };
 
@@ -1258,7 +1260,7 @@ export default function StudioLiveSessionPage() {
                     setShowStopConfirm(true);
                     return;
                   }
-                  router.push("/");
+                  navigate("/");
                 }}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-surface)] px-3 py-2 text-sm font-semibold text-[var(--brand-text-muted)]"
               >
