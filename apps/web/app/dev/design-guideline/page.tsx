@@ -586,13 +586,14 @@ function GuidelineV03() {
         <h2 className="text-lg font-bold">Page Transition</h2>
         <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
           ページ遷移のワイプ。紫の地に波と水玉を重ねた板が、右外から入り → しばらく滞空 → 左外へ抜けていく。
+          出すのは「配信の場（/room, /studio/live）に入る・出る」ときだけ。入り620ms・滞空込みで最短900ms・抜け420ms。
         </p>
         <div className="mt-4">
           <TransitionShowcase />
         </div>
         <h3 className="mt-8 text-base font-bold">読み込みバー（画面を覆わない方）</h3>
         <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
-          一覧から詳細へ移るときなど、元の画面が見えていた方が親切な遷移で使う。画面下に出るだけで操作も邪魔しない。
+          それ以外のふつうのページ移動（一覧→詳細、タブ、案内ページ同士、戻る／進む）はこちら。画面下に出るだけで操作も邪魔しない。
         </p>
         <div className="mt-3 h-[120px] overflow-hidden rounded-[var(--ui-radius-lg)]">
           <BrandProgressBar inline />
@@ -607,9 +608,9 @@ function GuidelineV03() {
             "5. 水玉は帯がほどけたもの。ふち際は粒同士が重なってべた塗りになり、離れるほど分離して消える",
             "6. 粒は1周でちょうど1マス送られ、奥で消えてふち側から補充される（無限に流れて見える）",
             "7. ロゴはシンボルのみを白抜き（ロゴタイプは使わない）",
-            "8. RouteTransitionProvider がリンククリックを見て出す。コード側の遷移は useRouteTransition().navigate() から出す",
-            "9. 覆う wipe と、画面下だけの bar の2種類。bar は入り320ms / 抜け260msと短く、pointer-events も切ってある",
-            "10. prefers-reduced-motion では動きを止め、静止画として見せる",
+            "8. RouteTransitionProvider がリンククリックと戻る／進むを見て出す。コード側の遷移は useRouteTransition().navigate() から出す",
+            "9. 出し分けは行き先で自動判定。配信の場（/room, /studio/live）に入る・出るときだけ wipe、それ以外は bar（入り260ms / 抜け220ms、pointer-events なし）",
+            "10. 出さない場面：ページ内リンク（#見出し）、同じページに留まる戻る／進む、クリックを途中で止める仕掛けがあるとき、prefers-reduced-motion",
           ]}
         />
       </section>

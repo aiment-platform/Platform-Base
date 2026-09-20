@@ -1,6 +1,6 @@
 "use client";
 
-import { ComponentType, SVGProps } from "react";
+import { ComponentType, SVGProps, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -34,10 +34,18 @@ type TopNavProps = {
 
 export function TopNav({ mode = "default", searchQuery, onSearchChange }: TopNavProps) {
   const { navigate } = useRouteTransition();
+
   const pathname = usePathname();
   const { locale, tx } = useI18n();
   const { isAuthenticated, isVtuber } = useUserSession();
   const isStudioMode = mode === "studio";
+  // 下固定のナビがある間は印を付けておく。読み込みの帯（.route-bar）が
+  // ナビの上に出るように、CSS 側で位置をずらすのに使う。
+  useEffect(() => {
+    if (isStudioMode) return;
+    document.documentElement.setAttribute("data-bottom-nav", "");
+    return () => document.documentElement.removeAttribute("data-bottom-nav");
+  }, [isStudioMode]);
   const showSearch = !isStudioMode && searchQuery !== undefined && onSearchChange !== undefined;
   const navItems: NavItem[] = isAuthenticated
     ? [

@@ -17,6 +17,7 @@ import { useI18n } from "../../lib/i18n";
 import { createStreamSession } from "../../lib/streamSessions";
 import { uploadImageToR2 } from "../../lib/uploadImage";
 import { useUserSession } from "../../lib/userSession";
+import { useRouteTransition } from "../../components/ui/RouteTransition";
 
 const PRESET_THUMBNAILS = [1, 2, 3, 4, 5].map((n) => `/image/thumbnail/thumbnail_${n}.png`);
 const DEFAULT_THUMBNAIL = PRESET_THUMBNAILS[4];
@@ -35,6 +36,7 @@ function localNow30min() {
 
 export default function StudioPreLivePage() {
   const router = useRouter();
+  const { navigate } = useRouteTransition();
   const { tx } = useI18n();
   const { isVtuber, hydrated } = useUserSession();
 
@@ -187,7 +189,7 @@ export default function StudioPreLivePage() {
         });
         if (selectedMicDeviceId) params.set("micDeviceId", selectedMicDeviceId);
         if (selectedCamDeviceId) params.set("camDeviceId", selectedCamDeviceId);
-        router.push(`/studio/live/${encodeURIComponent(created.sessionId)}?${params.toString()}`);
+        navigate(`/studio/live/${encodeURIComponent(created.sessionId)}?${params.toString()}`);
         return;
       }
       const params = new URLSearchParams({
@@ -196,7 +198,7 @@ export default function StudioPreLivePage() {
       });
       if (selectedMicDeviceId) params.set("micDeviceId", selectedMicDeviceId);
       if (selectedCamDeviceId) params.set("camDeviceId", selectedCamDeviceId);
-      router.push(`/studio/live/${encodeURIComponent(created.sessionId)}?${params.toString()}`);
+      navigate(`/studio/live/${encodeURIComponent(created.sessionId)}?${params.toString()}`);
     } catch (caughtError) {
       const message = caughtError instanceof Error ? caughtError.message : "";
       if (message.includes("VTuber registration requires verified phone")) {

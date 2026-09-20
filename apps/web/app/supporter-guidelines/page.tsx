@@ -3,9 +3,9 @@ import Link from "next/link";
 import { TopNav } from "../components/home/TopNav";
 
 export const metadata: Metadata = {
-  title: "日本人サポーター ガイドライン | Aiment",
+  title: "日本人メイト ガイドライン | Aiment",
   description:
-    "AimentのVTuberセッションに日本人サポーターとして参加するためのガイドライン・行動規範・禁止事項。",
+    "AimentのVTuberセッションに日本人メイトとして参加するためのガイドライン・行動規範・禁止事項。",
 };
 
 export default function SupporterGuidelinesPage() {
@@ -16,20 +16,20 @@ export default function SupporterGuidelinesPage() {
         {/* Header */}
         <div className="mb-10">
           <span className="mb-3 inline-block rounded-full bg-purple-500/15 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-purple-400">
-            Supporter Guidelines
+            Mate Guidelines
           </span>
           <h1 className="text-3xl font-bold tracking-tight">
-            日本人サポーター ガイドライン
+            日本人メイト ガイドライン
           </h1>
           <p className="mt-2 text-sm text-[var(--brand-text-muted)]">v1.0 — 2026年6月</p>
         </div>
 
         <div className="space-y-10">
           {/* What is a supporter */}
-          <Section title="サポーターとは" emoji="🎭">
+          <Section title="メイトとは" emoji="🎭">
             <p className="mb-4 leading-relaxed">
               VTuberとAimer（フィリピン人参加者）の架け橋として、セッションを豊かにする存在です。
-              <strong>主役はVTuberとAimer。サポーターは縁の下の力持ちです。</strong>
+              <strong>主役はVTuberとAimer。メイトは縁の下の力持ちです。</strong>
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <RoleCard
@@ -51,7 +51,7 @@ export default function SupporterGuidelinesPage() {
                 "Aimerの日本語の挑戦を肯定的に受け取り、後押しする",
                 "VTuberの進行・トーンに合わせて場を盛り上げる",
                 "Aimerが萎縮していたら話しかけて緊張をほぐす",
-                "会話の主導権はVTuberとAimerに委ねる（サポーターが話しすぎない）",
+                "会話の主導権はVTuberとAimerに委ねる（メイトが話しすぎない）",
                 "時間を独占せず、Aimerに話す機会を積極的に譲る",
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2 text-sm leading-relaxed">
@@ -87,14 +87,14 @@ export default function SupporterGuidelinesPage() {
                   "Aimerの日本語レベルへの嘲笑・馬鹿にする発言禁止",
                   "政治・宗教・性的・差別的な話題の持ち込み禁止",
                   "VTuberへの過度な感情移入・依存・独占的な言動禁止",
-                  "他のサポーター・Aimerへのハラスメント行為禁止",
+                  "他のメイト・Aimerへのハラスメント行為禁止",
                 ]}
               />
               <ProhibitedGroup
                 title="なりすまし・不正"
                 items={[
                   "複数アカウントによる規約回避禁止",
-                  "サポーターとしての立場を利用した営業・勧誘禁止",
+                  "メイトとしての立場を利用した営業・勧誘禁止",
                 ]}
               />
             </div>
@@ -163,16 +163,16 @@ export default function SupporterGuidelinesPage() {
         {/* CTA */}
         <div className="mt-12 rounded-2xl border border-purple-500/20 bg-purple-500/5 p-6 text-center">
           <p className="mb-1 text-sm font-semibold text-purple-300">
-            サポーターとして参加する
+            メイトとして参加する
           </p>
           <p className="mb-4 text-xs text-[var(--brand-text-muted)]">
-            このガイドラインに同意した上で、サポーターとしてアカウントを作成できます。
+            このガイドラインに同意した上で、メイトとしてアカウントを作成できます。
           </p>
           <Link
             href="/auth/signup"
             className="inline-block rounded-xl bg-purple-600 px-6 py-2.5 text-sm font-bold text-white transition hover:brightness-110"
           >
-            サポーター登録へ →
+            メイト登録へ →
           </Link>
         </div>
       </main>
