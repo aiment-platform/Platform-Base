@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
-import { PlayIcon } from "@heroicons/react/24/outline";
-
 import { RoleDiagram } from "../components/landing/RoleDiagram";
+import { SessionVideo } from "../components/landing/SessionVideo";
+import { SceneWhatIs } from "../lp/LearnerScenes";
 import { WaveEdge } from "../components/landing/WaveEdge";
 import { BODY, FaqItem, Lines as BreakLines, Section, SectionTitle, X_HANDLE, X_URL, XMark } from "../components/landing/primitives";
 import { MembershipCard } from "./MembershipCard";
@@ -37,7 +37,7 @@ import {
 export const metadata: Metadata = {
   title: "推しのaimentに、日本のファンも。 | aiment",
   description:
-    "aimentでは、海外の日本語学習者とVTuberが、ゲームや企画を通して日本語で交流します。メイト枠のある回では、日本のファンも一緒に参加できます。",
+    "aimentでは、海外の日本語学習者（ラーナー）とVTuberが、ゲームや企画を通して日本語で交流します。メイト枠のある回では、日本のファンも一緒に参加できます。",
   openGraph: {
     title: "推しのaimentに、日本のファンも。 | aiment",
     description: "メイト枠のある回では、日本のファンも一緒に参加できます。VTuberごとの月額メンバーシップ。",
@@ -46,7 +46,6 @@ export const metadata: Metadata = {
 
 const SIGNUP_URL = "/auth/signup";
 const GUIDELINES_URL = "/supporter-guidelines";
-const edited = (name: string) => `/lp/edited/${name}`;
 
 /** /for-vtubers, /lp と同じ「aimentって何？」。ページをまたいで同じ説明にする。 */
 const WHAT_IS = {
@@ -58,22 +57,22 @@ const WHAT_IS = {
       "学んでいる海外ファンはたくさんいます。",
     ],
     [
-      "aimentは、そんな日本語学習者と日本人VTuberをつなぎ、",
+      "aimentは、そんな日本語学習者（ラーナー）と日本人VTuberをつなぎ、",
       "「好きな人と楽しむために日本語を使う時間」をつくるサービスです。",
     ],
   ],
 };
 
 const SESSION_VIDEO_NOTE = [
-  "aimentには、VTuber、リスナーの他に「スピーカー」というロールが存在します。",
-  "aimentをメインで体験していただく方達で、カメラはOFF、マイクONの状態で",
-  "セッションに参加します。1セッションあたり平均5名です。",
+  "aimentでは、VTuberとリスナーのほかに、海外の日本語学習者（ラーナー）がセッションに参加します。",
+  "学習者（ラーナー）はカメラOFF、マイクONの状態でVTuberと直接話します。",
+  "1セッションあたり平均5名です。",
 ];
 
 /** 関係図の下の4行 */
 const ROLES = [
   { key: "vtuber", name: "VTuber", body: "セッションを開いて、進行する。" },
-  { key: "learner", name: "学習者", body: "海外の日本語学習者。声で参加して、日本語を使う。" },
+  { key: "learner", name: "学習者（ラーナー）", body: "海外の日本語学習者（ラーナー）。声で参加して、日本語を使う。" },
   { key: "mate", name: "メイト", body: "日本のファン。コメントで参加し、必要なときや後半は声で中へ。" },
   { key: "listener", name: "リスナー", body: "配信を見て、コメントする。" },
 ];
@@ -88,7 +87,7 @@ const CAN_DO = [
   {
     label: "本編中",
     title: ["コメントしながら、", "一緒に参加。"],
-    body: ["本編中は自由にコメントできます。", "VTuber・日本語学習者・メイトが、同じコメントを見ながらセッションを楽しみます。"],
+    body: ["本編中は自由にコメントできます。", "VTuber・日本語学習者（ラーナー）・メイトが、同じコメントを見ながらセッションを楽しみます。"],
     Scene: SceneWatch,
   },
   {
@@ -103,7 +102,7 @@ const CAN_DO = [
 ];
 
 const STYLES: { style: SupporterStyle; lines: string[] }[] = [
-  { style: "native-mix", lines: ["前半は日本語学習者中心。", "後半になるとメイトもマイクをONにして、みんなでゲームや会話に参加します。"] },
+  { style: "native-mix", lines: ["前半は日本語学習者（ラーナー）中心。", "後半になるとメイトもマイクをONにして、みんなでゲームや会話に参加します。"] },
   { style: "open-mix", lines: ["最初からメイトも音声参加。", "ゲームや参加型企画など、みんなで一緒に遊ぶ回に向いています。"] },
   { style: "call-in", lines: ["基本はコメント中心。", "ゲーム参加やサポートが必要になったときに、メイトが中に入ります。"] },
 ];
@@ -112,15 +111,15 @@ const STYLES: { style: SupporterStyle; lines: string[] }[] = [
 const WHY = [
   "音声が二重になっている。カメラがついていない。ゲームに入れずに困っている人がいる。",
   "セッション中に起きる小さなつまずきは、日本語が通じる人がひとりいるだけで、落ち着いて対処できます。",
-  "VTuberも学習者も、安心して本編に集中できる。メイトは、そのためにいます。",
+  "VTuberも学習者（ラーナー）も、安心して本編に集中できる。メイトは、そのためにいます。",
 ];
 
 const EXAMPLE = {
-  meta: ["60分", "ゲームA", "日本語学習者 3人", "メイト 3人", "後半から合流"],
+  meta: ["60分", "ゲームA", "ラーナー 3人", "メイト 3人", "後半から合流"],
   moments: [
     { time: "開始5分前", title: "メイト集合", body: "VTuberとメイトで少し早めに集まり、マイクやゲームを確認しながら軽く話します。", Scene: SceneGather },
-    { time: "本編開始", title: "日本語学習者が参加", body: "メイトはコメントしながら同じセッションを楽しみます。", Scene: SceneStart },
-    { time: "前半", title: "日本語学習者中心", body: "必要なときには、ゲームや音声のサポートに入ることもあります。", Scene: SceneWatch },
+    { time: "本編開始", title: "日本語学習者（ラーナー）が参加", body: "メイトはコメントしながら同じセッションを楽しみます。", Scene: SceneStart },
+    { time: "前半", title: "日本語学習者（ラーナー）中心", body: "必要なときには、ゲームや音声のサポートに入ることもあります。", Scene: SceneWatch },
     { time: "後半", title: "みんなで合流", body: "メイトもマイクをONにして、みんなでゲームや会話に参加します。", Scene: SceneNativeMix },
     { time: "終了", title: "その日のセッション終了", body: "", Scene: SceneEnd },
   ],
@@ -195,7 +194,7 @@ export default function ForSupportersPage() {
                 日本のファンも。
               </h1>
               <Lines
-                lines={["aimentでは、海外の日本語学習者とVTuberが、", "ゲームや企画を通して日本語で交流します。"]}
+                lines={["aimentでは、海外の日本語学習者（ラーナー）とVTuberが、", "ゲームや企画を通して日本語で交流します。"]}
                 className="mt-6 text-[clamp(15px,calc(12px_+_0.42vw),18px)] font-bold leading-[2]"
               />
               <Lines
@@ -237,13 +236,7 @@ export default function ForSupportersPage() {
             </div>
           </div>
           <div className="flex justify-center lg:justify-end">
-            <Image
-              src={edited("concept.png")}
-              alt="ファンとVTuberが話している"
-              width={1457}
-              height={1079}
-              className="w-full max-w-[460px]"
-            />
+            <SceneWhatIs lang="ja" />
           </div>
         </div>
       </Section>
@@ -251,10 +244,7 @@ export default function ForSupportersPage() {
       {/* ================= 実際のセッション映像（/lp と同じ） ================= */}
       <Section>
         <SectionTitle>実際のセッション映像</SectionTitle>
-        <div className="landing-video mt-[var(--ld-head-gap)]" role="img" aria-label="セッション映像（準備中）">
-          <PlayIcon aria-hidden />
-          <span className="landing-soon">準備中</span>
-        </div>
+        <SessionVideo label="実際のセッション映像" />
         <BreakLines
           lines={SESSION_VIDEO_NOTE}
           className={`mx-auto mt-[var(--ld-head-gap)] max-w-[880px] text-left sm:text-center ${BODY}`}
@@ -474,7 +464,7 @@ export default function ForSupportersPage() {
               VTuberの方へ
             </Link>
             <Link href="/lp" className="hover:underline">
-              学習者の方へ（English）
+              学習者（ラーナー）の方へ（English）
             </Link>
             <Link href={GUIDELINES_URL} className="hover:underline">
               ガイドライン

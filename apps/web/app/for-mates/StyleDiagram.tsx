@@ -15,7 +15,7 @@ export function StyleDiagram({ style }: { style: SupporterStyle }) {
         {style === "native-mix" ? (
           <>
             <span className="sp-style-bar__seg is-listen" style={{ flex: 2 }}>
-              学習者中心
+              ラーナー中心
             </span>
             <span className="sp-style-bar__seg is-open" style={{ flex: 1 }}>
               <MicrophoneIcon />

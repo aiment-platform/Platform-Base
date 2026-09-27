@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { MicrophoneIcon } from "@heroicons/react/24/outline";
 import type { CSSProperties } from "react";
 
 import { AJL_LEVELS } from "../../lib/ajl";
@@ -39,7 +40,7 @@ export function VtuberTile({ live = false, className = "" }: { live?: boolean; c
 
 export const SPEAKERS = ["A", "M", "L", "K", "S"];
 
-/** ライブ画面のスピーカー欄の1行。本物と同じ構造（頭文字・名前・レベルバー）。 */
+/** ライブ画面の参加者欄の1行。本物と同じ構造（頭文字・名前・レベルバー）。 */
 export function SpeakerRow({
   initial,
   className = "",
@@ -92,5 +93,95 @@ export function LevelPicker({ pick }: { pick: number }) {
         {chosen.level}
       </span>
     </span>
+  );
+}
+
+export type Mic = "on" | "off" | "switch";
+export type RosterRole = "learner" | "supporter" | "you";
+export type RosterRow = { initial: string; role: RosterRole; at?: string; talk?: string; mic?: Mic };
+
+/** 札の文言。ページの言語に合わせて渡す（既定は日本語のメイトページ用）。 */
+const ROLE_LABELS: Record<RosterRole, string> = { learner: "ラーナー", supporter: "メイト", you: "You" };
+
+export function MicBadge({ mic }: { mic: Mic }) {
+  if (mic === "switch") {
+    return (
+      <>
+        <span className="sc-mic sc-mic--off sc-out-40" aria-hidden>
+          <MicrophoneIcon />
+        </span>
+        <span className="sc-mic sc-mic--on sc-in-40" aria-hidden>
+          <MicrophoneIcon />
+        </span>
+      </>
+    );
+  }
+  return (
+    <span className={`sc-mic sc-mic--${mic}`} aria-hidden>
+      <MicrophoneIcon />
+    </span>
+  );
+}
+
+/** 参加者の一覧。役割の札と、マイクの状態。 */
+export function Roster({
+  title,
+  rows,
+  dotsAt,
+  className = "",
+  labels,
+}: {
+  title: string;
+  rows: RosterRow[];
+  dotsAt?: string[];
+  className?: string;
+  labels?: Partial<Record<RosterRole, string>>;
+}) {
+  const names = { ...ROLE_LABELS, ...labels };
+  return (
+    <div className={`sc-list ${className}`.trim()}>
+      <div className="sc-list__head">
+        <span>{title}</span>
+        <span className="sc-dots" aria-hidden>
+          {rows.map((row, index) => (
+            <span key={row.initial}>
+              <i className={dotsAt?.[index]} />
+            </span>
+          ))}
+        </span>
+      </div>
+      {rows.map((row) => (
+        <div key={row.initial} className={`sc-you sc-you--${row.role} ${row.mic ? "has-mic" : ""}`.trim()}>
+          <span className={`sc-you__tag ${row.at ?? ""}`.trim()}>{names[row.role]}</span>
+          <SpeakerRow initial={row.initial} className={row.at} talkClass={row.talk} />
+          {row.mic ? <MicBadge mic={row.mic} /> : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export type ChatMessage = { who: string; role: "sup" | "lrn"; text: string; at?: string };
+
+export function Chat({ messages, className = "", title = "チャット" }: { messages: ChatMessage[]; className?: string; title?: string }) {
+  return (
+    <div className={`sc-schat ${className}`.trim()}>
+      <div className="sc-schat__head">
+        <span>{title}</span>
+      </div>
+      <ul className="sc-schat__list">
+        {messages.map((message) => (
+          <li key={message.text} className={`sc-schat__msg sc-schat__msg--${message.role} ${message.at ?? ""}`.trim()}>
+            <span className="sc-schat__who">{message.who}</span>
+            <span className="sc-schat__text">{message.text}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="sc-schat__foot" aria-hidden>
+        <span className="sc-schat__input">
+          <span className="sc-bar" />
+        </span>
+      </div>
+    </div>
   );
 }

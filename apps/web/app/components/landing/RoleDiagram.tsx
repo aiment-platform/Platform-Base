@@ -35,7 +35,7 @@ export function RoleDiagram({ className = "" }: { className?: string }) {
       viewBox="0 0 640 440"
       className={`role-diagram ${className}`.trim()}
       role="img"
-      aria-label="関係図。声で参加するのはVTuberと学習者、メイトはコメントで参加し、必要なときや後半は声の輪に入る。リスナーは配信を見てコメントする。"
+      aria-label="関係図。声で参加するのはVTuberと学習者（ラーナー）、メイトはコメントで参加し、必要なときや後半は声の輪に入る。リスナーは配信を見てコメントする。"
     >
       <defs>
         <marker id="rd-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
@@ -79,7 +79,7 @@ export function RoleDiagram({ className = "" }: { className?: string }) {
         </g>
       ))}
       <text x="320" y="312" textAnchor="middle" className="rd-name">
-        学習者
+        ラーナー
       </text>
 
       {/* メイト：コメントの輪にいて、必要なときは内側へ */}
