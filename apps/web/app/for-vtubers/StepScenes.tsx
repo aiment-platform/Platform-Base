@@ -77,7 +77,7 @@ export function SceneCreate() {
 }
 
 /* --------------------------------------------------------------------------
-   02 スピーカーを迎える
+   02 学習者（ラーナー）を迎える
    空の5枠に1人ずつ入ってくる。最初の人が「はじめまして！」と話し、
    マイクの波が立つ。
    -------------------------------------------------------------------------- */
@@ -85,14 +85,14 @@ export function SceneWelcome() {
   const inAt = ["sc-in-12", "sc-in-26", "sc-in-40", "sc-in-54", "sc-in-68"];
   const talkAt = ["sc-win-30-50", "", "sc-win-56-66", "", "sc-win-74-92 sc-rm-on"];
   return (
-    <Stage label="スピーカーを迎える手順のアニメーション" modifier="welcome">
+    <Stage label="学習者（ラーナー）を迎える手順のアニメーション" modifier="welcome">
       <VtuberTile />
 
       <span className="sc-bubble sc-win-30-50">はじめまして！</span>
 
       <div className="sc-list">
         <div className="sc-list__head">
-          <span>スピーカー</span>
+          <span>ラーナー</span>
           <span className="sc-dots" aria-hidden>
             {inAt.map((cls) => (
               <span key={cls}>
@@ -114,7 +114,7 @@ export function SceneWelcome() {
 
 /* --------------------------------------------------------------------------
    03 あとは、いつもの配信
-   LIVE中。スピーカーの発話が順に回り、チャットが流れる。
+   LIVE中。学習者（ラーナー）の発話が順に回り、チャットが流れる。
    -------------------------------------------------------------------------- */
 export function SceneLive() {
   return (
@@ -140,7 +140,7 @@ export function SceneLive() {
 
       <div className="sc-list">
         <div className="sc-list__head">
-          <span>スピーカー</span>
+          <span>ラーナー</span>
           <span className="sc-dots" aria-hidden>
             <span>
               <i />

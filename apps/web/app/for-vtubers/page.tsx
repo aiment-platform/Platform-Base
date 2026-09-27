@@ -8,10 +8,10 @@ import {
   CheckCircleIcon,
   GlobeAltIcon,
   MinusCircleIcon,
-  PlayIcon,
   SparklesIcon,
 } from "@heroicons/react/24/outline";
 
+import { SessionVideo } from "../components/landing/SessionVideo";
 import { WaveEdge } from "../components/landing/WaveEdge";
 import {
   BODY,
@@ -54,7 +54,7 @@ import { SceneCreate, SceneLive, SceneWelcome } from "./StepScenes";
 export const metadata: Metadata = {
   title: "VTuberのみなさまへ",
   description:
-    "aimentは、海外の日本語学習者と日本人VTuberが、ゲームや雑談を通して直接会話できるサービスです。日本語を教える必要も、英語を話す必要もありません。いつものVTuber活動の延長で参加できます。",
+    "aimentは、海外の日本語学習者（ラーナー）と日本人VTuberが、ゲームや雑談を通して直接会話できるサービスです。日本語を教える必要も、英語を話す必要もありません。いつものVTuber活動の延長で参加できます。",
   openGraph: {
     title: "VTuberのみなさまへ | aiment",
     description:
@@ -70,7 +70,7 @@ export const metadata: Metadata = {
    ========================================================================== */
 
 const HERO_LEAD = [
-  "aimentは、海外の日本語学習者と日本人VTuberが、",
+  "aimentは、海外の日本語学習者（ラーナー）と日本人VTuberが、",
   "ゲームや雑談を通して直接会話できるサービスです。",
   "日本語を教える必要も、英語を話す必要もありません。",
   "いつものVTuber活動の延長で参加できます。",
@@ -85,7 +85,7 @@ const WHAT_IS = {
       "学んでいる海外ファンはたくさんいます。",
     ],
     [
-      "aimentは、そんな日本語学習者と日本人VTuberをつなぎ、",
+      "aimentは、そんな日本語学習者（ラーナー）と日本人VTuberをつなぎ、",
       "「勉強するための会話」ではなく、",
       "「好きな人と楽しむために日本語を使う時間」をつくるサービスです。",
     ],
@@ -93,9 +93,9 @@ const WHAT_IS = {
 };
 
 const SESSION_VIDEO_NOTE = [
-  "aimentには、VTuber、リスナーの他に「スピーカー」というロールが存在します。",
-  "aimentをメインで体験していただく方達で、カメラはOFF、マイクONの状態で",
-  "セッションに参加します。1セッションあたり平均5名です。",
+  "aimentでは、VTuberとリスナーのほかに、海外の日本語学習者（ラーナー）がセッションに参加します。",
+  "学習者（ラーナー）はカメラOFF、マイクONの状態でVTuberと直接話します。",
+  "1セッションあたり平均5名です。",
 ];
 
 const STEPS = [
@@ -114,7 +114,7 @@ const STEPS = [
   },
   {
     no: "02",
-    title: "スピーカーを迎える",
+    title: "学習者（ラーナー）を迎える",
     body: ["まずは自己紹介から。", "名前や好きなことを話して、ゆっくり", "会話を始めます。"],
     Scene: SceneWelcome,
   },
@@ -222,7 +222,7 @@ const FAQ_GROUPS = [
       },
       {
         q: "セッションではどんな流れで進みますか？",
-        a: "まず参加するスピーカーと簡単な自己紹介を行い、その後はゲームや雑談など、設定したテーマに沿って会話を楽しみます。普段の配信に、海外の日本語学習者が会話相手として加わるイメージです。",
+        a: "まず参加する学習者（ラーナー）と簡単な自己紹介を行い、その後はゲームや雑談など、設定したテーマに沿って会話を楽しみます。普段の配信に、海外の日本語学習者（ラーナー）が会話相手として加わるイメージです。",
       },
       {
         q: "普段使っている配信環境のまま参加できますか？",
@@ -363,10 +363,7 @@ export default function ForVTubersPage() {
           映像はまだない。枠だけ先に置いて「ここに映像が入る」と分かるようにしている。 */}
       <Section>
         <SectionTitle>実際のセッション映像</SectionTitle>
-        <div className="landing-video mt-[var(--ld-head-gap)]" role="img" aria-label="セッション映像（準備中）">
-          <PlayIcon aria-hidden />
-          <span className="landing-soon">準備中</span>
-        </div>
+        <SessionVideo label="実際のセッション映像" />
         <Lines
           lines={SESSION_VIDEO_NOTE}
           className={`mx-auto mt-[var(--ld-head-gap)] max-w-[880px] text-left sm:text-center ${BODY}`}

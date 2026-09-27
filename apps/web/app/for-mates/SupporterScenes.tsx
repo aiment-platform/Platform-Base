@@ -1,86 +1,13 @@
-import { MicrophoneIcon } from "@heroicons/react/24/outline";
-
-import { SpeakerRow, Stage, VtuberTile } from "../components/landing/scene";
+import { Chat, Roster, Stage, VtuberTile } from "../components/landing/scene";
 
 /**
  * メイトページの挿絵。/for-vtubers, /lp と同じく、本物の部品
- * （配信の枠・スピーカー行）を並べてCSSで動かす。
+ * （配信の枠・参加者の行）を並べてCSSで動かす。
  * 6秒ループ。sc-in-NN は「NN%の時点で現れる」、sc-win-A-B は「A〜B%だけ見える」。
  *
  * マイクの札（.sc-mic）で「話せる／聞くだけ」を見せる。後半から合流の場面では
  * 40% の時点で OFF → ON に切り替わる。
  */
-
-type Mic = "on" | "off" | "switch";
-type Row = { initial: string; role: "learner" | "supporter"; at?: string; talk?: string; mic?: Mic };
-
-function MicBadge({ mic }: { mic: Mic }) {
-  if (mic === "switch") {
-    return (
-      <>
-        <span className="sc-mic sc-mic--off sc-out-40" aria-hidden>
-          <MicrophoneIcon />
-        </span>
-        <span className="sc-mic sc-mic--on sc-in-40" aria-hidden>
-          <MicrophoneIcon />
-        </span>
-      </>
-    );
-  }
-  return (
-    <span className={`sc-mic sc-mic--${mic}`} aria-hidden>
-      <MicrophoneIcon />
-    </span>
-  );
-}
-
-/** 参加者の一覧。Learner / メイト の札と、マイクの状態。 */
-function Roster({ title, rows, dotsAt, className = "" }: { title: string; rows: Row[]; dotsAt?: string[]; className?: string }) {
-  return (
-    <div className={`sc-list ${className}`.trim()}>
-      <div className="sc-list__head">
-        <span>{title}</span>
-        <span className="sc-dots" aria-hidden>
-          {rows.map((row, index) => (
-            <span key={row.initial}>
-              <i className={dotsAt?.[index]} />
-            </span>
-          ))}
-        </span>
-      </div>
-      {rows.map((row) => (
-        <div key={row.initial} className={`sc-you sc-you--${row.role} ${row.mic ? "has-mic" : ""}`.trim()}>
-          <span className={`sc-you__tag ${row.at ?? ""}`.trim()}>{row.role === "learner" ? "学習者" : "メイト"}</span>
-          <SpeakerRow initial={row.initial} className={row.at} talkClass={row.talk} />
-          {row.mic ? <MicBadge mic={row.mic} /> : null}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function Chat({ messages, className = "" }: { messages: { who: string; role: "sup" | "lrn"; text: string; at?: string }[]; className?: string }) {
-  return (
-    <div className={`sc-schat ${className}`.trim()}>
-      <div className="sc-schat__head">
-        <span>チャット</span>
-      </div>
-      <ul className="sc-schat__list">
-        {messages.map((message) => (
-          <li key={message.text} className={`sc-schat__msg sc-schat__msg--${message.role} ${message.at ?? ""}`.trim()}>
-            <span className="sc-schat__who">{message.who}</span>
-            <span className="sc-schat__text">{message.text}</span>
-          </li>
-        ))}
-      </ul>
-      <div className="sc-schat__foot" aria-hidden>
-        <span className="sc-schat__input">
-          <span className="sc-bar" />
-        </span>
-      </div>
-    </div>
-  );
-}
 
 /* --------------------------------------------------------------------------
    Hero：本編中。Learnerが話し、メイトはコメントで参加している。

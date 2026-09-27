@@ -26,7 +26,8 @@ import {
 } from "../components/landing/primitives";
 import { AJL_LEVELS } from "../lib/ajl";
 import { LevelHelpButton, LevelHelpPanel } from "../components/landing/LevelHelp";
-import { SceneFind, SceneReserve, SceneTalk } from "./LearnerScenes";
+import { SessionVideo } from "../components/landing/SessionVideo";
+import { SceneFind, SceneLearnerHero, SceneListener, SceneReserve, SceneSpeaker, SceneTalk, SceneWhatIs } from "./LearnerScenes";
 
 /**
  * 日本語学習者向けのランディングページ。
@@ -36,23 +37,21 @@ import { SceneFind, SceneReserve, SceneTalk } from "./LearnerScenes";
  * 学習者向けが同じ世界を語るように、事実はすべてサイト内に既にある記述
  * （/for-vtubers の本文、参加ページの文言、ajl.ts のレベル定義）から取っている。
  *
- * 主導線は「配信枠を探す」（ホーム）。スピーカーになる操作は枠の中で行うので、
- * 「Become a speaker」は登録ページではなく手順の説明へ送る。
+ * 主導線は「配信枠を探す」（ホーム）。学習者として参加する操作は枠の中で行うので、
+ * 「How to join as a learner」は登録ページではなく手順の説明へ送る。
  */
 
 export const metadata: Metadata = {
   title: "aiment — Talk with Japanese VTubers, live",
   description:
-    "aiment is where Japanese learners talk with Japanese VTubers live, through games and casual conversation. Pick a session by level, reserve a speaker slot, and say hello.",
+    "aiment is where Japanese learners talk with Japanese VTubers live, through games and casual conversation. Pick a session by level, reserve a learner slot, and say hello.",
   openGraph: {
     title: "aiment — Talk with Japanese VTubers, live",
     description:
-      "Talk with Japanese VTubers live, through games and casual conversation. Pick a session by level, reserve a speaker slot, and say hello.",
+      "Talk with Japanese VTubers live, through games and casual conversation. Pick a session by level, reserve a learner slot, and say hello.",
   },
 };
 
-const edited = (name: string) => `/lp/edited/${name}`;
-const cell = (name: string) => `/lp/cells/${name}.png`;
 
 const HERO_LEAD = [
   "Talk with Japanese VTubers live, through games",
@@ -77,9 +76,9 @@ const WHAT_IS = {
 };
 
 const SESSION_VIDEO_NOTE = [
-  "Besides the VTuber and the listeners, aiment has a role called “speaker”.",
-  "Speakers join with their camera off and mic on, and talk with the VTuber directly.",
-  "On average, about 5 speakers join each session.",
+  "Besides the VTuber and the listeners, learners join each session.",
+  "Learners join with their camera off and mic on, and talk with the VTuber directly.",
+  "On average, about 5 learners join each session.",
 ];
 
 const STEPS = [
@@ -97,7 +96,7 @@ const STEPS = [
   },
   {
     no: "02",
-    title: "Reserve a speaker slot",
+    title: "Reserve a learner slot",
     body: [
       "Reserving is free. The participation fee is paid",
       "within 24 hours before the stream.",
@@ -118,7 +117,7 @@ const ROLES = [
     icon: SpeakerWaveIcon,
     label: "Listener",
     lead: "Watch the stream and follow along.",
-    image: edited("listener_image.png"),
+    Scene: SceneListener,
     points: [
       { icon: PlayIcon, text: "Watch the live stream" },
       { icon: ChatBubbleLeftRightIcon, text: "Follow the conversation in live chat" },
@@ -126,9 +125,9 @@ const ROLES = [
   },
   {
     icon: MicrophoneIcon,
-    label: "Speaker",
+    label: "Learner",
     lead: "Join by voice and talk with the VTuber.",
-    image: edited("speaker_image.png"),
+    Scene: SceneSpeaker,
     points: [
       { icon: VideoCameraSlashIcon, text: "Camera off, mic on" },
       { icon: MicrophoneIcon, text: "Talk with the VTuber directly" },
@@ -146,7 +145,7 @@ const GUIDELINES = ["Guidelines on harassment", "Streaming guidelines", "Archive
 const FAQ = [
   {
     q: "Do I need to show my face?",
-    a: "No. Speakers join with their camera off and mic on. Only your voice is part of the session.",
+    a: "No. Learners join with their camera off and mic on. Only your voice is part of the session.",
   },
   {
     q: "My Japanese is still basic. Can I join?",
@@ -154,7 +153,7 @@ const FAQ = [
   },
   {
     q: "Is it free?",
-    a: "Reserving a speaker slot is free. A participation fee is paid within 24 hours before the stream. If you have a participation ticket, you can use it instead of paying.",
+    a: "Reserving a learner slot is free. A participation fee is paid within 24 hours before the stream. If you have a participation ticket, you can use it instead of paying.",
   },
   {
     q: "What happens in a session?",
@@ -162,7 +161,7 @@ const FAQ = [
   },
   {
     q: "How many people are in a session?",
-    a: "On average about 5 speakers join each session, so there is room for you to actually talk.",
+    a: "On average about 5 learners join each session, so there is room for you to actually talk.",
   },
   {
     q: "What if something goes wrong?",
@@ -170,14 +169,6 @@ const FAQ = [
   },
 ];
 
-/** 吹き出し。ヒーローのキャラクターのまわりに置く。 */
-function Bubble({ children, className = "", style }: { children: string; className?: string; style?: CSSProperties }) {
-  return (
-    <span className={`lp-bubble ${className}`.trim()} style={style} aria-hidden>
-      {children}
-    </span>
-  );
-}
 
 function HeroCtas({ className = "" }: { className?: string }) {
   return (
@@ -186,12 +177,12 @@ function HeroCtas({ className = "" }: { className?: string }) {
         Find a session
       </Link>
       <a href="#how-it-works" className="landing-cta landing-cta--ghost ui-btn ui-btn-lg">
-        How to join as a speaker
+        How to join as a learner
       </a>
       <p className="mt-1 text-center text-[14px] font-bold leading-[1.9] text-white/90">
-        Speakers join by voice — camera off, mic on.
+        Learners join by voice — camera off, mic on.
         <br />
-        Reserving a speaker slot is free.
+        Reserving a learner slot is free.
       </p>
     </div>
   );
@@ -233,19 +224,8 @@ export default function LandingPage() {
               <HeroCtas className="mt-[clamp(28px,3.5vw,48px)] w-full max-w-[320px] sm:max-w-[400px]" />
             </div>
 
-            <div className="lp-hero-art" aria-hidden>
-              <span className="lp-hero-art__disc">
-                <Image src={edited("aiment_LPchara_v2.PNG")} alt="" width={604} height={881} priority />
-              </span>
-              <Bubble className="lp-bubble--tl">I love your stream!</Bubble>
-              <Bubble className="lp-bubble--ml lp-bubble--tint">Can you say “ありがとう”?</Bubble>
-              <Bubble className="lp-bubble--r">You noticed me! 😭</Bubble>
-              <Bubble className="lp-bubble--bl lp-bubble--ink">Nice to meet you!</Bubble>
-              <span className="lp-hero-art__row">
-                {["cell_32", "cell_33", "cell_35"].map((name) => (
-                  <Image key={name} src={cell(name)} alt="" width={52} height={52} />
-                ))}
-              </span>
+            <div className="sp-hero-art">
+              <SceneLearnerHero />
             </div>
           </div>
         </div>
@@ -270,13 +250,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="flex justify-center lg:justify-end">
-            <Image
-              src={edited("concept.png")}
-              alt="A fan and a VTuber talking"
-              width={1457}
-              height={1079}
-              className="w-full max-w-[460px]"
-            />
+            <SceneWhatIs />
           </div>
         </div>
       </Section>
@@ -284,10 +258,7 @@ export default function LandingPage() {
       {/* ================= Real session footage ================= */}
       <Section>
         <SectionTitle>What a session looks like</SectionTitle>
-        <div className="landing-video mt-[var(--ld-head-gap)]" role="img" aria-label="Session footage (coming soon)">
-          <PlayIcon aria-hidden />
-          <span className="landing-soon">Coming soon</span>
-        </div>
+        <SessionVideo label="Session footage" />
         <Lines
           lines={SESSION_VIDEO_NOTE}
           className={`mx-auto mt-[var(--ld-head-gap)] max-w-[880px] text-left sm:text-center ${BODY}`}
@@ -318,9 +289,9 @@ export default function LandingPage() {
         </Section>
       </section>
 
-      {/* ================= Listener / Speaker ================= */}
+      {/* ================= Listener / Learner ================= */}
       <Section>
-        <SectionTitle>Listener or speaker</SectionTitle>
+        <SectionTitle>Listener or learner</SectionTitle>
         <div className="mx-auto mt-[var(--ld-head-gap)] grid max-w-[960px] gap-5 sm:grid-cols-2">
           {ROLES.map((role) => {
             const Icon = role.icon;
@@ -330,7 +301,9 @@ export default function LandingPage() {
                   <Icon aria-hidden />
                   <span>{role.label}</span>
                 </div>
-                <Image src={role.image} alt="" width={604} height={881} className="lp-role__art" />
+                <div className="lp-role__art">
+                  <role.Scene />
+                </div>
                 <h3>{role.lead}</h3>
                 <ul>
                   {role.points.map((point) => {
@@ -417,7 +390,7 @@ export default function LandingPage() {
             Your first conversation is one reservation away.
           </h2>
           <p className="mx-auto mt-5 max-w-[620px] text-[clamp(13px,1.15vw,16px)] font-bold leading-[2] text-white/90">
-            Find a session that matches your level, reserve a speaker slot, and say hello.
+            Find a session that matches your level, reserve a learner slot, and say hello.
           </p>
           <div className="mt-9 flex flex-col items-center gap-3">
             <Link href="/" className="landing-cta ui-btn ui-btn-lg w-full max-w-[320px]">
