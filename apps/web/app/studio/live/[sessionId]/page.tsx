@@ -470,18 +470,19 @@ export default function StudioLiveSessionPage() {
   useEffect(() => {
     if (!sessionId) return;
     let cancelled = false;
-    // 初回は最新分の全件で置き換え、2回目以降は差分(新規投稿・取り消し)だけをマージする。
+    // 初回(とサーバーが reset を返したとき)は最新分の全件で置き換え、
+    // それ以外は差分(新規投稿・取り消し)だけをマージする。
     let cursor: string | null = null;
     const loadComments = async () => {
       try {
         const isInitial = cursor === null;
         const query = cursor ? `?since=${encodeURIComponent(cursor)}` : "";
         const response = await fetch(`/api/stream-sessions/${encodeURIComponent(sessionId)}/comments${query}`, { cache: "no-store" });
-        const payload = (await response.json().catch(() => null)) as { comments?: SessionComment[]; cursor?: string | null } | null;
+        const payload = (await response.json().catch(() => null)) as { comments?: SessionComment[]; cursor?: string | null; reset?: boolean } | null;
         if (!response.ok || cancelled) return;
         const next = (payload?.comments ?? []).map((comment) => commentToChatItem(comment, user?.id));
         next.forEach((message) => seenChatIdsRef.current.add(message.id));
-        if (isInitial) {
+        if (isInitial || payload?.reset) {
           setChat(next.slice(-MAX_CHAT_MESSAGES));
         } else if (next.length > 0) {
           setChat((prev) => mergeChatItems(prev, next));

@@ -14,9 +14,9 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 // 識別子はSQLパラメータにできないため、ここに列挙したものだけを扱う。
 const TARGETS = [
-  { table: "users", column: "avatar_url", folder: "avatars" },
-  { table: "users", column: "header_url", folder: "headers" },
-  { table: "stream_sessions", column: "thumbnail", folder: "thumbnails" },
+  { table: "users", key: "id", column: "avatar_url", folder: "avatars" },
+  { table: "users", key: "id", column: "header_url", folder: "headers" },
+  { table: "stream_sessions", key: "session_id", column: "thumbnail", folder: "thumbnails" },
 ];
 
 const apply = process.argv.includes("--apply");
@@ -84,11 +84,11 @@ async function migrate() {
 
   let migrated = 0;
   let skipped = 0;
-  for (const { table, column, folder } of TARGETS) {
-    const ids = await sql.query(`SELECT id FROM ${table} WHERE ${column} LIKE 'data:%'`);
+  for (const { table, key: keyColumn, column, folder } of TARGETS) {
+    const ids = await sql.query(`SELECT ${keyColumn} AS id FROM ${table} WHERE ${column} LIKE 'data:%'`);
     for (const { id } of ids) {
       // 1件ずつ読む(全件を一度にメモリへ載せない)
-      const [row] = await sql.query(`SELECT ${column} AS value FROM ${table} WHERE id = $1`, [id]);
+      const [row] = await sql.query(`SELECT ${column} AS value FROM ${table} WHERE ${keyColumn} = $1`, [id]);
       const value = row?.value;
       if (typeof value !== "string" || !value.startsWith("data:")) continue;
 
@@ -114,7 +114,7 @@ async function migrate() {
       // 読んでから書くまでの間にユーザーが画像を変えていたら上書きしない
       const md5 = createHash("md5").update(value).digest("hex");
       const updated = await sql.query(
-        `UPDATE ${table} SET ${column} = $1 WHERE id = $2 AND md5(${column}) = $3 RETURNING id`,
+        `UPDATE ${table} SET ${column} = $1 WHERE ${keyColumn} = $2 AND md5(${column}) = $3 RETURNING ${keyColumn}`,
         [`${publicBaseUrl}/${key}`, id, md5],
       );
       if (updated.length === 0) {

@@ -6,6 +6,7 @@ import {
   getStreamSessionById,
   listSessionComments,
   retractSessionComment,
+  SESSION_COMMENT_LIMIT,
 } from "@/app/lib/server/aimentStore";
 
 export const runtime = "nodejs";
@@ -30,6 +31,8 @@ const SINCE_OVERLAP_MS = 10_000;
 /**
  * GET ?since=<cursor> で、cursor 以降に投稿 or 取り消しされたコメントだけを返す。
  * レスポンスの cursor を次回の since に渡す。since なしは最新分の全件。
+ * 差分が上限件数に達した(取りこぼしの可能性がある)場合は最新分の全件と reset: true を返し、
+ * クライアントは一覧を置き換える。
  */
 export async function GET(request: Request, context: RouteContext) {
   const { sessionId } = await context.params;
@@ -40,8 +43,12 @@ export async function GET(request: Request, context: RouteContext) {
   const sinceMs = sinceParam ? Date.parse(sinceParam) : Number.NaN;
   const since = Number.isFinite(sinceMs) ? new Date(sinceMs - SINCE_OVERLAP_MS).toISOString() : undefined;
 
-  const comments = await listSessionComments(sessionId, since);
-  return NextResponse.json({ comments, cursor });
+  const delta = await listSessionComments(sessionId, since);
+  if (since && delta.length >= SESSION_COMMENT_LIMIT) {
+    const comments = await listSessionComments(sessionId);
+    return NextResponse.json({ comments, cursor, reset: true });
+  }
+  return NextResponse.json({ comments: delta, cursor });
 }
 
 export async function POST(request: Request, context: RouteContext) {

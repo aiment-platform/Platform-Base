@@ -1800,7 +1800,7 @@ export async function setStreamSessionStatus(
   });
 }
 
-const SESSION_COMMENT_LIMIT = 300;
+export const SESSION_COMMENT_LIMIT = 300;
 
 /**
  * `since` を省略すると最新 SESSION_COMMENT_LIMIT 件、指定するとそれ以降に
