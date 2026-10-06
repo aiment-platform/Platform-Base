@@ -19,5 +19,5 @@ export async function POST(request: Request) {
   }
 
   const response = NextResponse.json({ user, isAuthenticated: true });
-  return withSessionCookie(response, user.id);
+  return await withSessionCookie(response, user.id);
 }

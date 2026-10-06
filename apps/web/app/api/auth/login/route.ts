@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     const body = (await request.json()) as LoginInput;
     const user = await loginUser(body);
     const response = NextResponse.json({ user, isAuthenticated: true });
-    return withSessionCookie(response, user.id);
+    return await withSessionCookie(response, user.id);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to log in";
     return NextResponse.json({ error: message }, { status: 400 });
