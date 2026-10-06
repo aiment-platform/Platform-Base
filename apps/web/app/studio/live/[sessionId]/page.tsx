@@ -470,19 +470,27 @@ export default function StudioLiveSessionPage() {
   useEffect(() => {
     if (!sessionId) return;
     let cancelled = false;
-    // 初回(とサーバーが reset を返したとき)は最新分の全件で置き換え、
-    // それ以外は差分(新規投稿・取り消し)だけをマージする。
+    // 普段は差分(新規投稿・取り消し)だけを取得してマージする。
+    // 初回・サーバーが reset を返したとき・FULL_RESYNC_EVERY 回に1回は最新分の全件で置き換え、
+    // 差分では直らないズレ(保存の遅延、送信に失敗したコメントなど)を解消する。
+    const FULL_RESYNC_EVERY = 12; // 5秒間隔なので約60秒に1回
     let cursor: string | null = null;
+    let pollCount = 0;
+    // 応答の順番が入れ替わらないよう、前のリクエストが終わるまで次は送らない
+    let inFlight = false;
     const loadComments = async () => {
+      if (inFlight) return;
+      inFlight = true;
       try {
-        const isInitial = cursor === null;
-        const query = cursor ? `?since=${encodeURIComponent(cursor)}` : "";
+        const isFull = cursor === null || pollCount % FULL_RESYNC_EVERY === 0;
+        pollCount += 1;
+        const query = isFull || !cursor ? "" : `?since=${encodeURIComponent(cursor)}`;
         const response = await fetch(`/api/stream-sessions/${encodeURIComponent(sessionId)}/comments${query}`, { cache: "no-store" });
         const payload = (await response.json().catch(() => null)) as { comments?: SessionComment[]; cursor?: string | null; reset?: boolean } | null;
         if (!response.ok || cancelled) return;
         const next = (payload?.comments ?? []).map((comment) => commentToChatItem(comment, user?.id));
         next.forEach((message) => seenChatIdsRef.current.add(message.id));
-        if (isInitial || payload?.reset) {
+        if (isFull || payload?.reset) {
           setChat(next.slice(-MAX_CHAT_MESSAGES));
         } else if (next.length > 0) {
           setChat((prev) => mergeChatItems(prev, next));
@@ -490,6 +498,8 @@ export default function StudioLiveSessionPage() {
         if (payload?.cursor) cursor = payload.cursor;
       } catch {
         // keep local/livekit chat available
+      } finally {
+        inFlight = false;
       }
     };
 
