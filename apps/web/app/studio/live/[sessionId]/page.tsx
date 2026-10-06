@@ -470,14 +470,23 @@ export default function StudioLiveSessionPage() {
   useEffect(() => {
     if (!sessionId) return;
     let cancelled = false;
+    // 初回は最新分の全件で置き換え、2回目以降は差分(新規投稿・取り消し)だけをマージする。
+    let cursor: string | null = null;
     const loadComments = async () => {
       try {
-        const response = await fetch(`/api/stream-sessions/${encodeURIComponent(sessionId)}/comments`, { cache: "no-store" });
-        const payload = (await response.json().catch(() => null)) as { comments?: SessionComment[] } | null;
+        const isInitial = cursor === null;
+        const query = cursor ? `?since=${encodeURIComponent(cursor)}` : "";
+        const response = await fetch(`/api/stream-sessions/${encodeURIComponent(sessionId)}/comments${query}`, { cache: "no-store" });
+        const payload = (await response.json().catch(() => null)) as { comments?: SessionComment[]; cursor?: string | null } | null;
         if (!response.ok || cancelled) return;
         const next = (payload?.comments ?? []).map((comment) => commentToChatItem(comment, user?.id));
         next.forEach((message) => seenChatIdsRef.current.add(message.id));
-        setChat(next.slice(-MAX_CHAT_MESSAGES));
+        if (isInitial) {
+          setChat(next.slice(-MAX_CHAT_MESSAGES));
+        } else if (next.length > 0) {
+          setChat((prev) => mergeChatItems(prev, next));
+        }
+        if (payload?.cursor) cursor = payload.cursor;
       } catch {
         // keep local/livekit chat available
       }

@@ -479,6 +479,7 @@ async function initSchema() {
   await db`CREATE INDEX IF NOT EXISTS idx_stream_sessions_starts_at ON stream_sessions (starts_at)`;
   await db`CREATE INDEX IF NOT EXISTS idx_reservations_session_id ON reservations (session_id)`;
   await db`CREATE INDEX IF NOT EXISTS idx_reservations_user_id ON reservations (user_id)`;
+  await db`CREATE INDEX IF NOT EXISTS idx_session_comments_session_created ON session_comments (session_id, created_at)`;
 }
 
 // Row → TypeScript type converters
@@ -1799,24 +1800,43 @@ export async function setStreamSessionStatus(
   });
 }
 
-export async function listSessionComments(sessionId: string): Promise<SessionComment[]> {
+const SESSION_COMMENT_LIMIT = 300;
+
+/**
+ * `since` を省略すると最新 SESSION_COMMENT_LIMIT 件、指定するとそれ以降に
+ * 投稿 or 取り消しされたコメントだけを返す(古い順)。
+ * 視聴中のポーリングを差分取得にして、Neonの転送量を抑えるため。
+ */
+export async function listSessionComments(sessionId: string, since?: string): Promise<SessionComment[]> {
   if (USE_NEON) {
     await ensureSchema();
     const db = getDb();
-    const rows = await db`
-      SELECT * FROM session_comments
-      WHERE session_id = ${sessionId}
-      ORDER BY created_at ASC
-      LIMIT 300
-    `;
+    const rows = since
+      ? await db`
+          SELECT * FROM session_comments
+          WHERE session_id = ${sessionId}
+            AND (created_at > ${since} OR deleted_at > ${since})
+          ORDER BY created_at ASC
+          LIMIT ${SESSION_COMMENT_LIMIT}
+        `
+      : await db`
+          SELECT * FROM (
+            SELECT * FROM session_comments
+            WHERE session_id = ${sessionId}
+            ORDER BY created_at DESC
+            LIMIT ${SESSION_COMMENT_LIMIT}
+          ) latest
+          ORDER BY created_at ASC
+        `;
     return rows.map(rowToSessionComment);
   }
 
   const store = await readStore();
   return store.sessionComments
     .filter((comment) => comment.sessionId === sessionId)
+    .filter((comment) => !since || comment.createdAt > since || (comment.deletedAt !== undefined && comment.deletedAt > since))
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-    .slice(-300);
+    .slice(-SESSION_COMMENT_LIMIT);
 }
 
 export async function createSessionComment(input: Omit<SessionComment, "id" | "createdAt"> & { id?: string; createdAt?: string }) {

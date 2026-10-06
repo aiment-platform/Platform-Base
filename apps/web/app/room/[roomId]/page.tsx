@@ -532,14 +532,23 @@ export default function RoomPage() {
   useEffect(() => {
     if (!roomId) return;
     let cancelled = false;
+    // 初回は最新分の全件で置き換え、2回目以降は差分(新規投稿・取り消し)だけをマージする。
+    let cursor: string | null = null;
     const loadComments = async () => {
       try {
-        const response = await fetch(`/api/stream-sessions/${encodeURIComponent(roomId)}/comments`, { cache: "no-store" });
-        const payload = (await response.json().catch(() => null)) as { comments?: SessionComment[] } | null;
+        const isInitial = cursor === null;
+        const query = cursor ? `?since=${encodeURIComponent(cursor)}` : "";
+        const response = await fetch(`/api/stream-sessions/${encodeURIComponent(roomId)}/comments${query}`, { cache: "no-store" });
+        const payload = (await response.json().catch(() => null)) as { comments?: SessionComment[]; cursor?: string | null } | null;
         if (!response.ok || cancelled) return;
         const nextMessages = (payload?.comments ?? []).map((comment) => commentToChatMessage(comment, user?.id));
         nextMessages.forEach((message) => seenChatIdsRef.current.add(message.id));
-        setChatMessages((current) => mergeChatMessages(current.filter((message) => message.kind === "cue"), nextMessages));
+        if (isInitial) {
+          setChatMessages((current) => mergeChatMessages(current.filter((message) => message.kind === "cue"), nextMessages));
+        } else if (nextMessages.length > 0) {
+          setChatMessages((current) => mergeChatMessages(current, nextMessages));
+        }
+        if (payload?.cursor) cursor = payload.cursor;
       } catch {
         // keep local/livekit chat available
       }

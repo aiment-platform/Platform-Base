@@ -23,10 +23,25 @@ function validLang(value: unknown, fallback: SessionComment["originalLang"]) {
   return value === "ja" || value === "en" ? value : fallback;
 }
 
-export async function GET(_request: Request, context: RouteContext) {
+// 投稿の書き込み順と created_at の順が前後しても取りこぼさないよう、
+// 差分取得は cursor より少し前から取り直す(重複はクライアントがidでまとめる)。
+const SINCE_OVERLAP_MS = 10_000;
+
+/**
+ * GET ?since=<cursor> で、cursor 以降に投稿 or 取り消しされたコメントだけを返す。
+ * レスポンスの cursor を次回の since に渡す。since なしは最新分の全件。
+ */
+export async function GET(request: Request, context: RouteContext) {
   const { sessionId } = await context.params;
-  const comments = await listSessionComments(sessionId);
-  return NextResponse.json({ comments });
+  // 投稿時刻もサーバー時計で付くので、カーソルもサーバー時計の「問い合わせ時刻」にする。
+  // (コメントが来ない間は空配列だけが返る)
+  const cursor = new Date().toISOString();
+  const sinceParam = new URL(request.url).searchParams.get("since");
+  const sinceMs = sinceParam ? Date.parse(sinceParam) : Number.NaN;
+  const since = Number.isFinite(sinceMs) ? new Date(sinceMs - SINCE_OVERLAP_MS).toISOString() : undefined;
+
+  const comments = await listSessionComments(sessionId, since);
+  return NextResponse.json({ comments, cursor });
 }
 
 export async function POST(request: Request, context: RouteContext) {
