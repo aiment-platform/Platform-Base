@@ -532,16 +532,36 @@ export default function RoomPage() {
   useEffect(() => {
     if (!roomId) return;
     let cancelled = false;
+    // 普段は差分(新規投稿・取り消し)だけを取得してマージする。
+    // 初回・サーバーが reset を返したとき・FULL_RESYNC_EVERY 回に1回は最新分の全件で置き換え、
+    // 差分では直らないズレ(保存の遅延、送信に失敗したコメントなど)を解消する。
+    const FULL_RESYNC_EVERY = 12; // 5秒間隔なので約60秒に1回
+    let cursor: string | null = null;
+    let pollCount = 0;
+    // 応答の順番が入れ替わらないよう、前のリクエストが終わるまで次は送らない
+    let inFlight = false;
     const loadComments = async () => {
+      if (inFlight) return;
+      inFlight = true;
       try {
-        const response = await fetch(`/api/stream-sessions/${encodeURIComponent(roomId)}/comments`, { cache: "no-store" });
-        const payload = (await response.json().catch(() => null)) as { comments?: SessionComment[] } | null;
+        const isFull = cursor === null || pollCount % FULL_RESYNC_EVERY === 0;
+        pollCount += 1;
+        const query = isFull || !cursor ? "" : `?since=${encodeURIComponent(cursor)}`;
+        const response = await fetch(`/api/stream-sessions/${encodeURIComponent(roomId)}/comments${query}`, { cache: "no-store" });
+        const payload = (await response.json().catch(() => null)) as { comments?: SessionComment[]; cursor?: string | null; reset?: boolean } | null;
         if (!response.ok || cancelled) return;
         const nextMessages = (payload?.comments ?? []).map((comment) => commentToChatMessage(comment, user?.id));
         nextMessages.forEach((message) => seenChatIdsRef.current.add(message.id));
-        setChatMessages((current) => mergeChatMessages(current.filter((message) => message.kind === "cue"), nextMessages));
+        if (isFull || payload?.reset) {
+          setChatMessages((current) => mergeChatMessages(current.filter((message) => message.kind === "cue"), nextMessages));
+        } else if (nextMessages.length > 0) {
+          setChatMessages((current) => mergeChatMessages(current, nextMessages));
+        }
+        if (payload?.cursor) cursor = payload.cursor;
       } catch {
         // keep local/livekit chat available
+      } finally {
+        inFlight = false;
       }
     };
 
