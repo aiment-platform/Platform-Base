@@ -778,13 +778,9 @@ async function mutateStore<T>(mutator: (store: StoreFile) => Promise<T> | T): Pr
 // ---------------------------------------------------------------------------
 
 export async function resetStore() {
+  // ローカルから本番DBに繋いでいても全削除できないよう、Neonには一切実行しない。
   if (USE_NEON) {
-    await ensureSchema();
-    const db = getDb();
-    await db`DELETE FROM reservations`;
-    await db`DELETE FROM stream_sessions`;
-    await db`DELETE FROM users`;
-    return;
+    throw new Error("resetStore is disabled when DATABASE_URL is set");
   }
   const seed = await getSeedStore();
   await writeFile(STORE_FILE, JSON.stringify(seed, null, 2), "utf8");
