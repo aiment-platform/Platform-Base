@@ -55,6 +55,14 @@ test.describe("broadcast flow", () => {
     const res = await learner.post("/api/billing/speaker-session", { data: { sessionId: session.sessionId } });
     expect(res.status()).toBe(400);
 
+    // 予約済みでもチケットは消費させない
+    expect((await reserve(learner, session.sessionId as string, "speaker")).status()).toBe(201);
+    const redeem = await learner.post(
+      `/api/stream-sessions/${encodeURIComponent(session.sessionId as string)}/reservations/redeem-ticket`,
+    );
+    expect(redeem.status()).toBe(400);
+    expect((await redeem.json()).error).toContain("無料");
+
     await Promise.all([host.dispose(), learner.dispose()]);
   });
 });

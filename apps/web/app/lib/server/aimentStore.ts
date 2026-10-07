@@ -1429,7 +1429,12 @@ export async function listSessionsStartingBetween(windowStart: Date, windowEnd: 
       .filter((r) => r.sessionId === session.sessionId && r.type === "speaker" && r.status === "reserved")
       .map((r) => {
         const u = store.users.find((u) => u.id === r.userId);
-        return { userId: r.userId, userName: r.userName, email: u?.email ?? "", isPaid: Boolean(r.paymentIntentId) };
+        return {
+          userId: r.userId,
+          userName: r.userName,
+          email: u?.email ?? "",
+          isPaid: !SPEAKER_FEE_ENABLED || Boolean(r.paymentIntentId),
+        };
       });
     return { session, reservations };
   });
