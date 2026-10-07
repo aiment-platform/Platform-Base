@@ -3,14 +3,15 @@ import { NextResponse } from "next/server";
 import type { SessionUser, UserRole } from "../apiTypes";
 import { getUserById } from "./aimentStore";
 import { attachBillingState } from "./billingStore";
+import { SESSION_MAX_AGE_SECONDS, signSessionToken, verifySessionToken } from "@/lib/sessionToken";
 
 export const SESSION_COOKIE = "aiment_dev_session";
 
 export async function resolveSessionUser() {
   const cookieStore = await cookies();
-  const fromCookie = cookieStore.get(SESSION_COOKIE)?.value;
-  if (!fromCookie) return null;
-  const user = await getUserById(fromCookie);
+  const userId = await verifySessionToken(cookieStore.get(SESSION_COOKIE)?.value);
+  if (!userId) return null;
+  const user = await getUserById(userId);
   return attachBillingState(user);
 }
 
@@ -20,13 +21,13 @@ export async function requireSessionUser() {
   return user;
 }
 
-export function withSessionCookie(response: NextResponse, userId: string) {
-  response.cookies.set(SESSION_COOKIE, userId, {
+export async function withSessionCookie(response: NextResponse, userId: string) {
+  response.cookies.set(SESSION_COOKIE, await signSessionToken(userId), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: SESSION_MAX_AGE_SECONDS,
   });
   return response;
 }

@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       });
     }
     const response = NextResponse.json({ user, isAuthenticated: true }, { status: 201 });
-    return withSessionCookie(response, user.id);
+    return await withSessionCookie(response, user.id);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to sign up";
     await recordMonitoringEvent({

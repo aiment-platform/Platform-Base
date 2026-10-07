@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getRuntimeConfig, isAllowedOrigin } from "./lib/runtimeConfig";
+import { verifySessionToken } from "./lib/sessionToken";
 
 // Cookie name must match SESSION_COOKIE in app/lib/server/auth.ts
 const SESSION_COOKIE = "aiment_dev_session";
@@ -63,14 +64,14 @@ function checkRateLimit(request: NextRequest, config: ReturnType<typeof getRunti
   return { allowed: true, remaining: Math.max(0, max - existing.count), resetAt: existing.resetAt };
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Admin route protection — UX-layer redirect only.
   // Handler and DAL each independently verify admin identity — see CVE-2025-29927.
   if (pathname.startsWith("/admin")) {
     if (ADMIN_IDS.size > 0) {
-      const userId = request.cookies.get(SESSION_COOKIE)?.value;
+      const userId = await verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value);
       if (!userId || !ADMIN_IDS.has(userId)) {
         return NextResponse.redirect(new URL("/", request.url));
       }

@@ -3,7 +3,7 @@ import { type APIRequestContext, type BrowserContext, expect } from "@playwright
 // app 側のモジュールは Playwright の TS 解決と衝突するため import しない。
 type UserRole = "vtuber" | "listener";
 
-// セッションCookieは userId そのもの（auth.ts SESSION_COOKIE="aiment_dev_session"）。
+// セッションCookieは署名付きトークン（lib/sessionToken.ts, auth.ts SESSION_COOKIE="aiment_dev_session"）。
 export const SESSION_COOKIE = "aiment_dev_session";
 
 let counter = 0;
