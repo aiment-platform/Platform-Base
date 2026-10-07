@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { getStreamSession } from "../../../lib/streamSessions";
+import { SPEAKER_FEE_ENABLED } from "@/lib/speakerFee";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -189,6 +190,12 @@ export default function SpeakerCheckoutPage() {
         return;
       }
 
+      // 参加費が無料の間は、予約できた時点で参加確定
+      if (!SPEAKER_FEE_ENABLED) {
+        setStep("already_paid");
+        return;
+      }
+
       // Initialize Stripe PaymentIntent
       try {
         const res = await fetch("/api/billing/speaker-session", {
@@ -277,8 +284,14 @@ export default function SpeakerCheckoutPage() {
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand-primary)]/20">
             <span className="text-2xl">✓</span>
           </div>
-          <h1 className="mb-2 text-xl font-bold text-[var(--brand-text)]">支払い済みです</h1>
-          <p className="mb-6 text-sm text-[var(--brand-text-muted)]">このスピーカー枠の支払いはすでに完了しています。</p>
+          <h1 className="mb-2 text-xl font-bold text-[var(--brand-text)]">
+            {SPEAKER_FEE_ENABLED ? "支払い済みです" : "参加が確定しています"}
+          </h1>
+          <p className="mb-6 text-sm text-[var(--brand-text-muted)]">
+            {SPEAKER_FEE_ENABLED
+              ? "このスピーカー枠の支払いはすでに完了しています。"
+              : "参加費は現在無料です。配信が始まったら入室できます。"}
+          </p>
           <button onClick={backToJoin} className="w-full rounded-lg bg-[var(--brand-primary)] py-3 text-sm font-semibold text-white">
             入室準備へ戻る
           </button>

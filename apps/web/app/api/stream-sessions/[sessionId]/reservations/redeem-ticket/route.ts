@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSessionUser } from "@/app/lib/server/auth";
 import { getStreamSessionById, redeemParticipationTicket } from "@/app/lib/server/aimentStore";
+import { SPEAKER_FEE_ENABLED } from "@/lib/speakerFee";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,6 +16,10 @@ export async function POST(_req: Request, ctx: RouteContext) {
   try {
     const { sessionId } = await ctx.params;
     const actor = await requireSessionUser();
+    // 無料の間はチケットが不要なので、使わせない(誤って消費させない)
+    if (!SPEAKER_FEE_ENABLED) {
+      return NextResponse.json({ error: "参加費は現在無料のため、チケットは不要です" }, { status: 400 });
+    }
 
     const session = await getStreamSessionById(sessionId);
     if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });

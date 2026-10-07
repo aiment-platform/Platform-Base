@@ -22,6 +22,7 @@ import type {
 } from "../apiTypes";
 import { DEFAULT_AJL_LEVEL, normalizeAjlLevel } from "../ajl";
 import { canAccessPlan, getEffectivePlanForUser } from "./billingStore";
+import { SPEAKER_FEE_ENABLED } from "@/lib/speakerFee";
 
 type StoredUser = SessionUser & {
   passwordHash?: string;
@@ -1409,7 +1410,7 @@ export async function listSessionsStartingBetween(windowStart: Date, windowEnd: 
           userId: row.user_id as string,
           userName: row.user_name as string,
           email: row.email as string,
-          isPaid: Boolean(row.payment_intent_id),
+          isPaid: !SPEAKER_FEE_ENABLED || Boolean(row.payment_intent_id),
         })),
       });
     }
@@ -1428,7 +1429,12 @@ export async function listSessionsStartingBetween(windowStart: Date, windowEnd: 
       .filter((r) => r.sessionId === session.sessionId && r.type === "speaker" && r.status === "reserved")
       .map((r) => {
         const u = store.users.find((u) => u.id === r.userId);
-        return { userId: r.userId, userName: r.userName, email: u?.email ?? "", isPaid: Boolean(r.paymentIntentId) };
+        return {
+          userId: r.userId,
+          userName: r.userName,
+          email: u?.email ?? "",
+          isPaid: !SPEAKER_FEE_ENABLED || Boolean(r.paymentIntentId),
+        };
       });
     return { session, reservations };
   });

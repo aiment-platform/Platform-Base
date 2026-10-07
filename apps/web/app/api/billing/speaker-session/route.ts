@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireSessionUser } from "@/app/lib/server/auth";
 import { getStreamSessionById } from "@/app/lib/server/aimentStore";
 import { getStripeClient, getSpeakerSessionPriceId, getSpeakerSessionAmountPhp } from "@/app/lib/server/stripe";
+import { SPEAKER_FEE_ENABLED } from "@/lib/speakerFee";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,6 +10,9 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   try {
     const actor = await requireSessionUser();
+    if (!SPEAKER_FEE_ENABLED) {
+      return NextResponse.json({ error: "参加費は現在無料です" }, { status: 400 });
+    }
     const body = (await request.json()) as { sessionId?: unknown };
     const sessionId = typeof body.sessionId === "string" ? body.sessionId.trim() : "";
     if (!sessionId) return NextResponse.json({ error: "sessionId is required" }, { status: 400 });

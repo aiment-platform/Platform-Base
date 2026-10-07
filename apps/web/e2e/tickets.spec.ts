@@ -1,5 +1,6 @@
 import { test, expect, request } from "@playwright/test";
 import { signup, createSession, reserve } from "./helpers";
+import { SPEAKER_FEE_ENABLED } from "../lib/speakerFee";
 
 // 参加チケット（支払いスキップ）の権限ゲートとエラー経路を検証する。
 // 付与→使用のハッピーパスは ADMIN_USER_IDS（環境変数・動的id）が絡むため別途ライブ検証。
@@ -30,6 +31,8 @@ test.describe("participation tickets", () => {
   });
 
   test("redeem without a reservation is rejected", async ({ baseURL }) => {
+    // 参加費が無料の間はチケットの使用自体を断る(flow.spec.ts で検証)
+    test.skip(!SPEAKER_FEE_ENABLED, "参加費が無料の間はチケット不要");
     const host = await request.newContext({ baseURL });
     await signup(host, { role: "vtuber" });
     const session = await createSession(host);
@@ -46,6 +49,8 @@ test.describe("participation tickets", () => {
   });
 
   test("redeem with a reservation but no ticket is rejected", async ({ baseURL }) => {
+    // 参加費が無料の間はチケットの使用自体を断る(flow.spec.ts で検証)
+    test.skip(!SPEAKER_FEE_ENABLED, "参加費が無料の間はチケット不要");
     const host = await request.newContext({ baseURL });
     await signup(host, { role: "vtuber" });
     const session = await createSession(host);
