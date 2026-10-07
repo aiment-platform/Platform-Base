@@ -28,6 +28,7 @@ import { AJL_LEVELS } from "../lib/ajl";
 import { LevelHelpButton, LevelHelpPanel } from "../components/landing/LevelHelp";
 import { SessionVideo } from "../components/landing/SessionVideo";
 import { SceneFind, SceneLearnerHero, SceneListener, SceneReserve, SceneSpeaker, SceneTalk, SceneWhatIs } from "./LearnerScenes";
+import { SPEAKER_FEE_ENABLED } from "@/lib/speakerFee";
 
 /**
  * 日本語学習者向けのランディングページ。
@@ -97,11 +98,13 @@ const STEPS = [
   {
     no: "02",
     title: "Reserve a learner slot",
-    body: [
-      "Reserving is free. The participation fee is paid",
-      "within 24 hours before the stream.",
-      "If you have a participation ticket, you can use it instead.",
-    ],
+    body: SPEAKER_FEE_ENABLED
+      ? [
+          "Reserving is free. The participation fee is paid",
+          "within 24 hours before the stream.",
+          "If you have a participation ticket, you can use it instead.",
+        ]
+      : ["Participation is currently free.", "Just reserve a slot and join the stream."],
     Scene: SceneReserve,
   },
   {
@@ -153,7 +156,9 @@ const FAQ = [
   },
   {
     q: "Is it free?",
-    a: "Reserving a learner slot is free. A participation fee is paid within 24 hours before the stream. If you have a participation ticket, you can use it instead of paying.",
+    a: SPEAKER_FEE_ENABLED
+      ? "Reserving a learner slot is free. A participation fee is paid within 24 hours before the stream. If you have a participation ticket, you can use it instead of paying."
+      : "Yes — participation is currently free. Just reserve a learner slot and join the stream.",
   },
   {
     q: "What happens in a session?",

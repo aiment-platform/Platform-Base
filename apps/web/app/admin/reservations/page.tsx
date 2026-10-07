@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Reservation } from "../../lib/apiTypes";
+import { SPEAKER_FEE_ENABLED } from "@/lib/speakerFee";
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
@@ -112,7 +113,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function Row({ r }: { r: Reservation }) {
-  const isPaid = Boolean(r.paymentIntentId);
+  const isPaid = !SPEAKER_FEE_ENABLED || Boolean(r.paymentIntentId);
   return (
     <div className="flex items-center gap-3 rounded-xl bg-black/[0.04] px-4 py-2.5">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/15 text-sm font-bold text-[var(--brand-primary)]">
@@ -126,7 +127,7 @@ function Row({ r }: { r: Reservation }) {
         <p className="text-xs text-[var(--brand-text-muted)]">{formatDate(r.createdAt)}</p>
         {r.type === "speaker" && (
           <span className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${isPaid ? "bg-green-500/20 text-green-600" : "bg-black/[0.06] text-[var(--brand-text-muted)]"}`}>
-            {isPaid ? "支払済" : "未払い"}
+            {SPEAKER_FEE_ENABLED ? (isPaid ? "支払済" : "未払い") : "無料"}
           </span>
         )}
       </div>

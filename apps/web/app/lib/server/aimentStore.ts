@@ -22,6 +22,7 @@ import type {
 } from "../apiTypes";
 import { DEFAULT_AJL_LEVEL, normalizeAjlLevel } from "../ajl";
 import { canAccessPlan, getEffectivePlanForUser } from "./billingStore";
+import { SPEAKER_FEE_ENABLED } from "@/lib/speakerFee";
 
 type StoredUser = SessionUser & {
   passwordHash?: string;
@@ -1409,7 +1410,7 @@ export async function listSessionsStartingBetween(windowStart: Date, windowEnd: 
           userId: row.user_id as string,
           userName: row.user_name as string,
           email: row.email as string,
-          isPaid: Boolean(row.payment_intent_id),
+          isPaid: !SPEAKER_FEE_ENABLED || Boolean(row.payment_intent_id),
         })),
       });
     }

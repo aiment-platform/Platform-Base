@@ -18,6 +18,7 @@ import { createStreamSession } from "../../lib/streamSessions";
 import { uploadImageToR2 } from "../../lib/uploadImage";
 import { useUserSession } from "../../lib/userSession";
 import { useRouteTransition } from "../../components/ui/RouteTransition";
+import { SPEAKER_FEE_ENABLED } from "@/lib/speakerFee";
 
 const PRESET_THUMBNAILS = [1, 2, 3, 4, 5].map((n) => `/image/thumbnail/thumbnail_${n}.png`);
 const DEFAULT_THUMBNAIL = PRESET_THUMBNAILS[4];
@@ -491,11 +492,12 @@ export default function StudioPreLivePage() {
                           onChange={(e) => setPlannedDurationMin(Number(e.target.value))}
                           className="rounded-lg bg-[var(--brand-surface)] px-2 py-1.5 text-[var(--brand-text)] outline-none"
                         >
-                          <option value={30}>30 {tx("分", "min")} — ₱200</option>
-                          <option value={45}>45 {tx("分", "min")} — ₱200</option>
-                          <option value={60}>60 {tx("分", "min")} — ₱200</option>
-                          <option value={90}>90 {tx("分", "min")} — ₱400</option>
-                          <option value={120}>120 {tx("分", "min")} — ₱400</option>
+                          {[30, 45, 60, 90, 120].map((min) => (
+                            <option key={min} value={min}>
+                              {min} {tx("分", "min")}
+                              {SPEAKER_FEE_ENABLED ? ` — ₱${min <= 60 ? 200 : 400}` : ""}
+                            </option>
+                          ))}
                         </select>
                       </label>
                       <div className="grid gap-1 text-xs sm:col-span-2">

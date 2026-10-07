@@ -16,6 +16,7 @@ import {
   updateStreamSession,
   type StreamSession,
 } from "../../../../lib/streamSessions";
+import { SPEAKER_FEE_ENABLED } from "@/lib/speakerFee";
 
 const CATEGORY_OPTIONS = ["雑談", "ゲーム", "歌枠", "英語"] as const;
 
@@ -511,7 +512,7 @@ export default function SessionEditPage() {
 }
 
 function ReservationRow({ r, formatDate }: { r: Reservation; formatDate: (s: string) => string }) {
-  const isPaid = Boolean(r.paymentIntentId);
+  const isPaid = !SPEAKER_FEE_ENABLED || Boolean(r.paymentIntentId);
   return (
     <div className="flex items-center gap-3 rounded-xl bg-[var(--brand-surface)] px-4 py-2.5">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/20 text-sm font-bold text-[var(--brand-primary)]">
@@ -523,7 +524,7 @@ function ReservationRow({ r, formatDate }: { r: Reservation; formatDate: (s: str
       </div>
       {r.type === "speaker" && (
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${isPaid ? "bg-green-500/20 text-green-400" : "bg-[var(--brand-text-muted)]/15 text-[var(--brand-text-muted)]"}`}>
-          {isPaid ? "支払済" : "未払い"}
+          {SPEAKER_FEE_ENABLED ? (isPaid ? "支払済" : "未払い") : "無料"}
         </span>
       )}
     </div>

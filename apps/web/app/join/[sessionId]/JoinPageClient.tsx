@@ -20,6 +20,7 @@ import { participationLabel } from "../../lib/labels";
 import { getStreamSession } from "../../lib/streamSessions";
 import { useUserSession } from "../../lib/userSession";
 import { useRouteTransition } from "../../components/ui/RouteTransition";
+import { SPEAKER_FEE_ENABLED } from "@/lib/speakerFee";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -733,7 +734,9 @@ export function JoinPageClient() {
                     : tx("スピーカー枠の詳細を確認しています", "Checking speaker slots...")}
                 </p>
                 <p className="mt-2 rounded-lg bg-[var(--brand-surface)] px-3 py-2 text-xs text-[var(--brand-text-muted)]">
-                  {tx("予約は無料です。配信24時間前になったら参加費の支払いが必要です。", "Reservation is free. Payment is required within 24h of the stream.")}
+                  {SPEAKER_FEE_ENABLED
+                    ? tx("予約は無料です。配信24時間前になったら参加費の支払いが必要です。", "Reservation is free. Payment is required within 24h of the stream.")
+                    : tx("参加費は現在無料です。予約するだけで参加できます。", "Participation is currently free. Just reserve a slot to join.")}
                 </p>
               </div>
               {paymentError && <p className="text-xs text-red-400">{paymentError}</p>}
