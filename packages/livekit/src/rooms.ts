@@ -39,11 +39,8 @@ export type DeleteRoomParams = {
  * Resolves silently when the room does not exist.
  */
 export async function deleteRoom(params: DeleteRoomParams): Promise<void> {
-  const client = new RoomServiceClient(
-    params.host.replace(/^wss?:\/\//, "https://"),
-    params.apiKey,
-    params.apiSecret,
-  );
+  // RoomServiceClient converts ws:// → http:// and wss:// → https:// itself
+  const client = new RoomServiceClient(params.host, params.apiKey, params.apiSecret);
   try {
     await client.deleteRoom(params.roomName);
   } catch (err) {
