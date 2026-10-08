@@ -40,6 +40,8 @@ test.describe("broadcast flow", () => {
     const end = await host.post(`/api/stream-sessions/${encodeURIComponent(sessionId)}/end`);
     expect(end.ok(), await end.text()).toBeTruthy();
     expect((await requestToken(learner, sessionId, "speaker")).status()).toBe(403);
+    // 終了後はホストも入室し直せない(ルームを作り直して配信を再開できないように)
+    expect((await requestToken(host, sessionId, "vtuber")).status()).toBe(403);
 
     await Promise.all([host.dispose(), learner.dispose(), viewer.dispose()]);
   });

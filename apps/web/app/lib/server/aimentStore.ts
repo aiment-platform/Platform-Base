@@ -1680,15 +1680,28 @@ export async function updateStreamSession(
 
 export async function deleteStreamSession(sessionId: string, actor: SessionUser) {
   requireVerifiedVtuber(actor);
+  return removeStreamSession(sessionId, (current) => {
+    if (current.hostUserId !== actor.id) throw new Error("Cannot delete another VTuber's session");
+  });
+}
 
+/** 管理者用: ホストに関係なく配信枠を削除し、削除した枠を返す。呼び出し側で管理者確認を済ませること。 */
+export async function adminDeleteStreamSession(sessionId: string) {
+  return removeStreamSession(sessionId, () => undefined);
+}
+
+/** 配信枠を削除し、有効な予約をキャンセルする。削除した枠を返す(無ければ null)。権限確認は authorize に任せる。 */
+async function removeStreamSession(
+  sessionId: string,
+  authorize: (current: StreamSession) => void,
+): Promise<StreamSession | null> {
   if (USE_NEON) {
     await ensureSchema();
     const db = getDb();
     const rows = await db`SELECT * FROM stream_sessions WHERE session_id = ${sessionId}`;
     if (!rows[0]) return null;
     const current = rowToStreamSession(rows[0]);
-    if (current.hostUserId !== actor.id)
-      throw new Error("Cannot delete another VTuber's session");
+    authorize(current);
     if (current.status === "live")
       throw new Error("Cannot delete a session that is currently live");
 
@@ -1697,8 +1710,9 @@ export async function deleteStreamSession(sessionId: string, actor: SessionUser)
       UPDATE reservations SET status = 'cancelled', cancelled_at = ${now}
       WHERE session_id = ${sessionId} AND status = 'reserved'
     `;
-    await db`DELETE FROM stream_sessions WHERE session_id = ${sessionId}`;
-    return true;
+    // 実際に削除した行を返す(読み取りから削除までの間に配信キーが替わっていても、削除時点の値で後片付けできる)
+    const deleted = await db`DELETE FROM stream_sessions WHERE session_id = ${sessionId} RETURNING *`;
+    return deleted[0] ? rowToStreamSession(deleted[0]) : null;
   }
 
   return mutateStore((store) => {
@@ -1708,7 +1722,7 @@ export async function deleteStreamSession(sessionId: string, actor: SessionUser)
     if (index === -1) return null;
 
     const current = store.streamSessions[index];
-    if (current.hostUserId !== actor.id) throw new Error("Cannot delete another VTuber's session");
+    authorize(current);
     if (current.status === "live") throw new Error("Cannot delete a session that is currently live");
 
     store.streamSessions.splice(index, 1);
@@ -1718,7 +1732,7 @@ export async function deleteStreamSession(sessionId: string, actor: SessionUser)
         reservation.cancelledAt = new Date().toISOString();
       }
     }
-    return true;
+    return current;
   });
 }
 
@@ -1766,15 +1780,29 @@ export async function setStreamSessionStatus(
   status: StreamSessionStatus,
 ) {
   requireVerifiedVtuber(actor);
+  return updateStreamSessionStatus(sessionId, status, (current) => {
+    if (current.hostUserId !== actor.id) throw new Error("Cannot change another VTuber's session");
+  });
+}
 
+/** 管理者用: ホストに関係なく配信を終了する(放置された配信中の枠の後始末など)。呼び出し側で管理者確認を済ませること。 */
+export async function adminEndStreamSession(sessionId: string) {
+  return updateStreamSessionStatus(sessionId, "ended", () => undefined);
+}
+
+/** 配信枠のステータスを変更する。権限確認は authorize に任せる。 */
+async function updateStreamSessionStatus(
+  sessionId: string,
+  status: StreamSessionStatus,
+  authorize: (current: StreamSession) => void,
+) {
   if (USE_NEON) {
     await ensureSchema();
     const db = getDb();
     const rows = await db`SELECT * FROM stream_sessions WHERE session_id = ${sessionId}`;
     if (!rows[0]) return null;
     const current = rowToStreamSession(rows[0]);
-    if (current.hostUserId !== actor.id)
-      throw new Error("Cannot change another VTuber's session");
+    authorize(current);
     validateTransition(current.status, status);
 
     await db`UPDATE stream_sessions SET status = ${status} WHERE session_id = ${sessionId}`;
@@ -1791,7 +1819,7 @@ export async function setStreamSessionStatus(
     if (index === -1) return null;
 
     const current = store.streamSessions[index];
-    if (current.hostUserId !== actor.id) throw new Error("Cannot change another VTuber's session");
+    authorize(current);
 
     validateTransition(current.status, status);
 
@@ -2295,37 +2323,53 @@ export async function cancelReservation(actor: SessionUser, reservationId: strin
   });
 }
 
+/**
+ * 配信枠に配信キー(Ingress)を紐づける。終了済みの枠には紐づけず false を返す
+ * (強制終了の後片付け中に作成が完了したIngressが残らないよう、呼び出し側で削除する)。
+ */
 export async function setSessionIngress(
   sessionId: string,
   ingressId: string,
   streamKey: string,
   rtmpUrl: string,
-): Promise<void> {
+): Promise<boolean> {
   if (USE_NEON) {
     await ensureSchema();
     const db = getDb();
-    await db`
+    const rows = await db`
       UPDATE stream_sessions
       SET ingress_id = ${ingressId}, stream_key = ${streamKey}, rtmp_url = ${rtmpUrl}
-      WHERE session_id = ${sessionId}
+      WHERE session_id = ${sessionId} AND status <> 'ended'
+      RETURNING session_id
     `;
-    return;
+    return rows.length > 0;
   }
-  await mutateStore((store) => {
+  return mutateStore((store) => {
     const session = store.streamSessions.find((s) => s.sessionId === sessionId);
-    if (session) {
-      session.ingressId = ingressId;
-      session.streamKey = streamKey;
-      session.rtmpUrl = rtmpUrl;
-    }
-    return null;
+    if (!session || session.status === "ended") return false;
+    session.ingressId = ingressId;
+    session.streamKey = streamKey;
+    session.rtmpUrl = rtmpUrl;
+    return true;
   });
 }
 
-export async function clearSessionIngress(sessionId: string): Promise<void> {
+/**
+ * 配信枠の配信キー(Ingress)情報を消す。expectedIngressId を渡すと、その Ingress が
+ * まだ紐づいている場合だけ消す(削除処理中に回線切替で新しいIngressに替わっていたら残す)。
+ */
+export async function clearSessionIngress(sessionId: string, expectedIngressId?: string): Promise<void> {
   if (USE_NEON) {
     await ensureSchema();
     const db = getDb();
+    if (expectedIngressId) {
+      await db`
+        UPDATE stream_sessions
+        SET ingress_id = NULL, stream_key = NULL, rtmp_url = NULL
+        WHERE session_id = ${sessionId} AND ingress_id = ${expectedIngressId}
+      `;
+      return;
+    }
     await db`
       UPDATE stream_sessions
       SET ingress_id = NULL, stream_key = NULL, rtmp_url = NULL
@@ -2335,7 +2379,7 @@ export async function clearSessionIngress(sessionId: string): Promise<void> {
   }
   await mutateStore((store) => {
     const session = store.streamSessions.find((s) => s.sessionId === sessionId);
-    if (session) {
+    if (session && (!expectedIngressId || session.ingressId === expectedIngressId)) {
       delete session.ingressId;
       delete session.streamKey;
       delete session.rtmpUrl;

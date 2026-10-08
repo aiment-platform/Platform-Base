@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
   { href: "/admin/users", label: "ユーザー管理", icon: "👤" },
-  { href: "/admin/sessions", label: "セッション管理", icon: "📡", soon: true },
+  { href: "/admin/sessions", label: "セッション管理", icon: "📡" },
   { href: "/admin/reservations", label: "予約確認", icon: "📋" },
   { href: "/admin/supporter-lottery", label: "サポーター抽選", icon: "🎲" },
   { href: "/admin/tickets", label: "チケット管理", icon: "🎟" },
