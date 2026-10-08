@@ -51,6 +51,11 @@ export async function POST(request: Request) {
       }
     }
 
+    // 終了した配信(管理者の強制終了を含む)には、ホストも含めて誰も入室させない
+    if (session.status === "ended") {
+      return NextResponse.json({ error: "Broadcast has ended" }, { status: 403 });
+    }
+
     if (role !== "vtuber" && session.status !== "live") {
       return NextResponse.json({ error: "Broadcast is not live" }, { status: 403 });
     }
