@@ -58,6 +58,8 @@ export async function POST(request: Request) {
     if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
     if (session.hostUserId !== actor.id)
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (session.status === "ended")
+      return NextResponse.json({ error: "この配信は終了しています" }, { status: 400 });
 
     const { apiKey, apiSecret, host } = getLivekitConfig();
 
@@ -76,7 +78,16 @@ export async function POST(request: Request) {
       streamName: session.title,
     });
 
-    await setSessionIngress(sessionId, result.ingressId, result.streamKey, result.rtmpUrl);
+    const attached = await setSessionIngress(sessionId, result.ingressId, result.streamKey, result.rtmpUrl);
+    if (!attached) {
+      // 作成中に配信が終了(管理者の強制終了など)した。作ったIngressを残さない。
+      try {
+        await deleteRtmpIngress({ apiKey, apiSecret, host, ingressId: result.ingressId });
+      } catch (err) {
+        console.error("[livekit/ingress] failed to roll back ingress for ended session:", err);
+      }
+      return NextResponse.json({ error: "この配信は終了しています" }, { status: 409 });
+    }
 
     if (previousIngressId && previousIngressId !== result.ingressId) {
       // 旧回線を後始末（失敗してもswap自体は成功扱い。残留は /admin/ingresses で掃除可能）。

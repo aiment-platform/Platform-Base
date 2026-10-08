@@ -2323,30 +2323,34 @@ export async function cancelReservation(actor: SessionUser, reservationId: strin
   });
 }
 
+/**
+ * 配信枠に配信キー(Ingress)を紐づける。終了済みの枠には紐づけず false を返す
+ * (強制終了の後片付け中に作成が完了したIngressが残らないよう、呼び出し側で削除する)。
+ */
 export async function setSessionIngress(
   sessionId: string,
   ingressId: string,
   streamKey: string,
   rtmpUrl: string,
-): Promise<void> {
+): Promise<boolean> {
   if (USE_NEON) {
     await ensureSchema();
     const db = getDb();
-    await db`
+    const rows = await db`
       UPDATE stream_sessions
       SET ingress_id = ${ingressId}, stream_key = ${streamKey}, rtmp_url = ${rtmpUrl}
-      WHERE session_id = ${sessionId}
+      WHERE session_id = ${sessionId} AND status <> 'ended'
+      RETURNING session_id
     `;
-    return;
+    return rows.length > 0;
   }
-  await mutateStore((store) => {
+  return mutateStore((store) => {
     const session = store.streamSessions.find((s) => s.sessionId === sessionId);
-    if (session) {
-      session.ingressId = ingressId;
-      session.streamKey = streamKey;
-      session.rtmpUrl = rtmpUrl;
-    }
-    return null;
+    if (!session || session.status === "ended") return false;
+    session.ingressId = ingressId;
+    session.streamKey = streamKey;
+    session.rtmpUrl = rtmpUrl;
+    return true;
   });
 }
 
