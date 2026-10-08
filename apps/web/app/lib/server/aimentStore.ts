@@ -1685,13 +1685,16 @@ export async function deleteStreamSession(sessionId: string, actor: SessionUser)
   });
 }
 
-/** 管理者用: ホストに関係なく配信枠を削除する。呼び出し側で管理者確認を済ませること。 */
+/** 管理者用: ホストに関係なく配信枠を削除し、削除した枠を返す。呼び出し側で管理者確認を済ませること。 */
 export async function adminDeleteStreamSession(sessionId: string) {
   return removeStreamSession(sessionId, () => undefined);
 }
 
-/** 配信枠を削除し、有効な予約をキャンセルする。権限確認は authorize に任せる。 */
-async function removeStreamSession(sessionId: string, authorize: (current: StreamSession) => void) {
+/** 配信枠を削除し、有効な予約をキャンセルする。削除した枠を返す(無ければ null)。権限確認は authorize に任せる。 */
+async function removeStreamSession(
+  sessionId: string,
+  authorize: (current: StreamSession) => void,
+): Promise<StreamSession | null> {
   if (USE_NEON) {
     await ensureSchema();
     const db = getDb();
@@ -1707,8 +1710,9 @@ async function removeStreamSession(sessionId: string, authorize: (current: Strea
       UPDATE reservations SET status = 'cancelled', cancelled_at = ${now}
       WHERE session_id = ${sessionId} AND status = 'reserved'
     `;
-    await db`DELETE FROM stream_sessions WHERE session_id = ${sessionId}`;
-    return true;
+    // 実際に削除した行を返す(読み取りから削除までの間に配信キーが替わっていても、削除時点の値で後片付けできる)
+    const deleted = await db`DELETE FROM stream_sessions WHERE session_id = ${sessionId} RETURNING *`;
+    return deleted[0] ? rowToStreamSession(deleted[0]) : null;
   }
 
   return mutateStore((store) => {
@@ -1728,7 +1732,7 @@ async function removeStreamSession(sessionId: string, authorize: (current: Strea
         reservation.cancelledAt = new Date().toISOString();
       }
     }
-    return true;
+    return current;
   });
 }
 
