@@ -1680,15 +1680,25 @@ export async function updateStreamSession(
 
 export async function deleteStreamSession(sessionId: string, actor: SessionUser) {
   requireVerifiedVtuber(actor);
+  return removeStreamSession(sessionId, (current) => {
+    if (current.hostUserId !== actor.id) throw new Error("Cannot delete another VTuber's session");
+  });
+}
 
+/** 管理者用: ホストに関係なく配信枠を削除する。呼び出し側で管理者確認を済ませること。 */
+export async function adminDeleteStreamSession(sessionId: string) {
+  return removeStreamSession(sessionId, () => undefined);
+}
+
+/** 配信枠を削除し、有効な予約をキャンセルする。権限確認は authorize に任せる。 */
+async function removeStreamSession(sessionId: string, authorize: (current: StreamSession) => void) {
   if (USE_NEON) {
     await ensureSchema();
     const db = getDb();
     const rows = await db`SELECT * FROM stream_sessions WHERE session_id = ${sessionId}`;
     if (!rows[0]) return null;
     const current = rowToStreamSession(rows[0]);
-    if (current.hostUserId !== actor.id)
-      throw new Error("Cannot delete another VTuber's session");
+    authorize(current);
     if (current.status === "live")
       throw new Error("Cannot delete a session that is currently live");
 
@@ -1708,7 +1718,7 @@ export async function deleteStreamSession(sessionId: string, actor: SessionUser)
     if (index === -1) return null;
 
     const current = store.streamSessions[index];
-    if (current.hostUserId !== actor.id) throw new Error("Cannot delete another VTuber's session");
+    authorize(current);
     if (current.status === "live") throw new Error("Cannot delete a session that is currently live");
 
     store.streamSessions.splice(index, 1);
@@ -1766,15 +1776,29 @@ export async function setStreamSessionStatus(
   status: StreamSessionStatus,
 ) {
   requireVerifiedVtuber(actor);
+  return updateStreamSessionStatus(sessionId, status, (current) => {
+    if (current.hostUserId !== actor.id) throw new Error("Cannot change another VTuber's session");
+  });
+}
 
+/** 管理者用: ホストに関係なく配信を終了する(放置された配信中の枠の後始末など)。呼び出し側で管理者確認を済ませること。 */
+export async function adminEndStreamSession(sessionId: string) {
+  return updateStreamSessionStatus(sessionId, "ended", () => undefined);
+}
+
+/** 配信枠のステータスを変更する。権限確認は authorize に任せる。 */
+async function updateStreamSessionStatus(
+  sessionId: string,
+  status: StreamSessionStatus,
+  authorize: (current: StreamSession) => void,
+) {
   if (USE_NEON) {
     await ensureSchema();
     const db = getDb();
     const rows = await db`SELECT * FROM stream_sessions WHERE session_id = ${sessionId}`;
     if (!rows[0]) return null;
     const current = rowToStreamSession(rows[0]);
-    if (current.hostUserId !== actor.id)
-      throw new Error("Cannot change another VTuber's session");
+    authorize(current);
     validateTransition(current.status, status);
 
     await db`UPDATE stream_sessions SET status = ${status} WHERE session_id = ${sessionId}`;
@@ -1791,7 +1815,7 @@ export async function setStreamSessionStatus(
     if (index === -1) return null;
 
     const current = store.streamSessions[index];
-    if (current.hostUserId !== actor.id) throw new Error("Cannot change another VTuber's session");
+    authorize(current);
 
     validateTransition(current.status, status);
 

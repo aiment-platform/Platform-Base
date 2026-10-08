@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import type { SessionUser, UserRole } from "../apiTypes";
-import { getUserById } from "./aimentStore";
+import { getUserById, isUserAdmin } from "./aimentStore";
 import { attachBillingState } from "./billingStore";
 import { SESSION_MAX_AGE_SECONDS, signSessionToken, verifySessionToken } from "@/lib/sessionToken";
 
@@ -18,6 +18,13 @@ export async function resolveSessionUser() {
 export async function requireSessionUser() {
   const user = await resolveSessionUser();
   if (!user) throw new Error("No session user is configured");
+  return user;
+}
+
+/** 管理者(ADMIN_USER_IDS に含まれるユーザー)だけを通す。ADMIN_USER_IDS が未設定なら誰も通さない。 */
+export async function requireAdminUser() {
+  const user = await requireSessionUser();
+  if (!isUserAdmin(user.id)) throw new Error("Forbidden");
   return user;
 }
 
