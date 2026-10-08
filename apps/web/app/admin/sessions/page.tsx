@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { StreamSession, StreamSessionStatus } from "../../lib/apiTypes";
 
 const TABS: { status: StreamSessionStatus; label: string }[] = [
@@ -31,24 +31,32 @@ export default function AdminSessionsPage() {
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // タブを素早く切り替えたとき、古いリクエストの結果で一覧を上書きしないための番号
+  const requestIdRef = useRef(0);
+  // 操作後の再読み込みは、操作を始めたときではなく「今」選ばれているタブに対して行う
+  const tabRef = useRef(tab);
 
   const load = useCallback(async (status: StreamSessionStatus) => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`/api/admin/sessions?status=${status}`, { cache: "no-store" });
       const data = (await res.json()) as { sessions?: StreamSession[]; error?: string };
+      if (requestId !== requestIdRef.current) return;
       if (!res.ok) throw new Error(data.error ?? "Failed");
       setSessions(data.sessions ?? []);
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       setError(err instanceof Error ? err.message : "Failed");
       setSessions([]);
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    tabRef.current = tab;
     void load(tab);
   }, [load, tab]);
 
@@ -67,7 +75,7 @@ export default function AdminSessionsPage() {
         action === "end" ? await fetch(`${path}/end`, { method: "POST" }) : await fetch(path, { method: "DELETE" });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(data.error ?? "Failed");
-      await load(tab);
+      await load(tabRef.current);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed");
     } finally {
