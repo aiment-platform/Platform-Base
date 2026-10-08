@@ -2346,10 +2346,22 @@ export async function setSessionIngress(
   });
 }
 
-export async function clearSessionIngress(sessionId: string): Promise<void> {
+/**
+ * 配信枠の配信キー(Ingress)情報を消す。expectedIngressId を渡すと、その Ingress が
+ * まだ紐づいている場合だけ消す(削除処理中に回線切替で新しいIngressに替わっていたら残す)。
+ */
+export async function clearSessionIngress(sessionId: string, expectedIngressId?: string): Promise<void> {
   if (USE_NEON) {
     await ensureSchema();
     const db = getDb();
+    if (expectedIngressId) {
+      await db`
+        UPDATE stream_sessions
+        SET ingress_id = NULL, stream_key = NULL, rtmp_url = NULL
+        WHERE session_id = ${sessionId} AND ingress_id = ${expectedIngressId}
+      `;
+      return;
+    }
     await db`
       UPDATE stream_sessions
       SET ingress_id = NULL, stream_key = NULL, rtmp_url = NULL
@@ -2359,7 +2371,7 @@ export async function clearSessionIngress(sessionId: string): Promise<void> {
   }
   await mutateStore((store) => {
     const session = store.streamSessions.find((s) => s.sessionId === sessionId);
-    if (session) {
+    if (session && (!expectedIngressId || session.ingressId === expectedIngressId)) {
       delete session.ingressId;
       delete session.streamKey;
       delete session.rtmpUrl;

@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { requireAdminUser } from "@/app/lib/server/auth";
 import { adminEndStreamSession, getStreamSessionById } from "@/app/lib/server/aimentStore";
-import { releaseSessionIngress } from "@/app/lib/server/ingressCleanup";
+import { releaseSessionMedia } from "@/app/lib/server/ingressCleanup";
 import { adminErrorResponse } from "../../adminErrorResponse";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** POST /api/admin/sessions/:sessionId/end — ホストに関係なく配信を終了し、OBS用のIngressも片付ける */
+/** POST /api/admin/sessions/:sessionId/end — ホストに関係なく配信を終了し、LiveKitのルームとOBS用のIngressも片付ける */
 export async function POST(_request: Request, context: { params: Promise<{ sessionId: string }> }) {
   try {
     await requireAdminUser();
@@ -17,7 +17,7 @@ export async function POST(_request: Request, context: { params: Promise<{ sessi
 
     const session = await adminEndStreamSession(sessionId);
     if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
-    await releaseSessionIngress(current);
+    await releaseSessionMedia(current);
     return NextResponse.json({ session });
   } catch (error) {
     return adminErrorResponse(error, "Failed to end session");

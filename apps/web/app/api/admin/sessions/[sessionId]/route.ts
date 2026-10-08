@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdminUser } from "@/app/lib/server/auth";
 import { adminDeleteStreamSession, getStreamSessionById } from "@/app/lib/server/aimentStore";
-import { releaseSessionIngress } from "@/app/lib/server/ingressCleanup";
+import { releaseSessionMedia } from "@/app/lib/server/ingressCleanup";
 import { adminErrorResponse } from "../adminErrorResponse";
 
 export const runtime = "nodejs";
@@ -17,8 +17,8 @@ export async function DELETE(_request: Request, context: { params: Promise<{ ses
 
     const result = await adminDeleteStreamSession(sessionId);
     if (!result) return NextResponse.json({ error: "Session not found" }, { status: 404 });
-    // 削除後はホストが枠経由でIngressを消せなくなるため、ここで片付ける
-    await releaseSessionIngress(current);
+    // 削除後はホストが枠経由でIngressを消せなくなるため、ここで片付ける(終了済みなのでルームは通常すでに無い)
+    await releaseSessionMedia(current);
     return NextResponse.json({ ok: true });
   } catch (error) {
     return adminErrorResponse(error, "Failed to delete session");
