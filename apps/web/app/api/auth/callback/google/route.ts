@@ -98,7 +98,7 @@ export async function GET(request: Request) {
     const redirectPath = isNew ? "/setup" : "/account";
     const response = NextResponse.redirect(`${appUrl}${redirectPath}`);
     response.cookies.set("google_oauth_state", "", { maxAge: 0, path: "/" });
-    return withSessionCookie(response, user.id);
+    return await withSessionCookie(response, user.id);
   } catch (error) {
     const message = error instanceof Error ? error.message : "auth_failed";
     return NextResponse.redirect(`${appUrl}/auth?error=${encodeURIComponent(message)}`);

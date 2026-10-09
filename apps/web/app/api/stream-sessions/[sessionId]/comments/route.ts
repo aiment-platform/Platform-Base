@@ -1,0 +1,121 @@
+import { NextResponse } from "next/server";
+import type { SessionComment } from "@/app/lib/apiTypes";
+import { resolveSessionUser } from "@/app/lib/server/auth";
+import {
+  createSessionComment,
+  getStreamSessionById,
+  listSessionComments,
+  retractSessionComment,
+  SESSION_COMMENT_LIMIT,
+} from "@/app/lib/server/aimentStore";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type RouteContext = {
+  params: Promise<{ sessionId: string }>;
+};
+
+function validRole(value: unknown): SessionComment["senderRole"] {
+  return value === "vtuber" || value === "speaker" || value === "listener" ? value : "listener";
+}
+
+function validLang(value: unknown, fallback: SessionComment["originalLang"]) {
+  return value === "ja" || value === "en" ? value : fallback;
+}
+
+// 投稿の書き込み順と created_at の順が前後しても取りこぼさないよう、
+// 差分取得は cursor より少し前から取り直す(重複はクライアントがidでまとめる)。
+const SINCE_OVERLAP_MS = 10_000;
+
+/**
+ * GET ?since=<cursor> で、cursor 以降に投稿 or 取り消しされたコメントだけを返す。
+ * レスポンスの cursor を次回の since に渡す。since なしは最新分の全件。
+ * 差分が上限件数に達した(取りこぼしの可能性がある)場合は最新分の全件と reset: true を返し、
+ * クライアントは一覧を置き換える。
+ */
+export async function GET(request: Request, context: RouteContext) {
+  const { sessionId } = await context.params;
+  // 投稿時刻もサーバー時計で付くので、カーソルもサーバー時計の「問い合わせ時刻」にする。
+  // (コメントが来ない間は空配列だけが返る)
+  const cursor = new Date().toISOString();
+  const sinceParam = new URL(request.url).searchParams.get("since");
+  const sinceMs = sinceParam ? Date.parse(sinceParam) : Number.NaN;
+  const since = Number.isFinite(sinceMs) ? new Date(sinceMs - SINCE_OVERLAP_MS).toISOString() : undefined;
+
+  const delta = await listSessionComments(sessionId, since);
+  if (since && delta.length >= SESSION_COMMENT_LIMIT) {
+    const comments = await listSessionComments(sessionId);
+    return NextResponse.json({ comments, cursor, reset: true });
+  }
+  return NextResponse.json({ comments: delta, cursor });
+}
+
+export async function POST(request: Request, context: RouteContext) {
+  const { sessionId } = await context.params;
+  const actor = await resolveSessionUser();
+  const session = await getStreamSessionById(sessionId);
+  if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
+
+  try {
+    const body = (await request.json()) as {
+      id?: unknown;
+      senderRole?: unknown;
+      senderName?: unknown;
+      originalText?: unknown;
+      originalLang?: unknown;
+      translatedText?: unknown;
+      translatedLang?: unknown;
+      clientId?: unknown;
+    };
+
+    const text = typeof body.originalText === "string" ? body.originalText.trim() : "";
+    if (!text) return NextResponse.json({ error: "Comment is empty" }, { status: 400 });
+    if (text.length > 500) return NextResponse.json({ error: "Comment is too long" }, { status: 400 });
+
+    const senderRole = validRole(body.senderRole);
+    const fallbackLang = senderRole === "vtuber" ? "ja" : "en";
+    const senderId = actor?.id ?? (typeof body.clientId === "string" && body.clientId.trim() ? `guest:${body.clientId.trim()}` : "");
+    if (!senderId) return NextResponse.json({ error: "Comment sender is required" }, { status: 401 });
+
+    if (senderRole === "vtuber" && actor?.id !== session.hostUserId) {
+      return NextResponse.json({ error: "Only the host can comment as VTuber" }, { status: 403 });
+    }
+
+    const comment = await createSessionComment({
+      id: typeof body.id === "string" ? body.id : undefined,
+      sessionId,
+      senderId,
+      senderRole,
+      senderName:
+        actor?.channelName ??
+        actor?.name ??
+        (typeof body.senderName === "string" && body.senderName.trim() ? body.senderName.trim() : senderRole),
+      originalText: text,
+      originalLang: validLang(body.originalLang, fallbackLang),
+      translatedText: typeof body.translatedText === "string" ? body.translatedText : undefined,
+      translatedLang: validLang(body.translatedLang, fallbackLang === "ja" ? "en" : "ja"),
+    });
+
+    return NextResponse.json({ comment }, { status: 201 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to create comment";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
+
+export async function DELETE(request: Request, context: RouteContext) {
+  const { sessionId } = await context.params;
+  const actor = await resolveSessionUser();
+  if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const commentId = new URL(request.url).searchParams.get("commentId")?.trim();
+    if (!commentId) return NextResponse.json({ error: "commentId required" }, { status: 400 });
+    const comment = await retractSessionComment({ sessionId, commentId, actorId: actor.id });
+    return NextResponse.json({ comment });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to retract comment";
+    return NextResponse.json({ error: message }, { status: message.includes("Cannot") ? 403 : 400 });
+  }
+}

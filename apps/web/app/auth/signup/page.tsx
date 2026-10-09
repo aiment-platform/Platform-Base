@@ -13,7 +13,7 @@ const ROLE_CARDS: { role: UserRole; label: string; description: string }[] = [
   { role: "vtuber", label: "VTuber", description: "配信作成・管理" },
   {
     role: "supporter",
-    label: "日本人サポーター",
+    label: "日本人メイト",
     description: "VTuber×Aimerセッションの通訳・盛り上げ役",
   },
 ];
@@ -30,6 +30,10 @@ async function postJson<T>(url: string, body: unknown) {
   }
   if (!payload) throw new Error("Empty response");
   return payload;
+}
+
+async function checkEmailAvailability(email: string) {
+  return postJson<{ available: boolean }>("/api/auth/email-availability", { email });
 }
 
 function InputLabel({
@@ -114,7 +118,7 @@ export default function SignupPage() {
 
   if (isAuthenticated) return null;
 
-  const goStep2 = () => {
+  const goStep2 = async () => {
     setError(null);
     if (!email.trim()) {
       setError(tx("メールアドレスを入力してください。", "Please enter your email address."));
@@ -128,7 +132,19 @@ export default function SignupPage() {
       setError(tx("利用規約とプライバシーポリシーへの同意が必要です。", "You need to accept the Terms and Privacy Policy."));
       return;
     }
-    setStep(2);
+    setSubmitting(true);
+    try {
+      const result = await checkEmailAvailability(email.trim());
+      if (!result.available) {
+        setError(tx("このメールアドレスはすでに使われています。", "This email address is already in use."));
+        return;
+      }
+      setStep(2);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : tx("メールアドレスの確認に失敗しました。", "Failed to check this email address."));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const goStep3 = () => {
@@ -145,7 +161,7 @@ export default function SignupPage() {
     setError(null);
 
     if (step === 1) {
-      goStep2();
+      void goStep2();
       return;
     }
 
@@ -159,7 +175,7 @@ export default function SignupPage() {
       return;
     }
     if (role === "supporter" && !supporterGuidelinesAccepted) {
-      setError("サポーターガイドラインへの同意が必要です。");
+      setError("メイトガイドラインへの同意が必要です。");
       return;
     }
 
@@ -287,7 +303,7 @@ export default function SignupPage() {
 
                 {role === "supporter" && (
                   <div className="space-y-4 rounded-2xl border border-purple-500/20 bg-purple-500/5 p-4">
-                    <p className="text-xs font-semibold text-purple-300">サポーター追加情報</p>
+                    <p className="text-xs font-semibold text-purple-300">メイト追加情報</p>
 
                     <InputLabel label="応援しているVTuber（任意）">
                       <TextInput
@@ -321,7 +337,7 @@ export default function SignupPage() {
                           rel="noopener noreferrer"
                           className="text-[var(--brand-secondary)] underline-offset-2 hover:underline"
                         >
-                          サポーターガイドライン
+                          メイトガイドライン
                         </Link>
                         を読み、すべての内容に同意します
                         <span className="ml-1 text-red-400">*</span>

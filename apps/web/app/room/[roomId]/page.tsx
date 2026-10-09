@@ -11,7 +11,7 @@ import {
   ArrowsPointingInIcon,
   ArrowsPointingOutIcon,
   ChatBubbleLeftRightIcon,
-  ChevronDownIcon,
+  ChevronUpIcon,
   Cog6ToothIcon,
   MicrophoneIcon,
   PhoneXMarkIcon,
@@ -22,6 +22,7 @@ import { Room, RoomEvent, Track, type Participant } from "livekit-client";
 import type { CueCategory, CueEvent } from "../../components/cue/CueMiniPanel";
 import { SmartPhraseAssist, type SmartPhraseSessionState } from "../../components/chat/SmartPhraseAssist";
 import { SpeakerTranslationAssistPanel } from "../../components/translation/TranslationAssistPanels";
+import type { SessionComment } from "../../lib/apiTypes";
 import {
   isChatLanguage,
   isChatSenderRole,
@@ -34,15 +35,20 @@ import {
 import { useI18n } from "../../lib/i18n";
 import { getStreamSession, listActiveStreamSessions, type StreamSession } from "../../lib/streamSessions";
 import { useWatchTimeTracker } from "../../hooks/useWatchTimeTracker";
+import { useUserSession } from "../../lib/userSession";
+import { useRouteTransition } from "../../components/ui/RouteTransition";
 
 type Role = "host" | "listener" | "speaker" | "unknown";
 type RequestedRole = "host" | "listener" | "speaker";
 type Status = "idle" | "waitingForLive" | "connecting" | "connected" | "failed";
 
 type ChatMessage = BilingualChatMessage & {
+  senderId?: string;
   user?: string;
   mine?: boolean;
   kind?: "chat" | "cue";
+  deletedAt?: string;
+  deletedBy?: string;
 };
 
 type CueMessage = Partial<CueEvent> & {
@@ -89,7 +95,8 @@ function isStoredChatMessage(value: unknown): value is ChatMessage {
     typeof message.createdAt === "string" &&
     (message.translatedText === undefined || typeof message.translatedText === "string") &&
     (message.translatedLang === undefined || isChatLanguage(message.translatedLang)) &&
-    (message.kind === undefined || message.kind === "chat" || message.kind === "cue")
+    (message.kind === undefined || message.kind === "chat" || message.kind === "cue") &&
+    (message.deletedAt === undefined || typeof message.deletedAt === "string")
   );
 }
 
@@ -128,6 +135,24 @@ function writeStoredChatMessages(roomId: string, messages: ChatMessage[]) {
   } catch {
     // If storage is unavailable or full, chat still works for the current page session.
   }
+}
+
+function commentToChatMessage(comment: SessionComment, currentUserId?: string): ChatMessage {
+  return {
+    id: comment.id,
+    sessionId: comment.sessionId,
+    senderId: comment.senderId,
+    senderRole: comment.senderRole,
+    senderName: comment.senderName,
+    originalText: comment.originalText,
+    originalLang: comment.originalLang,
+    translatedText: comment.translatedText,
+    translatedLang: comment.translatedLang,
+    createdAt: comment.createdAt,
+    deletedAt: comment.deletedAt,
+    deletedBy: comment.deletedBy,
+    mine: currentUserId ? comment.senderId === currentUserId : undefined,
+  };
 }
 
 const PREVIEW_SPEAKER_PARTICIPANTS: SpeakerParticipantItem[] = [
@@ -382,7 +407,7 @@ function SpeakerPictureInPictureButton({
         type="button"
         onClick={() => void openPanel()}
         aria-label={tx("スピーカーパネルを開く", "Open speaker panel")}
-        className="grid h-10 w-10 place-items-center rounded-full bg-[var(--brand-secondary)] text-black shadow-[0_12px_28px_rgba(255,213,102,0.24)]"
+        className="ui-btn ui-btn-sm ui-btn-primary h-10 w-10 rounded-full p-0"
       >
         <ArrowTopRightOnSquareIcon className="h-5 w-5" aria-hidden />
       </button>
@@ -420,7 +445,9 @@ function SpeakerParticipantDock({
 
 export default function RoomPage() {
   const router = useRouter();
+  const { navigate } = useRouteTransition();
   const { tx } = useI18n();
+  const { user } = useUserSession();
   const params = useParams<{ roomId: string }>();
   const searchParams = useSearchParams();
   const roomId = params?.roomId ?? "";
@@ -440,6 +467,15 @@ export default function RoomPage() {
   );
   const [chatInput, setChatInput] = useState("");
   const [chatSendError, setChatSendError] = useState<string | null>(null);
+  const [guestCommentClientId] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const key = "aiment-comment-client-id";
+    const existing = window.localStorage.getItem(key);
+    if (existing) return existing;
+    const next = crypto.randomUUID();
+    window.localStorage.setItem(key, next);
+    return next;
+  });
   const [chatOpen, setChatOpen] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showVideoControls, setShowVideoControls] = useState(false);
@@ -492,6 +528,50 @@ export default function RoomPage() {
     connected: status === "connected",
     isHost: requestedRole === "host",
   });
+
+  useEffect(() => {
+    if (!roomId) return;
+    let cancelled = false;
+    // 普段は差分(新規投稿・取り消し)だけを取得してマージする。
+    // 初回・サーバーが reset を返したとき・FULL_RESYNC_EVERY 回に1回は最新分の全件で置き換え、
+    // 差分では直らないズレ(保存の遅延、送信に失敗したコメントなど)を解消する。
+    const FULL_RESYNC_EVERY = 12; // 5秒間隔なので約60秒に1回
+    let cursor: string | null = null;
+    let pollCount = 0;
+    // 応答の順番が入れ替わらないよう、前のリクエストが終わるまで次は送らない
+    let inFlight = false;
+    const loadComments = async () => {
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        const isFull = cursor === null || pollCount % FULL_RESYNC_EVERY === 0;
+        pollCount += 1;
+        const query = isFull || !cursor ? "" : `?since=${encodeURIComponent(cursor)}`;
+        const response = await fetch(`/api/stream-sessions/${encodeURIComponent(roomId)}/comments${query}`, { cache: "no-store" });
+        const payload = (await response.json().catch(() => null)) as { comments?: SessionComment[]; cursor?: string | null; reset?: boolean } | null;
+        if (!response.ok || cancelled) return;
+        const nextMessages = (payload?.comments ?? []).map((comment) => commentToChatMessage(comment, user?.id));
+        nextMessages.forEach((message) => seenChatIdsRef.current.add(message.id));
+        if (isFull || payload?.reset) {
+          setChatMessages((current) => mergeChatMessages(current.filter((message) => message.kind === "cue"), nextMessages));
+        } else if (nextMessages.length > 0) {
+          setChatMessages((current) => mergeChatMessages(current, nextMessages));
+        }
+        if (payload?.cursor) cursor = payload.cursor;
+      } catch {
+        // keep local/livekit chat available
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    void loadComments();
+    const timer = window.setInterval(() => void loadComments(), 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [roomId, user?.id]);
 
   useEffect(() => {
     if (!roomId || !chatHistoryHydratedRef.current) return;
@@ -595,36 +675,63 @@ export default function RoomPage() {
 
   const publishTranslatedMessage = useCallback((message: BilingualChatMessage, mine = true) => {
     const room = roomRef.current;
-    if (!room || status !== "connected") {
-      setChatSendError(tx("接続後に送信できます。", "You can send after the room is connected."));
+    const senderId = user?.id ?? (guestCommentClientId ? `guest:${guestCommentClientId}` : "");
+    if (!senderId) {
+      setChatSendError(tx("コメント送信の準備中です。少し待ってください。", "Preparing comments. Please wait a moment."));
       return;
     }
+    setChatSendError(null);
+    const optimistic: ChatMessage = { ...message, senderId, mine };
     seenChatIdsRef.current.add(message.id);
-    setChatMessages((prev) => [...prev, { ...message, mine }].slice(-MAX_CHAT_MESSAGES));
+    setChatMessages((prev) => [...prev, optimistic].slice(-MAX_CHAT_MESSAGES));
     setChatInput("");
-    const payload = JSON.stringify({ type: "chat", ...message });
-    console.debug("[room] publishData", payload.slice(0, 80));
-    void room.localParticipant
-      .publishData(
-        new TextEncoder().encode(payload),
-        { reliable: true },
-      )
+
+    void fetch(`/api/stream-sessions/${encodeURIComponent(roomId)}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: message.id,
+        clientId: guestCommentClientId,
+        senderRole: message.senderRole,
+        senderName: message.senderName,
+        originalText: message.originalText,
+        originalLang: message.originalLang,
+        translatedText: message.translatedText,
+        translatedLang: message.translatedLang,
+      }),
+    })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => null)) as { comment?: SessionComment; error?: string } | null;
+        if (!response.ok) throw new Error(payload?.error ?? "Failed to send comment");
+        if (payload?.comment) {
+          const saved = commentToChatMessage(payload.comment, user?.id);
+          setChatMessages((prev) => mergeChatMessages(prev, [saved]));
+        }
+      })
       .catch((error: unknown) => {
-        console.error("Failed to publish chat message", error);
-        setChatSendError(tx("コメントの送信に失敗しました。接続状態を確認してください。", "Failed to send the message. Please check your connection."));
+        console.error("Failed to save chat message", error);
+        setChatSendError(tx("コメントの送信に失敗しました。", "Failed to send the message."));
       });
-  }, [status, tx]);
+
+    if (room && status === "connected") {
+      const payload = JSON.stringify({ type: "chat", ...message });
+      console.debug("[room] publishData", payload.slice(0, 80));
+      void room.localParticipant
+        .publishData(
+          new TextEncoder().encode(payload),
+          { reliable: true },
+        )
+        .catch((error: unknown) => {
+          console.error("Failed to publish chat message", error);
+        });
+    }
+  }, [guestCommentClientId, roomId, status, tx, user?.id]);
 
   const sendChatText = useCallback((text: string) => {
     const value = text.trim();
     if (!value) return;
-    const room = roomRef.current;
-    if (!room || status !== "connected") {
-      setChatSendError(tx("接続後に送信できます。", "You can send after the room is connected."));
-      return;
-    }
     setChatSendError(null);
-    const displayName = room.localParticipant.name ?? "you";
+    const displayName = user?.channelName ?? user?.name ?? tx("ゲスト", "Guest");
     publishTranslatedMessage({
       id: crypto.randomUUID(),
       sessionId: roomId,
@@ -634,11 +741,29 @@ export default function RoomPage() {
       originalLang: senderRole === "vtuber" ? "ja" : "en",
       createdAt: new Date().toISOString(),
     });
-  }, [publishTranslatedMessage, roomId, senderRole, status, tx]);
+  }, [publishTranslatedMessage, roomId, senderRole, tx, user?.channelName, user?.name]);
 
   const sendChat = useCallback(() => {
     sendChatText(chatInput);
   }, [chatInput, sendChatText]);
+
+  const retractChatMessage = useCallback((messageId: string) => {
+    void fetch(`/api/stream-sessions/${encodeURIComponent(roomId)}/comments?commentId=${encodeURIComponent(messageId)}`, {
+      method: "DELETE",
+    })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => null)) as { comment?: SessionComment; error?: string } | null;
+        if (!response.ok) throw new Error(payload?.error ?? "Failed to retract comment");
+        if (payload?.comment) {
+          const next = commentToChatMessage(payload.comment, user?.id);
+          setChatMessages((prev) => prev.map((message) => (message.id === messageId ? { ...message, ...next } : message)));
+        }
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to retract comment", error);
+        setChatSendError(tx("コメントの取り消しに失敗しました。", "Failed to retract the comment."));
+      });
+  }, [roomId, tx, user?.id]);
 
   const insertChatPhrase = useCallback((phrase: string) => {
     setChatInput((current) => (current.trim() ? `${current.trimEnd()} ${phrase}` : phrase));
@@ -1109,7 +1234,7 @@ export default function RoomPage() {
     <div className="flex h-screen flex-col overflow-hidden bg-[var(--brand-bg-900)] text-[var(--brand-text)]">
       <header className="shrink-0 bg-[var(--brand-bg-900)]">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between px-8 py-3 lg:px-12">
-          <button onClick={() => router.push("/")} className="flex items-center">
+          <button onClick={() => navigate("/")} className="flex items-center">
             <Image src="/logo/aiment_logotype.svg" alt="aiment" width={150} height={50} className="h-10 w-auto object-contain brightness-0 invert" />
           </button>
           <div className="flex items-center gap-2">
@@ -1185,7 +1310,7 @@ export default function RoomPage() {
                         void roomRef.current?.startAudio();
                         setAudioBlocked(false);
                       }}
-                      className="flex items-center gap-2 rounded-full bg-black/60 px-5 py-3 text-sm font-bold text-white backdrop-blur hover:bg-black/75"
+                      className="ui-btn ui-btn-md ui-btn-primary"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5" aria-hidden>
                         <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06ZM18.584 5.106a.75.75 0 0 1 1.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 0 1-1.06-1.06 8.25 8.25 0 0 0 0-11.668.75.75 0 0 1 0-1.06Z" />
@@ -1205,7 +1330,7 @@ export default function RoomPage() {
                     type="button"
                     onClick={toggleFullscreen}
                     aria-label={isFullscreen ? tx("フルスクリーンを終了", "Exit fullscreen") : tx("フルスクリーン", "Fullscreen")}
-                    className={`inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/25 text-white shadow-lg backdrop-blur transition-all hover:bg-black/35 focus-visible:opacity-100 ${
+                    className={`inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur transition-all hover:bg-black/50 focus-visible:opacity-100 ${
                       showVideoControls ? "opacity-100" : "opacity-0"
                     }`}
                   >
@@ -1242,7 +1367,7 @@ export default function RoomPage() {
                     </div>
                   </div>
                 )}
-                <button onClick={() => router.push("/")} className="mx-auto mt-5 block rounded-xl bg-[var(--brand-primary)] px-6 py-2.5 text-sm font-bold text-white">
+                <button onClick={() => navigate("/")} className="mx-auto mt-5 block rounded-xl bg-[var(--brand-primary)] px-6 py-2.5 text-sm font-bold text-white">
                   {tx("ホームへ", "Go Home")}
                 </button>
               </div>
@@ -1289,7 +1414,7 @@ export default function RoomPage() {
                     type="button"
                     onClick={() => setChatOpen(false)}
                     aria-label={tx("コメントを閉じる", "Close comments")}
-                    className="inline-flex h-8 items-center gap-1 rounded-full bg-[var(--brand-surface)] px-3 text-[11px] font-bold text-[var(--brand-text-muted)] transition-colors hover:text-[var(--brand-text)]"
+                    className="ui-btn ui-btn-sm h-8 gap-1 px-3 text-[11px] ui-btn-ghost"
                   >
                     <ChatBubbleLeftRightIcon className="h-4 w-4" aria-hidden />
                     <span>{tx("OFF", "Off")}</span>
@@ -1305,19 +1430,36 @@ export default function RoomPage() {
                     key={message.id}
                     className={`rounded-lg px-3 py-2 ${
                       message.kind === "cue"
-                        ? "bg-[var(--brand-bg-900)] ring-1 ring-[var(--brand-secondary)]/35"
+                        ? "bg-[var(--brand-bg-900)] ring-1 ring-[var(--brand-primary)]/30"
                         : message.mine
                           ? "ml-6 bg-[var(--brand-primary)]/20"
                           : "mr-6 bg-[var(--brand-surface)]"
                     }`}
                   >
-                    <p className={`mb-1 text-[11px] font-semibold ${message.kind === "cue" ? "text-[var(--brand-secondary)]" : "text-[var(--brand-primary)]"}`}>
-                      {message.senderName ?? message.senderRole}
-                    </p>
-                    <p className={`text-sm leading-relaxed ${message.kind === "cue" ? "font-bold text-[var(--brand-secondary)]" : "text-[var(--brand-text)]"}`}>
-                      {primaryTextForMessage(message)}
-                    </p>
-                    {secondaryTextForMessage(message) ? (
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <p className={`text-[11px] font-semibold ${message.kind === "cue" ? "text-[var(--brand-primary-dark)]" : "text-[var(--brand-primary)]"}`}>
+                        {message.senderName ?? message.senderRole}
+                      </p>
+                      {user && message.mine && !message.deletedAt && message.kind !== "cue" ? (
+                        <button
+                          type="button"
+                          onClick={() => retractChatMessage(message.id)}
+                          className="rounded-full bg-[var(--brand-bg-900)] px-2 py-0.5 text-[10px] font-bold text-[var(--brand-text-muted)] ring-1 ring-black/5 hover:text-[var(--brand-accent)]"
+                        >
+                          {tx("取消", "Undo")}
+                        </button>
+                      ) : null}
+                    </div>
+                    {message.deletedAt ? (
+                      <p className="text-sm italic leading-relaxed text-[var(--brand-text-muted)]">
+                        {tx("このコメントは取り消されました。", "This comment was retracted.")}
+                      </p>
+                    ) : (
+                      <p className={`text-sm leading-relaxed ${message.kind === "cue" ? "font-bold text-[var(--brand-primary-dark)]" : "text-[var(--brand-text)]"}`}>
+                        {primaryTextForMessage(message)}
+                      </p>
+                    )}
+                    {!message.deletedAt && secondaryTextForMessage(message) ? (
                       <p className="mt-1 text-xs leading-relaxed text-[var(--brand-text-muted)]">
                         {secondaryTextForMessage(message)}
                       </p>
@@ -1330,7 +1472,7 @@ export default function RoomPage() {
                   type="button"
                   onClick={() => scrollChatToBottom("smooth")}
                   aria-label={tx("最新コメントへ移動", "Jump to latest comments")}
-                  className="absolute bottom-3 right-3 z-10 rounded-full bg-[var(--brand-primary)] px-3 py-2 text-sm font-bold text-white shadow-lg shadow-black/25"
+                  className="ui-btn ui-btn-sm ui-btn-primary absolute bottom-3 right-3 z-10 h-10 w-10 rounded-full p-0"
                 >
                   <ArrowDownCircleIcon className="h-5 w-5" aria-hidden />
                 </button>
@@ -1339,11 +1481,11 @@ export default function RoomPage() {
 
             <div className="p-3">
               {latestCue ? (
-                <div className="mb-2 rounded-xl bg-[var(--brand-surface)] px-3 py-2 shadow-[0_10px_24px_rgba(0,0,0,0.16)]">
+                <div className="mb-2 rounded-xl bg-[var(--brand-surface)] px-3 py-2 shadow-[0_10px_24px_rgba(73,71,70,0.12)]">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--brand-text-muted)]">Live cue</span>
                   </div>
-                  <p className="mt-1 text-sm font-extrabold text-[var(--brand-secondary)]">
+                  <p className="mt-1 text-sm font-extrabold text-[var(--brand-primary-dark)]">
                     {latestCue.english}
                     <span className="ml-2 text-xs text-[var(--brand-text)]">{latestCue.japanese}</span>
                   </p>
@@ -1359,14 +1501,13 @@ export default function RoomPage() {
                     event.preventDefault();
                     sendChat();
                   }}
-                  disabled={status !== "connected"}
-                  placeholder={status === "connected" ? tx("チャットを入力", "Type a message") : tx("接続後に送信できます", "Connect to send")}
-                  className="flex-1 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-sm text-[var(--brand-text)] outline-none placeholder:text-[var(--brand-text-muted)] disabled:cursor-not-allowed disabled:opacity-60"
+                  placeholder={tx("チャットを入力", "Type a message")}
+                  className="flex-1 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-sm text-[var(--brand-text)] outline-none placeholder:text-[var(--brand-text-muted)]"
                 />
                 <button
                   onClick={sendChat}
-                  disabled={status !== "connected"}
-                  className="rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-55"
+                  disabled={!user && !guestCommentClientId}
+                  className="ui-btn ui-btn-sm ui-btn-primary"
                 >
                   {tx("送信", "Send")}
                 </button>
@@ -1398,7 +1539,7 @@ export default function RoomPage() {
                 type="button"
                 onClick={() => setChatOpen(true)}
                 aria-label={tx("コメントを開く", "Open comments")}
-                className="flex h-full min-h-[64px] w-full flex-col items-center justify-center gap-2 text-[var(--brand-text-muted)] transition-colors hover:bg-[var(--brand-surface)] hover:text-[var(--brand-text)]"
+                className="flex h-full min-h-[64px] w-full flex-col items-center justify-center gap-2 text-[var(--brand-text-muted)] transition-colors hover:bg-[var(--brand-bg-900)] hover:text-[var(--brand-primary)]"
               >
                 <ChatBubbleLeftRightIcon className="h-6 w-6" aria-hidden />
                 <span className="text-[11px] font-bold [writing-mode:vertical-rl]">{tx("コメント", "Chat")}</span>
@@ -1410,26 +1551,22 @@ export default function RoomPage() {
 
       {requestedRole !== "listener" && (
         <div className="pointer-events-none fixed bottom-4 left-1/2 z-30 w-[calc(100%-24px)] max-w-[720px] -translate-x-1/2">
-          <div className="pointer-events-auto rounded-[28px] bg-[var(--brand-bg-800)]/95 px-4 py-3 shadow-[0_18px_40px_rgba(0,0,0,0.38)] backdrop-blur">
-            <div className="flex items-center justify-center gap-2 md:gap-3">
-              <div className="relative inline-flex items-center rounded-full bg-[var(--brand-bg-900)]">
+          <div className="pointer-events-auto rounded-[28px] bg-[var(--brand-surface)]/95 px-4 py-3 shadow-[0_14px_34px_rgba(73,71,70,0.18)] backdrop-blur">
+            <div className="flex items-end justify-center gap-2 md:gap-3">
+              <div className="relative">
+                <div className="ui-ctl-group">
                 <button
                   onClick={() => applyMic(!micOn)}
                   disabled={!canSendMic}
-                  className={`flex h-12 w-12 items-center justify-center rounded-full transition-colors ${
-                    canSendMic
-                      ? micOn
-                        ? "bg-[var(--brand-primary)] text-white"
-                        : "bg-transparent text-[var(--brand-text-muted)]"
-                      : "cursor-not-allowed bg-[var(--brand-surface)] text-[var(--brand-text-muted)]/60"
-                  }`}
+                  aria-label={micOn ? tx("マイクをオフ", "Mute microphone") : tx("マイクをオン", "Unmute microphone")}
+                  className={`ui-ctl ui-ctl-md ui-ctl-icon ${canSendMic && micOn ? "ui-ctl-primary" : "ui-ctl-neutral"}`}
                 >
                   {micOn ? (
                     <MicrophoneIcon className="h-5 w-5" aria-hidden />
                   ) : (
                     <span className="relative flex h-5 w-5 items-center justify-center">
                       <MicrophoneIcon className="h-5 w-5" aria-hidden />
-                      <span className="pointer-events-none absolute h-6 w-[5px] -rotate-45 rounded-full bg-black" aria-hidden />
+                      <span className="pointer-events-none absolute h-6 w-[5px] -rotate-45 rounded-full bg-[var(--ctl-face)]" aria-hidden />
                       <span className="pointer-events-none absolute h-6 w-[2px] -rotate-45 rounded-full bg-current" aria-hidden />
                     </span>
                   )}
@@ -1441,12 +1578,14 @@ export default function RoomPage() {
                     setShowMicMenu((v) => !v);
                     setShowCamMenu(false);
                   }}
-                  className="flex h-12 w-8 items-center justify-center border-l border-black/20 bg-transparent text-[var(--brand-text-muted)]"
+                  aria-label={tx("マイク入力を選択", "Select microphone input")}
+                  className="ui-ctl ui-ctl-md ui-ctl-neutral w-8 px-0"
                 >
-                  <ChevronDownIcon className="h-4 w-4" aria-hidden />
+                  <ChevronUpIcon className="h-4 w-4" aria-hidden />
                 </button>
+                </div>
                 {showMicMenu && canSendMic && (
-                  <div className="absolute bottom-14 left-0 z-20 min-w-[220px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/35">
+                  <div className="absolute bottom-14 left-0 z-20 min-w-[220px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/10 ring-1 ring-black/5">
                     {audioDevices.map((device, index) => (
                       <button
                         key={device.deviceId}
@@ -1472,12 +1611,12 @@ export default function RoomPage() {
               </div>
 
             {canSendCam && (
-              <div className="relative inline-flex items-center rounded-full bg-[var(--brand-bg-900)]">
+              <div className="relative">
+                <div className="ui-ctl-group">
                 <button
                   onClick={() => applyCam(!camOn)}
-                  className={`flex h-12 w-12 items-center justify-center rounded-full transition-colors ${
-                    camOn ? "bg-[var(--brand-primary)] text-white" : "bg-transparent text-[var(--brand-text-muted)]"
-                  }`}
+                  aria-label={camOn ? tx("カメラをオフ", "Turn camera off") : tx("カメラをオン", "Turn camera on")}
+                  className={`ui-ctl ui-ctl-md ui-ctl-icon ${camOn ? "ui-ctl-primary" : "ui-ctl-neutral"}`}
                 >
                   {camOn ? <VideoCameraIcon className="h-5 w-5" aria-hidden /> : <VideoCameraSlashIcon className="h-5 w-5" aria-hidden />}
                 </button>
@@ -1487,12 +1626,14 @@ export default function RoomPage() {
                     setShowCamMenu((v) => !v);
                     setShowMicMenu(false);
                   }}
-                  className="flex h-12 w-8 items-center justify-center border-l border-black/20 bg-transparent text-[var(--brand-text-muted)]"
+                  aria-label={tx("カメラ入力を選択", "Select camera input")}
+                  className="ui-ctl ui-ctl-md ui-ctl-neutral w-8 px-0"
                 >
-                  <ChevronDownIcon className="h-4 w-4" aria-hidden />
+                  <ChevronUpIcon className="h-4 w-4" aria-hidden />
                 </button>
+                </div>
                 {showCamMenu && (
-                  <div className="absolute bottom-14 left-0 z-20 min-w-[220px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/35">
+                  <div className="absolute bottom-14 left-0 z-20 min-w-[220px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/10 ring-1 ring-black/5">
                     {videoDevices.map((device, index) => (
                       <button
                         key={device.deviceId}
@@ -1518,33 +1659,27 @@ export default function RoomPage() {
               </div>
             )}
 
-            <div className="inline-flex items-center rounded-full bg-[var(--brand-bg-900)]">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDevicePanel((v) => !v);
-                  setShowMicMenu(false);
-                  setShowCamMenu(false);
-                }}
-                aria-pressed={showDevicePanel}
-                aria-label={tx("入力設定を開く", "Open input settings")}
-                className={`flex h-12 items-center justify-center gap-2 rounded-full px-3.5 text-sm font-bold transition-colors ${
-                  showDevicePanel
-                    ? "bg-[var(--brand-primary)] text-white"
-                    : "text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
-                }`}
-              >
-                <Cog6ToothIcon className="h-5 w-5" aria-hidden />
-                <span className="hidden sm:inline">{tx("入力", "Input")}</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setShowDevicePanel((v) => !v);
+                setShowMicMenu(false);
+                setShowCamMenu(false);
+              }}
+              aria-pressed={showDevicePanel}
+              aria-label={tx("入力設定を開く", "Open input settings")}
+              className={`ui-ctl ui-ctl-md ${showDevicePanel ? "ui-ctl-primary" : "ui-ctl-neutral"}`}
+            >
+              <Cog6ToothIcon className="h-5 w-5" aria-hidden />
+              <span className="hidden sm:inline">{tx("入力", "Input")}</span>
+            </button>
 
             <button
               onClick={() => {
                 cleanup();
-                router.push("/");
+                navigate("/");
               }}
-              className="inline-flex h-12 items-center gap-2 rounded-full bg-[var(--brand-accent)] px-4 text-sm font-semibold text-white"
+              className="ui-ctl ui-ctl-md ui-ctl-danger"
             >
               <PhoneXMarkIcon className="h-5 w-5" aria-hidden />
               {tx("退出", "Leave")}
@@ -1552,7 +1687,7 @@ export default function RoomPage() {
           </div>
 
           {showDevicePanel && (
-            <div className="mt-3 rounded-2xl bg-[var(--brand-surface)] p-3 text-sm text-[var(--brand-text)] shadow-lg shadow-black/25">
+            <div className="mt-3 rounded-2xl bg-[var(--brand-surface)] p-3 text-sm text-[var(--brand-text)] shadow-lg shadow-black/10">
               <div className="grid gap-2 md:grid-cols-3">
                 <div className="rounded-xl bg-[var(--brand-bg-900)] px-3 py-2">
                   <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--brand-text-muted)]">{tx("役割", "Role")}</p>

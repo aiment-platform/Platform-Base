@@ -25,7 +25,7 @@ export function PaymentModal({ clientSecret, title, onSuccess, onClose }: Paymen
               <button
                 type="button"
                 onClick={onSuccess}
-                className="h-11 flex-1 rounded-lg bg-[var(--brand-secondary)] text-sm font-semibold text-[var(--brand-bg-900)]"
+                className="h-11 flex-1 rounded-lg bg-[var(--brand-secondary)] text-sm font-semibold text-[var(--brand-text)]"
               >
                 完了にする
               </button>

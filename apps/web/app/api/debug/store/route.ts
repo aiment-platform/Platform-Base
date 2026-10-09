@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
+import { rejectInProduction } from "@/app/lib/server/devOnly";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const rejected = rejectInProduction();
+  if (rejected) return rejected;
+
   const databaseUrl = process.env.DATABASE_URL;
   const useNeon = Boolean(databaseUrl);
 

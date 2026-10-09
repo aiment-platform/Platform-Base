@@ -1,16 +1,17 @@
 "use client";
 
-import { ComponentType, SVGProps } from "react";
+import { ComponentType, SVGProps, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { CalendarDaysIcon, HomeIcon, RectangleStackIcon, VideoCameraIcon } from "@heroicons/react/24/outline";
 import { AuthProfileControl } from "../auth/AuthProfileControl";
 import { useI18n } from "../../lib/i18n";
 import { useUserSession } from "../../lib/userSession";
 import { buttonClassName } from "../ui/Button";
+import { LocaleSwitch } from "../ui/LocaleSwitch";
+import { useRouteTransition } from "../ui/RouteTransition";
 import { HomeSearchInput } from "./HomeSearchInput";
-import { ThemeToggle } from "./ThemeToggle";
 
 type NavItem = {
   labelJp: string;
@@ -32,13 +33,21 @@ type TopNavProps = {
 };
 
 export function TopNav({ mode = "default", searchQuery, onSearchChange }: TopNavProps) {
-  const router = useRouter();
+  const { navigate } = useRouteTransition();
+
   const pathname = usePathname();
-  const { locale, setLocale, tx } = useI18n();
-  const { isVtuber } = useUserSession();
+  const { locale, tx } = useI18n();
+  const { isAuthenticated, isVtuber } = useUserSession();
   const isStudioMode = mode === "studio";
+  // 下固定のナビがある間は印を付けておく。読み込みの帯（.route-bar）が
+  // ナビの上に出るように、CSS 側で位置をずらすのに使う。
+  useEffect(() => {
+    if (isStudioMode) return;
+    document.documentElement.setAttribute("data-bottom-nav", "");
+    return () => document.documentElement.removeAttribute("data-bottom-nav");
+  }, [isStudioMode]);
   const showSearch = !isStudioMode && searchQuery !== undefined && onSearchChange !== undefined;
-  const navItems: NavItem[] = isVtuber
+  const navItems: NavItem[] = isAuthenticated
     ? [
         ...BASE_NAV_ITEMS,
         { labelJp: "チャンネル", labelEn: "Channel", href: "/channel", shortLabelEn: "Channel", icon: RectangleStackIcon },
@@ -102,29 +111,7 @@ export function TopNav({ mode = "default", searchQuery, onSearchChange }: TopNav
             )}
 
             <div className="flex items-center gap-2">
-              <ThemeToggle />
-              <div className="flex items-center rounded-lg bg-[var(--brand-bg-900)] p-1">
-                <button
-                  onClick={() => setLocale("jp")}
-                  className={`rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors ${
-                    locale === "jp"
-                      ? "bg-[var(--brand-primary)] text-white"
-                      : "text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
-                  }`}
-                >
-                  JP
-                </button>
-                <button
-                  onClick={() => setLocale("en")}
-                  className={`rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors ${
-                    locale === "en"
-                      ? "bg-[var(--brand-primary)] text-white"
-                      : "text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
-                  }`}
-                >
-                  EN
-                </button>
-              </div>
+              <LocaleSwitch />
                 {isStudioMode && isVtuber && (
                 <Link
                   href="/studio/sessions"
@@ -137,9 +124,9 @@ export function TopNav({ mode = "default", searchQuery, onSearchChange }: TopNav
                 <button
                   type="button"
                   onClick={() => {
-                    router.push("/studio/pre-live");
+                    navigate("/studio/pre-live");
                   }}
-                  className={`hidden shadow-[var(--ui-shadow-1)] sm:inline-flex ${buttonClassName({ variant: "primary", size: "md" })}`}
+                  className={`hidden sm:inline-flex ${buttonClassName({ variant: "primary", size: "md" })}`}
                 >
                   <VideoCameraIcon className="h-5 w-5" aria-hidden />
                   <span>{tx("配信を作成", "Create Stream")}</span>

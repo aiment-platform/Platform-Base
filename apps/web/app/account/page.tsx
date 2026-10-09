@@ -8,7 +8,6 @@ import {
   EyeIcon,
   EyeSlashIcon,
   ShieldCheckIcon,
-  UserCircleIcon,
   WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline";
 import { TopNav } from "../components/home/TopNav";
@@ -81,7 +80,6 @@ const ACCOUNT_TABS: Array<{
   labelEn: string;
   Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
 }> = [
-  { key: "profile", labelJp: "プロフィール", labelEn: "Profile", Icon: UserCircleIcon },
   { key: "security", labelJp: "セキュリティ", labelEn: "Security", Icon: ShieldCheckIcon },
   { key: "notifications", labelJp: "通知・データ", labelEn: "Notifications & Data", Icon: BellAlertIcon },
   { key: "billing", labelJp: "課金", labelEn: "Billing", Icon: CreditCardIcon },
@@ -183,7 +181,7 @@ export default function AccountPage() {
   const [reportTargetId, setReportTargetId] = useState("");
   const [reportCategory, setReportCategory] = useState<ReportCategory>("other");
   const [reportDetails, setReportDetails] = useState("");
-  const [activeTab, setActiveTab] = useState<AccountTab>("profile");
+  const [activeTab, setActiveTab] = useState<AccountTab>("security");
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showPhoneModal, setShowPhoneModal] = useState(false);
@@ -498,7 +496,7 @@ export default function AccountPage() {
                 {tx("プロフィール、認証、通知、課金、サポートへの連絡を管理できます。", "Manage your profile, verification, notifications, billing, and support requests.")}
               </p>
               <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-[var(--brand-text-muted)]">
-                <span className={`rounded-full px-3 py-1 ${saving || uploadingImage ? "bg-[var(--brand-secondary)]/15 text-[var(--brand-secondary)]" : "bg-[var(--brand-surface)]"}`}>
+                <span className={`rounded-full px-3 py-1 ${saving || uploadingImage ? "bg-[var(--brand-secondary)]/40 text-[var(--brand-text)]" : "bg-[var(--brand-surface)]"}`}>
                   {uploadingImage
                     ? tx("画像アップロード中...", "Uploading image...")
                     : saving
@@ -683,7 +681,7 @@ export default function AccountPage() {
                   <button
                     type="button"
                     onClick={() => setShowEmailModal(true)}
-                    className="shrink-0 rounded-lg bg-[var(--brand-secondary)] px-3 py-2 text-xs font-semibold text-[var(--brand-bg-900)]"
+                    className="shrink-0 rounded-lg bg-[var(--brand-secondary)] px-3 py-2 text-xs font-semibold text-[var(--brand-text)]"
                   >
                     {tx("認証する", "Verify")}
                   </button>
@@ -713,7 +711,7 @@ export default function AccountPage() {
                 <button
                   type="button"
                   onClick={() => setShowPhoneModal(true)}
-                  className="shrink-0 rounded-lg bg-[var(--brand-secondary)] px-3 py-2 text-xs font-semibold text-[var(--brand-bg-900)]"
+                  className="shrink-0 rounded-lg bg-[var(--brand-secondary)] px-3 py-2 text-xs font-semibold text-[var(--brand-text)]"
                 >
                   {draft.phoneVerifiedAt ? tx("番号を変更", "Change number") : tx("認証する", "Verify")}
                 </button>
@@ -795,7 +793,7 @@ export default function AccountPage() {
                     type="button"
                     onClick={() => void startCheckout()}
                     disabled={billingLoading}
-                    className="h-11 rounded-lg bg-[var(--brand-secondary)] px-4 text-sm font-semibold text-[var(--brand-bg-900)] disabled:opacity-60"
+                    className="h-11 rounded-lg bg-[var(--brand-secondary)] px-4 text-sm font-semibold text-[var(--brand-text)] disabled:opacity-60"
                   >
                     {tx("Aimerプランに登録 PHP 1,098/月", "Subscribe to Aimer PHP 1,098/month")}
                   </button>

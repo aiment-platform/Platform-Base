@@ -163,7 +163,7 @@ export default function UserProfilePage() {
                       <div className="flex shrink-0 flex-col items-end gap-1">
                         <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold ${
                           s.role === "speaker"
-                            ? "bg-[var(--brand-secondary)]/20 text-[var(--brand-secondary)]"
+                            ? "bg-[var(--brand-secondary)]/40 text-[var(--brand-text)]"
                             : "bg-white/10 text-[var(--brand-text-muted)]"
                         }`}>
                           {tx(ROLE_LABEL[s.role]?.jp ?? s.role, ROLE_LABEL[s.role]?.en ?? s.role)}

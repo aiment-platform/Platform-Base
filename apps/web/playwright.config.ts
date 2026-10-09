@@ -35,6 +35,12 @@ export default defineConfig({
     env: {
       DATABASE_URL: "",
       E2E: "1",
+      // ダミーのLiveKit設定。token routeの env チェックを通し、入室ゲート(予約/プラン/
+      // live判定)を検証できるようにする。JWT署名はローカルのみでネットワーク不要。
+      // ingress(ネットワークを伴う)は到達後に失敗するため権限ゲートのみ検証する。
+      LIVEKIT_API_KEY: "e2e-dummy-key",
+      LIVEKIT_API_SECRET: "e2e-dummy-secret-e2e-dummy-secret",
+      NEXT_PUBLIC_LIVEKIT_URL: "wss://127.0.0.1:7880",
     },
   },
 });

@@ -24,7 +24,13 @@ export async function POST(request: Request) {
     const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
 
     if (!apiKey || !apiSecret || !livekitUrl) {
-      return NextResponse.json({ error: "LiveKit not configured" }, { status: 500 });
+      return NextResponse.json(
+        {
+          error:
+            "LiveKit is not configured. Set LIVEKIT_API_KEY, LIVEKIT_API_SECRET, and NEXT_PUBLIC_LIVEKIT_URL in apps/web/.env.local to start a live session locally.",
+        },
+        { status: 503 },
+      );
     }
 
     const session = await getStreamSessionById(sessionId);
@@ -43,6 +49,11 @@ export async function POST(request: Request) {
       if (sessionUser.role !== "vtuber" || session.hostUserId !== sessionUser.id) {
         return NextResponse.json({ error: "Only the session host can join as VTuber" }, { status: 403 });
       }
+    }
+
+    // 終了した配信(管理者の強制終了を含む)には、ホストも含めて誰も入室させない
+    if (session.status === "ended") {
+      return NextResponse.json({ error: "Broadcast has ended" }, { status: 403 });
     }
 
     if (role !== "vtuber" && session.status !== "live") {

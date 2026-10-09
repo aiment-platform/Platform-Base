@@ -118,14 +118,14 @@ export default function AdminUsersPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold">ユーザー管理</h1>
-          <p className="mt-0.5 text-xs text-white/40">
+          <p className="mt-0.5 text-xs text-[var(--brand-text-muted)]">
             {loading ? "読み込み中..." : `${allUsers.length} 件`}
           </p>
         </div>
         <button
           type="button"
           onClick={() => void fetchUsers()}
-          className="rounded-xl bg-white/10 px-4 py-2 text-sm hover:bg-white/15"
+          className="rounded-xl bg-black/[0.06] px-4 py-2 text-sm hover:bg-black/[0.08]"
         >
           更新
         </button>
@@ -137,12 +137,12 @@ export default function AdminUsersPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="名前・メールで検索..."
-          className="flex-1 min-w-48 rounded-xl bg-white/10 px-4 py-2.5 text-sm outline-none placeholder:text-white/30 focus:ring-2 focus:ring-purple-500"
+          className="flex-1 min-w-48 rounded-xl bg-black/[0.06] px-4 py-2.5 text-sm outline-none placeholder:text-[var(--brand-text-muted)] focus:ring-2 focus:ring-[var(--brand-primary)]"
         />
         <select
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value as RoleFilter)}
-          className="rounded-xl bg-white/10 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500"
+          className="rounded-xl bg-black/[0.06] px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
         >
           <option value="all">すべてのロール</option>
           <option value="vtuber">VTuber</option>
@@ -151,7 +151,7 @@ export default function AdminUsersPage() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-          className="rounded-xl bg-white/10 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500"
+          className="rounded-xl bg-black/[0.06] px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
         >
           <option value="all">すべてのステータス</option>
           <option value="active">アクティブ</option>
@@ -160,13 +160,13 @@ export default function AdminUsersPage() {
       </div>
 
       {error && (
-        <div className="mb-4 rounded-xl bg-red-500/15 px-4 py-3 text-sm text-red-400">{error}</div>
+        <div className="mb-4 rounded-xl bg-[var(--brand-accent)]/15 px-4 py-3 text-sm text-[var(--brand-accent)]">{error}</div>
       )}
 
       {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-white/10">
+      <div className="overflow-hidden rounded-2xl border border-black/[0.08]">
         <table className="w-full text-sm">
-          <thead className="border-b border-white/10 bg-white/5 text-xs text-white/40 uppercase tracking-wider">
+          <thead className="border-b border-black/[0.08] bg-black/[0.04] text-xs text-[var(--brand-text-muted)] uppercase tracking-wider">
             <tr>
               <th className="px-4 py-3 text-left">ユーザー</th>
               <th className="px-4 py-3 text-left">メール</th>
@@ -177,17 +177,17 @@ export default function AdminUsersPage() {
               <th className="px-4 py-3 text-right">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5">
+          <tbody className="divide-y divide-black/[0.06]">
             {loading && (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-white/30">
+                <td colSpan={7} className="px-4 py-12 text-center text-[var(--brand-text-muted)]">
                   読み込み中...
                 </td>
               </tr>
             )}
             {!loading && pageUsers.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-white/30">
+                <td colSpan={7} className="px-4 py-12 text-center text-[var(--brand-text-muted)]">
                   {filtered.length === 0 && allUsers.length > 0
                     ? "条件に一致するユーザーがいません"
                     : "ユーザーがいません"}
@@ -208,7 +208,7 @@ export default function AdminUsersPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-white/40">
+        <div className="mt-4 flex items-center justify-between text-sm text-[var(--brand-text-muted)]">
           <span>
             {clampedPage + 1} / {totalPages} ページ（{filtered.length} 件）
           </span>
@@ -217,7 +217,7 @@ export default function AdminUsersPage() {
               type="button"
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={clampedPage === 0}
-              className="rounded-lg bg-white/10 px-3 py-1.5 text-xs hover:bg-white/15 disabled:opacity-40"
+              className="ui-btn ui-btn-sm ui-btn-ghost text-xs"
             >
               ← 前
             </button>
@@ -225,7 +225,7 @@ export default function AdminUsersPage() {
               type="button"
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={clampedPage >= totalPages - 1}
-              className="rounded-lg bg-white/10 px-3 py-1.5 text-xs hover:bg-white/15 disabled:opacity-40"
+              className="ui-btn ui-btn-sm ui-btn-ghost text-xs"
             >
               次 →
             </button>
@@ -284,39 +284,39 @@ function UserRow({
 
   return (
     <tr
-      className="cursor-pointer transition-colors hover:bg-white/5"
+      className="cursor-pointer transition-colors hover:bg-black/[0.04]"
       onClick={onDetail}
     >
       <td className="px-4 py-3">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-sm font-bold text-purple-300">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/15 text-sm font-bold text-[var(--brand-primary)]">
             {user.name.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
             <p className="truncate font-medium">{user.name}</p>
             {user.channelName && (
-              <p className="truncate text-[11px] text-white/40">@{user.channelName}</p>
+              <p className="truncate text-[11px] text-[var(--brand-text-muted)]">@{user.channelName}</p>
             )}
           </div>
         </div>
       </td>
-      <td className="px-4 py-3 font-mono text-xs text-white/60">{user.email}</td>
+      <td className="px-4 py-3 font-mono text-xs text-[var(--brand-text-muted)]">{user.email}</td>
       <td className="px-4 py-3">
         <RoleBadge role={user.role} />
       </td>
       <td className="px-4 py-3">
-        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${user.plan === "aimer" ? "bg-amber-500/20 text-amber-400" : "bg-white/10 text-white/40"}`}>
+        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${user.plan === "aimer" ? "bg-amber-500/20 text-amber-600" : "bg-black/[0.06] text-[var(--brand-text-muted)]"}`}>
           {user.plan === "aimer" ? "Aimer" : "Free"}
         </span>
       </td>
-      <td className="px-4 py-3 text-xs text-white/40">{fmt(user.createdAt)}</td>
+      <td className="px-4 py-3 text-xs text-[var(--brand-text-muted)]">{fmt(user.createdAt)}</td>
       <td className="px-4 py-3">
         {isBanned ? (
-          <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-[11px] font-bold text-red-400">
+          <span className="rounded-full bg-[var(--brand-accent)]/20 px-2 py-0.5 text-[11px] font-bold text-[var(--brand-accent)]">
             BAN
           </span>
         ) : (
-          <span className="rounded-full bg-green-500/20 px-2 py-0.5 text-[11px] font-bold text-green-400">
+          <span className="rounded-full bg-green-500/20 px-2 py-0.5 text-[11px] font-bold text-green-600">
             Active
           </span>
         )}
@@ -326,25 +326,25 @@ function UserRow({
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            className="rounded-lg bg-white/10 px-2.5 py-1.5 text-xs hover:bg-white/15"
+            className="ui-btn ui-btn-sm ui-btn-ghost text-xs"
           >
             ⋯
           </button>
           {open && (
-            <div className="absolute right-0 top-8 z-50 min-w-40 rounded-xl border border-white/10 bg-[#1a1a2e] py-1 shadow-2xl">
+            <div className="absolute right-0 top-8 z-50 min-w-40 rounded-xl border border-black/[0.08] bg-[var(--brand-surface)] py-1 shadow-2xl">
               <button
                 type="button"
                 onClick={() => { setOpen(false); onDetail(); }}
-                className="w-full px-4 py-2 text-left text-sm hover:bg-white/5"
+                className="w-full px-4 py-2 text-left text-sm hover:bg-black/[0.04]"
               >
                 詳細を見る
               </button>
-              <div className="my-1 border-t border-white/10" />
+              <div className="my-1 border-t border-black/[0.08]" />
               {user.role === "listener" ? (
                 <button
                   type="button"
                   onClick={() => { setOpen(false); onAction({ type: "role", user, newRole: "vtuber" }); }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-white/5"
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-black/[0.04]"
                 >
                   VTuberに変更
                 </button>
@@ -352,17 +352,17 @@ function UserRow({
                 <button
                   type="button"
                   onClick={() => { setOpen(false); onAction({ type: "role", user, newRole: "listener" }); }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-white/5"
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-black/[0.04]"
                 >
                   リスナーに変更
                 </button>
               )}
-              <div className="my-1 border-t border-white/10" />
+              <div className="my-1 border-t border-black/[0.08]" />
               {isBanned ? (
                 <button
                   type="button"
                   onClick={() => { setOpen(false); onAction({ type: "unban", user }); }}
-                  className="w-full px-4 py-2 text-left text-sm text-green-400 hover:bg-white/5"
+                  className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-black/[0.04]"
                 >
                   BAN解除
                 </button>
@@ -370,7 +370,7 @@ function UserRow({
                 <button
                   type="button"
                   onClick={() => { setOpen(false); onAction({ type: "ban", user }); }}
-                  className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-white/5"
+                  className="w-full px-4 py-2 text-left text-sm text-[var(--brand-accent)] hover:bg-black/[0.04]"
                 >
                   BANする
                 </button>
@@ -394,7 +394,7 @@ function DetailModal({ user, onClose }: { user: SessionUser; onClose: () => void
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl bg-[#1a1a2e] p-6 shadow-2xl"
+        className="w-full max-w-md rounded-2xl bg-[var(--brand-surface)] p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">
@@ -402,25 +402,25 @@ function DetailModal({ user, onClose }: { user: SessionUser; onClose: () => void
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg bg-white/10 px-3 py-1.5 text-xs hover:bg-white/15"
+            className="ui-btn ui-btn-sm ui-btn-ghost text-xs"
           >
             閉じる
           </button>
         </div>
 
         <div className="mb-5 flex items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-2xl font-bold text-purple-300">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/15 text-2xl font-bold text-[var(--brand-primary)]">
             {user.name.charAt(0).toUpperCase()}
           </div>
           <div>
             <p className="text-lg font-bold">{user.name}</p>
             {user.channelName && (
-              <p className="text-sm text-white/50">@{user.channelName}</p>
+              <p className="text-sm text-[var(--brand-text-muted)]">@{user.channelName}</p>
             )}
             <div className="mt-1 flex items-center gap-1.5">
               <RoleBadge role={user.role} />
               {user.bannedAt && (
-                <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-[11px] font-bold text-red-400">
+                <span className="rounded-full bg-[var(--brand-accent)]/20 px-2 py-0.5 text-[11px] font-bold text-[var(--brand-accent)]">
                   BAN
                 </span>
               )}
@@ -444,9 +444,9 @@ function DetailModal({ user, onClose }: { user: SessionUser; onClose: () => void
             <DetailRow label="BAN日時" value={fmt(user.bannedAt)} highlight="red" />
           )}
           {user.bio && (
-            <div className="rounded-xl bg-white/5 p-3">
-              <p className="mb-1 text-xs text-white/40">自己紹介</p>
-              <p className="text-sm text-white/80">{user.bio}</p>
+            <div className="rounded-xl bg-black/[0.04] p-3">
+              <p className="mb-1 text-xs text-[var(--brand-text-muted)]">自己紹介</p>
+              <p className="text-sm text-[var(--brand-text)]">{user.bio}</p>
             </div>
           )}
         </div>
@@ -467,10 +467,10 @@ function DetailRow({
   highlight?: "red";
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 rounded-lg px-3 py-2 odd:bg-white/[0.03]">
-      <span className="shrink-0 text-xs text-white/40">{label}</span>
+    <div className="flex items-baseline justify-between gap-4 rounded-lg px-3 py-2 odd:bg-black/[0.03]">
+      <span className="shrink-0 text-xs text-[var(--brand-text-muted)]">{label}</span>
       <span
-        className={`min-w-0 truncate ${mono ? "font-mono text-xs" : ""} ${highlight === "red" ? "text-red-400" : "text-white/80"}`}
+        className={`min-w-0 truncate ${mono ? "font-mono text-xs" : ""} ${highlight === "red" ? "text-[var(--brand-accent)]" : "text-[var(--brand-text)]"}`}
       >
         {value}
       </span>
@@ -513,12 +513,12 @@ function ConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-sm rounded-2xl bg-[#1a1a2e] p-6 shadow-2xl">
+      <div className="w-full max-w-sm rounded-2xl bg-[var(--brand-surface)] p-6 shadow-2xl">
         <h3 className="mb-2 text-base font-bold">{title}</h3>
-        <p className="mb-5 text-sm text-white/60">{description}</p>
+        <p className="mb-5 text-sm text-[var(--brand-text-muted)]">{description}</p>
 
         {error && (
-          <div className="mb-4 rounded-xl bg-red-500/15 px-4 py-3 text-sm text-red-400">{error}</div>
+          <div className="mb-4 rounded-xl bg-[var(--brand-accent)]/15 px-4 py-3 text-sm text-[var(--brand-accent)]">{error}</div>
         )}
 
         <div className="flex justify-end gap-2">
@@ -526,7 +526,7 @@ function ConfirmDialog({
             type="button"
             onClick={onCancel}
             disabled={loading}
-            className="rounded-xl bg-white/10 px-4 py-2.5 text-sm hover:bg-white/15 disabled:opacity-50"
+            className="ui-btn ui-btn-md ui-btn-ghost"
           >
             キャンセル
           </button>
@@ -534,9 +534,7 @@ function ConfirmDialog({
             type="button"
             onClick={onConfirm}
             disabled={loading}
-            className={`rounded-xl px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50 ${
-              isBan ? "bg-red-600 hover:brightness-110" : isRole ? "bg-purple-600 hover:brightness-110" : "bg-green-700 hover:brightness-110"
-            }`}
+            className={`ui-btn ui-btn-md ${isBan ? "ui-btn-danger" : isRole ? "ui-btn-primary" : "ui-btn-success"}`}
           >
             {loading ? "処理中..." : isBan ? "BANする" : isUnban ? "BAN解除" : "変更する"}
           </button>
@@ -555,8 +553,8 @@ function RoleBadge({ role }: { role: UserRole }) {
     <span
       className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
         role === "vtuber"
-          ? "bg-purple-500/20 text-purple-300"
-          : "bg-blue-500/20 text-blue-300"
+          ? "bg-[var(--brand-primary)]/15 text-[var(--brand-primary)]"
+          : "bg-blue-500/20 text-blue-600"
       }`}
     >
       {role === "vtuber" ? "VTuber" : "リスナー"}

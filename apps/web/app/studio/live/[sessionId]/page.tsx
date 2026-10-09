@@ -8,7 +8,7 @@ import {
   ArrowDownCircleIcon,
   ArrowTopRightOnSquareIcon,
   ChatBubbleLeftRightIcon,
-  ChevronDownIcon,
+  ChevronUpIcon,
   MicrophoneIcon,
   PaperAirplaneIcon,
   PlayIcon,
@@ -30,7 +30,7 @@ import {
   type BilingualChatMessage,
   type ChatSenderRole,
 } from "../../../lib/chatMessages";
-import type { Reservation } from "../../../lib/apiTypes";
+import type { Reservation, SessionComment } from "../../../lib/apiTypes";
 import { useI18n } from "../../../lib/i18n";
 import {
   getStreamSession,
@@ -40,6 +40,8 @@ import {
 } from "../../../lib/streamSessions";
 import { useUserSession } from "../../../lib/userSession";
 import { ObsStreamPanel } from "./ObsStreamPanel";
+import { TroubleshootPanel, type Diagnostics } from "./TroubleshootPanel";
+import { useRouteTransition } from "../../../components/ui/RouteTransition";
 
 type ParticipantItem = {
   id: string;
@@ -64,13 +66,34 @@ declare global {
 }
 
 type ChatItem = BilingualChatMessage & {
+  senderId?: string;
   mine?: boolean;
+  deletedAt?: string;
+  deletedBy?: string;
 };
 
 const INITIAL_CHAT: ChatItem[] = [];
 
 const MAX_CHAT_MESSAGES = 200;
 const STUDIO_CHAT_HISTORY_STORAGE_PREFIX = "aiment:studio-chat-history";
+
+function commentToChatItem(comment: SessionComment, currentUserId?: string): ChatItem {
+  return {
+    id: comment.id,
+    sessionId: comment.sessionId,
+    senderId: comment.senderId,
+    senderRole: comment.senderRole,
+    senderName: comment.senderName,
+    originalText: comment.originalText,
+    originalLang: comment.originalLang,
+    translatedText: comment.translatedText,
+    translatedLang: comment.translatedLang,
+    createdAt: comment.createdAt,
+    deletedAt: comment.deletedAt,
+    deletedBy: comment.deletedBy,
+    mine: currentUserId ? comment.senderId === currentUserId : undefined,
+  };
+}
 
 function studioChatHistoryStorageKey(sessionId: string) {
   return `${STUDIO_CHAT_HISTORY_STORAGE_PREFIX}:${sessionId}`;
@@ -88,7 +111,8 @@ function isStoredChatItem(value: unknown): value is ChatItem {
     typeof message.createdAt === "string" &&
     (message.translatedText === undefined || typeof message.translatedText === "string") &&
     (message.translatedLang === undefined || isChatLanguage(message.translatedLang)) &&
-    (message.mine === undefined || typeof message.mine === "boolean")
+    (message.mine === undefined || typeof message.mine === "boolean") &&
+    (message.deletedAt === undefined || typeof message.deletedAt === "string")
   );
 }
 
@@ -138,22 +162,20 @@ type CircleControlProps = {
   onToggle: () => void;
 };
 
-function CircleControl({ icon: Icon, offIcon: OffIcon, slashedWhenOff, on, onToggle }: CircleControlProps) {
+function CircleControl({ label, icon: Icon, offIcon: OffIcon, slashedWhenOff, on, onToggle }: CircleControlProps) {
   const CurrentIcon = on ? Icon : (OffIcon ?? Icon);
   return (
     <button
       onClick={onToggle}
-      className={`flex h-14 w-14 items-center justify-center rounded-full transition-colors ${
-        on
-          ? "bg-[var(--brand-primary)] text-white"
-          : "bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)]"
-      }`}
+      aria-pressed={on}
+      aria-label={label}
+      className={`ui-ctl ui-ctl-md ui-ctl-icon ${on ? "ui-ctl-primary" : "ui-ctl-neutral"}`}
     >
       <span className="relative flex h-6 w-6 items-center justify-center">
         <CurrentIcon className="h-6 w-6" aria-hidden />
         {!on && slashedWhenOff && (
           <>
-            <span className="pointer-events-none absolute h-7 w-[5px] -rotate-45 rounded-full bg-black" aria-hidden />
+            <span className="pointer-events-none absolute h-7 w-[5px] -rotate-45 rounded-full bg-[var(--ctl-face)]" aria-hidden />
             <span className="pointer-events-none absolute h-7 w-[2px] -rotate-45 rounded-full bg-current" aria-hidden />
           </>
         )}
@@ -367,7 +389,7 @@ function SpeakerOverlayLauncher({
         type="button"
         onClick={() => void openOverlay()}
         aria-label={tx("スピーカーパネルを開く", "Open speaker panel")}
-        className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--brand-secondary)] px-3 text-xs font-extrabold text-black transition-transform hover:-translate-y-0.5"
+        className="ui-btn ui-btn-sm ui-btn-primary text-xs"
       >
         <ArrowTopRightOnSquareIcon className="h-5 w-5" aria-hidden />
         <span>{tx("スピーカー一覧", "Speakers")}</span>
@@ -376,7 +398,7 @@ function SpeakerOverlayLauncher({
         </span>
       </button>
       {error ? (
-        <p className="absolute left-0 top-11 z-20 w-[280px] rounded-lg bg-[var(--brand-accent)]/15 px-3 py-2 text-xs text-[var(--brand-accent)] shadow-lg shadow-black/25">
+        <p className="absolute left-0 top-11 z-20 w-[280px] rounded-lg bg-[var(--brand-accent)]/15 px-3 py-2 text-xs text-[var(--brand-accent)] shadow-lg shadow-black/10">
           {error}
         </p>
       ) : null}
@@ -386,9 +408,10 @@ function SpeakerOverlayLauncher({
 
 export default function StudioLiveSessionPage() {
   const router = useRouter();
+  const { navigate } = useRouteTransition();
   const searchParams = useSearchParams();
   const { tx } = useI18n();
-  const { isVtuber, hydrated: sessionHydrated } = useUserSession();
+  const { user, isVtuber, hydrated: sessionHydrated } = useUserSession();
   const params = useParams<{ sessionId: string }>();
   const sessionId = params?.sessionId ?? "";
 
@@ -407,6 +430,7 @@ export default function StudioLiveSessionPage() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("idle");
   const [connectedViewers, setConnectedViewers] = useState(0);
   const [obsConnected, setObsConnected] = useState(false);
+  const [monitorActive, setMonitorActive] = useState(false);
   const [speakerReservations, setSpeakerReservations] = useState<{ reservationId: string; userName: string }[]>([]);
   const [showStopConfirm, setShowStopConfirm] = useState(false);
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
@@ -417,6 +441,9 @@ export default function StudioLiveSessionPage() {
   const [showCamMenu, setShowCamMenu] = useState(false);
 
   const previewRef = useRef<HTMLVideoElement | null>(null);
+  const monitorRef = useRef<HTMLVideoElement | null>(null);
+  // OBS接続の false→true 遷移を検知して一度だけブラウザのマイク/カメラを止める。
+  const prevObsConnectedRef = useRef(false);
   const remoteAudioContainerRef = useRef<HTMLDivElement | null>(null);
   const chatListRef = useRef<HTMLDivElement | null>(null);
   const shouldAutoScrollRef = useRef(true);
@@ -439,6 +466,50 @@ export default function StudioLiveSessionPage() {
     if (!sessionId || !chatHistoryHydratedRef.current) return;
     writeStoredChatItems(sessionId, chat);
   }, [chat, sessionId]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    // 普段は差分(新規投稿・取り消し)だけを取得してマージする。
+    // 初回・サーバーが reset を返したとき・FULL_RESYNC_EVERY 回に1回は最新分の全件で置き換え、
+    // 差分では直らないズレ(保存の遅延、送信に失敗したコメントなど)を解消する。
+    const FULL_RESYNC_EVERY = 12; // 5秒間隔なので約60秒に1回
+    let cursor: string | null = null;
+    let pollCount = 0;
+    // 応答の順番が入れ替わらないよう、前のリクエストが終わるまで次は送らない
+    let inFlight = false;
+    const loadComments = async () => {
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        const isFull = cursor === null || pollCount % FULL_RESYNC_EVERY === 0;
+        pollCount += 1;
+        const query = isFull || !cursor ? "" : `?since=${encodeURIComponent(cursor)}`;
+        const response = await fetch(`/api/stream-sessions/${encodeURIComponent(sessionId)}/comments${query}`, { cache: "no-store" });
+        const payload = (await response.json().catch(() => null)) as { comments?: SessionComment[]; cursor?: string | null; reset?: boolean } | null;
+        if (!response.ok || cancelled) return;
+        const next = (payload?.comments ?? []).map((comment) => commentToChatItem(comment, user?.id));
+        next.forEach((message) => seenChatIdsRef.current.add(message.id));
+        if (isFull || payload?.reset) {
+          setChat(next.slice(-MAX_CHAT_MESSAGES));
+        } else if (next.length > 0) {
+          setChat((prev) => mergeChatItems(prev, next));
+        }
+        if (payload?.cursor) cursor = payload.cursor;
+      } catch {
+        // keep local/livekit chat available
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    void loadComments();
+    const timer = window.setInterval(() => void loadComments(), 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [sessionId, user?.id]);
 
   useEffect(() => {
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.enumerateDevices) return;
@@ -540,16 +611,44 @@ export default function StudioLiveSessionPage() {
   );
 
   const sendTranslatedChatMessage = useCallback((message: BilingualChatMessage) => {
+    if (!user?.id) return;
     seenChatIdsRef.current.add(message.id);
-    setChat((prev) => [...prev, { ...message, mine: true }].slice(-MAX_CHAT_MESSAGES));
+    setChat((prev) => [...prev, { ...message, senderId: user.id, mine: true }].slice(-MAX_CHAT_MESSAGES));
     setChatInput("");
+    void fetch(`/api/stream-sessions/${encodeURIComponent(sessionId)}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: message.id,
+        senderRole: message.senderRole,
+        senderName: message.senderName,
+        originalText: message.originalText,
+        originalLang: message.originalLang,
+        translatedText: message.translatedText,
+        translatedLang: message.translatedLang,
+      }),
+    })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => null)) as { comment?: SessionComment } | null;
+        if (response.ok && payload?.comment) {
+          const saved = commentToChatItem(payload.comment, user.id);
+          setChat((prev) => {
+            const next = new Map(prev.map((entry) => [entry.id, entry]));
+            next.set(saved.id, saved);
+            return Array.from(next.values()).slice(-MAX_CHAT_MESSAGES);
+          });
+        }
+      })
+      .catch(() => {
+        // Live chat remains visible locally; polling will reconcile if saved.
+      });
     if (roomRef.current && connectionStatus === "live") {
       void roomRef.current.localParticipant.publishData(
         new TextEncoder().encode(JSON.stringify({ type: "chat", ...message })),
         { reliable: true },
       );
     }
-  }, [connectionStatus]);
+  }, [connectionStatus, sessionId, user?.id]);
 
   const sendChatText = useCallback((phrase: string) => {
     const text = phrase.trim();
@@ -558,17 +657,33 @@ export default function StudioLiveSessionPage() {
       id: crypto.randomUUID(),
       sessionId,
       senderRole: "vtuber",
-      senderName: "host",
+      senderName: user?.channelName ?? user?.name ?? "host",
       originalText: text,
       originalLang: "ja",
       createdAt: new Date().toISOString(),
     };
     sendTranslatedChatMessage(message);
-  }, [sendTranslatedChatMessage, sessionId]);
+  }, [sendTranslatedChatMessage, sessionId, user?.channelName, user?.name]);
 
   const sendChat = useCallback(() => {
     sendChatText(chatInput);
   }, [chatInput, sendChatText]);
+
+  const retractChatMessage = useCallback((messageId: string) => {
+    void fetch(`/api/stream-sessions/${encodeURIComponent(sessionId)}/comments?commentId=${encodeURIComponent(messageId)}`, {
+      method: "DELETE",
+    })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => null)) as { comment?: SessionComment } | null;
+        if (response.ok && payload?.comment) {
+          const next = commentToChatItem(payload.comment, user?.id);
+          setChat((prev) => prev.map((message) => (message.id === messageId ? { ...message, ...next } : message)));
+        }
+      })
+      .catch(() => {
+        // no-op
+      });
+  }, [sessionId, user?.id]);
 
   useEffect(() => {
     const el = chatListRef.current;
@@ -693,6 +808,25 @@ export default function StudioLiveSessionPage() {
     }
   };
 
+  // 二重音声/映像対策: OBS(ingress)が接続されたら、配信のA/VソースをOBSに一本化する。
+  // ブラウザのマイク/カメラを止めることで「二重音声」と「映像/音声のズレ」を防ぐ。
+  // 接続の false→true 遷移時に一度だけ実行し、その後の手動トグルは尊重する。
+  useEffect(() => {
+    const wasConnected = prevObsConnectedRef.current;
+    prevObsConnectedRef.current = obsConnected;
+    if (!obsConnected || wasConnected) return;
+    if (connectionStatus !== "live") return;
+    // OBSが新たに接続された → ブラウザのマイク・カメラを停止
+    if (micOn) {
+      setMicOn(false);
+      void roomRef.current?.localParticipant.setMicrophoneEnabled(false);
+    }
+    if (camOn) {
+      setCamOn(false);
+      void roomRef.current?.localParticipant.setCameraEnabled(false);
+    }
+  }, [obsConnected, connectionStatus, micOn, camOn]);
+
   const handleMicDeviceChange = (deviceId: string) => {
     setSelectedMicDeviceId(deviceId);
     if (roomRef.current && connectionStatus === "live" && micOn) {
@@ -706,6 +840,74 @@ export default function StudioLiveSessionPage() {
       void roomRef.current.localParticipant.setCameraEnabled(true, deviceId ? { deviceId } : undefined);
     }
   };
+
+  // OBS(ingress)の映像をモニタ用<video>に(再)アタッチする。マイク/カメラ操作で
+  // 再ネゴが起きてもモニタ受信が止まらない/必ず復旧するための保険。
+  const attachObsMonitor = useCallback(() => {
+    const room = roomRef.current;
+    const el = monitorRef.current;
+    if (!room || !el) return;
+    for (const p of room.remoteParticipants.values()) {
+      if (!(p.identity.startsWith("obs-") || p.identity.startsWith("ingress-"))) continue;
+      for (const pub of p.trackPublications.values()) {
+        if (pub.kind === Track.Kind.Video && pub.track) {
+          pub.track.attach(el);
+          el.muted = true;
+          void el.play().catch(() => {});
+          setMonitorActive(true);
+          return;
+        }
+      }
+    }
+  }, []);
+
+  // OBS接続中はモニタ映像を維持・復旧する。マイク/カメラのトグルで再ネゴが起きて
+  // モニタが消えても、micOn/camOn の変化を契機に再アタッチして必ず復旧させる。
+  useEffect(() => {
+    if (!obsConnected) return;
+    attachObsMonitor();
+    const t1 = window.setTimeout(attachObsMonitor, 600);
+    const t2 = window.setTimeout(attachObsMonitor, 1800);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [obsConnected, micOn, camOn, attachObsMonitor]);
+
+  // トラブルシューティング用の診断値とチェック結果を集める。
+  const collectDiagnostics = useCallback((): { diagnostics: Diagnostics; checks: { label: string; ok: boolean; hint?: string }[] } => {
+    const online = typeof navigator !== "undefined" ? navigator.onLine : true;
+    const roomConnected = connectionStatus === "live";
+    const quality = roomRef.current?.localParticipant.connectionQuality ?? "unknown";
+    const hasAudio = obsConnected || micOn;
+    const hasVideo = obsConnected || camOn;
+
+    const diagnostics: Diagnostics = {
+      online,
+      connectionStatus,
+      connectionQuality: String(quality),
+      obsConnected,
+      monitorActive,
+      micPublishing: micOn,
+      camPublishing: camOn,
+      participantCount: participants.length,
+      viewerCount: connectedViewers,
+      userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "n/a",
+    };
+
+    const checks = [
+      { label: tx("インターネット接続", "Internet connection"), ok: online, hint: tx("ネットワークを確認してください。", "Check your network.") },
+      { label: tx("配信ルームに接続", "Connected to room"), ok: roomConnected, hint: tx("配信を開始してください。", "Start the broadcast.") },
+      { label: tx("音声ソースあり（OBSまたはマイク）", "Audio source present (OBS or mic)"), ok: hasAudio, hint: tx("マイクをONにするかOBSを接続してください。", "Turn on mic or connect OBS.") },
+      { label: tx("映像ソースあり（OBSまたはカメラ）", "Video source present (OBS or camera)"), ok: hasVideo, hint: tx("カメラをONにするかOBSを接続してください。", "Turn on camera or connect OBS.") },
+      {
+        label: tx("OBS映像の受信（モニタ）", "Receiving OBS video (monitor)"),
+        ok: !obsConnected || monitorActive,
+        hint: tx("OBSは接続済みですが映像が届いていません。回線の切り替えを試してください。", "OBS connected but no video — try switching the connection."),
+      },
+    ];
+    return { diagnostics, checks };
+  }, [connectionStatus, obsConnected, monitorActive, micOn, camOn, participants.length, connectedViewers, tx]);
 
   const startBroadcast = async () => {
     if (!session) return;
@@ -722,8 +924,8 @@ export default function StudioLiveSessionPage() {
         body: JSON.stringify({ sessionId: session.sessionId, role: "vtuber" }),
       });
       if (!res.ok) {
-        const err = (await res.json()) as { error?: string };
-        throw new Error(err.error ?? "Token error");
+        const err = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(err?.error ?? "Live session could not start. Please check the streaming server settings.");
       }
       tokenData = (await res.json()) as { token: string; livekitUrl: string };
     } catch (err) {
@@ -830,9 +1032,21 @@ export default function StudioLiveSessionPage() {
     });
 
     room.on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
+      const isObs = participant.identity.startsWith("obs-") || participant.identity.startsWith("ingress-");
+      // 配信モニタ: OBS(ingress)の映像を「視聴者に見えている画」として表示する。
+      if (track.kind === Track.Kind.Video && isObs && monitorRef.current) {
+        track.attach(monitorRef.current);
+        monitorRef.current.muted = true;
+        void monitorRef.current.play().catch(() => {
+          // autoplay制限時は無視（映像のみ・音声なし）
+        });
+        setMonitorActive(true);
+        return;
+      }
       if (track.kind !== Track.Kind.Audio) return;
       if (participant.identity === room.localParticipant.identity) return;
-      if (participant.identity.startsWith("obs-") || participant.identity.startsWith("ingress-")) return;
+      // OBS音声はVTuber自身には流さない（遅延した自分の声によるエコー防止）。
+      if (isObs) return;
       upsertParticipant(participant, {
         muted: !participant.isMicrophoneEnabled,
         isSpeaking: participant.isSpeaking,
@@ -852,7 +1066,13 @@ export default function StudioLiveSessionPage() {
       });
     });
 
-    room.on(RoomEvent.TrackUnsubscribed, (track) => {
+    room.on(RoomEvent.TrackUnsubscribed, (track, _pub, participant) => {
+      const isObs = participant.identity.startsWith("obs-") || participant.identity.startsWith("ingress-");
+      if (track.kind === Track.Kind.Video && isObs) {
+        track.detach();
+        setMonitorActive(false);
+        return;
+      }
       if (track.kind !== Track.Kind.Audio || !remoteAudioContainerRef.current) return;
       const audioEl = remoteAudioContainerRef.current.querySelector(
         `audio[data-lk-track-sid="${track.sid}"]`,
@@ -933,7 +1153,7 @@ export default function StudioLiveSessionPage() {
     }).catch(() => null);
     const endedSession = await setStreamSessionStatus(session.sessionId, "ended");
     if (endedSession) {
-      router.push(`/studio/live/${encodeURIComponent(session.sessionId)}/post`);
+      navigate(`/studio/live/${encodeURIComponent(session.sessionId)}/post`);
     }
   };
 
@@ -1022,7 +1242,7 @@ export default function StudioLiveSessionPage() {
         <main className="mx-auto flex max-w-[900px] flex-col items-center gap-4 px-4 py-16 text-center">
           <h1 className="text-2xl font-bold">{tx("枠が見つかりません", "Session not found")}</h1>
           <p className="text-sm text-[var(--brand-text-muted)]">{tx("配信枠を先に作成してください。", "Create a stream session first.")}</p>
-          <Link href="/studio/pre-live" className="rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white">
+          <Link href="/studio/pre-live" className="ui-btn ui-btn-md ui-btn-primary">
             {tx("枠作成へ", "Go to Pre-live")}
           </Link>
         </main>
@@ -1060,7 +1280,7 @@ export default function StudioLiveSessionPage() {
                     setShowStopConfirm(true);
                     return;
                   }
-                  router.push("/");
+                  navigate("/");
                 }}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-surface)] px-3 py-2 text-sm font-semibold text-[var(--brand-text-muted)]"
               >
@@ -1070,12 +1290,50 @@ export default function StudioLiveSessionPage() {
             </div>
           </div>
 
-          <section className="rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/25">
-            <div className="mx-auto max-w-[640px] overflow-hidden rounded-xl bg-[var(--brand-bg-900)]" style={{ aspectRatio: "16/9" }}>
-              <video ref={previewRef} autoPlay playsInline muted className="h-full w-full object-cover" />
+          <section className="rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/10">
+            {/* 配信モニタ: OBS接続中は「視聴者に見えている映像」を主表示にする */}
+            <div className="relative mx-auto max-w-[640px] overflow-hidden rounded-xl bg-[var(--brand-bg-900)]" style={{ aspectRatio: "16/9" }}>
+              {/* OBSモニタ（視聴者の見え方）。音声はミュート（自分の遅延音エコー防止）。
+                  マイク/カメラ操作に関わらず、OBSの受信が続く限り表示し続ける。 */}
+              <video
+                ref={monitorRef}
+                autoPlay
+                playsInline
+                muted
+                className={`h-full w-full object-cover ${monitorActive ? "" : "hidden"}`}
+              />
+              {/* ブラウザカメラのプレビュー。OBSモニタ表示中・カメラオフ時は隠す。 */}
+              <video
+                ref={previewRef}
+                autoPlay
+                playsInline
+                muted
+                className={`h-full w-full object-cover ${!monitorActive && camOn ? "" : "hidden"}`}
+              />
+              {/* カメラオフのプレースホルダ（OBS仮想カメラのデフォルト画面を出さない）。 */}
+              {!monitorActive && !camOn && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--placeholder)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/logo/aiment_logo_white.svg" alt="aiment" className="h-10 w-auto opacity-70" />
+                  <span className="text-sm font-semibold text-white">{tx("カメラオフ", "Camera off")}</span>
+                </div>
+              )}
+              {monitorActive && (
+                <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-bold text-white">
+                  {tx("配信モニタ（視聴者の見え方）", "Monitor (what viewers see)")}
+                </span>
+              )}
               <div ref={remoteAudioContainerRef} className="hidden" aria-hidden />
             </div>
-            {!camOn && <p className="mt-2 text-xs text-[var(--brand-text-muted)]">{tx("カメラOFF", "Camera OFF")}</p>}
+            {obsConnected && (
+              <p className="mt-2 rounded-lg bg-[var(--brand-primary)]/12 px-3 py-2 text-xs text-[var(--brand-primary)]">
+                {tx(
+                  "OBS接続中: 二重音声・映像のズレ防止のため、ブラウザのマイク/カメラは停止しています。OBSの音声・映像がそのまま配信されます。",
+                  "OBS connected: browser mic/camera are stopped to prevent double audio and A/V drift. OBS audio/video is broadcast as-is.",
+                )}
+              </p>
+            )}
+            {!camOn && !obsConnected && <p className="mt-2 text-xs text-[var(--brand-text-muted)]">{tx("カメラOFF", "Camera OFF")}</p>}
             {mediaError && <p className="mt-2 text-xs text-[var(--brand-accent)]">{mediaError}</p>}
 
             <div className="mt-3 rounded-[24px] bg-[var(--brand-bg-900)] px-4 py-3">
@@ -1092,7 +1350,8 @@ export default function StudioLiveSessionPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center justify-center gap-2">
-                  <div className="relative inline-flex items-center rounded-full bg-[var(--brand-surface)]">
+                  <div className="relative">
+                    <div className="ui-ctl-group">
                     <CircleControl label="MIC" icon={MicrophoneIcon} slashedWhenOff on={micOn} onToggle={handleMicToggle} />
                     <button
                       type="button"
@@ -1101,12 +1360,13 @@ export default function StudioLiveSessionPage() {
                         setShowCamMenu(false);
                       }}
                       aria-label={tx("マイク入力を選択", "Select microphone input")}
-                      className="flex h-14 w-9 items-center justify-center rounded-r-full border-l border-black/20 text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+                      className="ui-ctl ui-ctl-md ui-ctl-neutral w-9 px-0"
                     >
-                      <ChevronDownIcon className="h-4 w-4" aria-hidden />
+                      <ChevronUpIcon className="h-4 w-4" aria-hidden />
                     </button>
+                    </div>
                     {showMicMenu ? (
-                      <div className="absolute bottom-16 left-0 z-20 min-w-[240px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/35">
+                      <div className="absolute bottom-16 left-0 z-20 min-w-[240px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/10 ring-1 ring-black/5">
                         {audioDevices.length === 0 ? (
                           <p className="px-3 py-2 text-sm text-[var(--brand-text-muted)]">{tx("マイクが見つかりません", "No microphone found")}</p>
                         ) : (
@@ -1132,7 +1392,8 @@ export default function StudioLiveSessionPage() {
                     ) : null}
                   </div>
 
-                  <div className="relative inline-flex items-center rounded-full bg-[var(--brand-surface)]">
+                  <div className="relative">
+                    <div className="ui-ctl-group">
                     <CircleControl label="CAM" icon={VideoCameraIcon} offIcon={VideoCameraSlashIcon} on={camOn} onToggle={handleCamToggle} />
                     <button
                       type="button"
@@ -1141,12 +1402,13 @@ export default function StudioLiveSessionPage() {
                         setShowMicMenu(false);
                       }}
                       aria-label={tx("カメラ入力を選択", "Select camera input")}
-                      className="flex h-14 w-9 items-center justify-center rounded-r-full border-l border-black/20 text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+                      className="ui-ctl ui-ctl-md ui-ctl-neutral w-9 px-0"
                     >
-                      <ChevronDownIcon className="h-4 w-4" aria-hidden />
+                      <ChevronUpIcon className="h-4 w-4" aria-hidden />
                     </button>
+                    </div>
                     {showCamMenu ? (
-                      <div className="absolute bottom-16 left-0 z-20 min-w-[240px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/35">
+                      <div className="absolute bottom-16 left-0 z-20 min-w-[240px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/10 ring-1 ring-black/5">
                         {videoDevices.length === 0 ? (
                           <p className="px-3 py-2 text-sm text-[var(--brand-text-muted)]">{tx("カメラが見つかりません", "No camera found")}</p>
                         ) : (
@@ -1183,11 +1445,7 @@ export default function StudioLiveSessionPage() {
                   }
                   disabled={!isLive && !obsConnected && connectionStatus === "idle"}
                   title={!isLive && !obsConnected ? tx("OBSを先に接続してください", "Connect OBS first") : undefined}
-                  className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-extrabold disabled:opacity-50 ${
-                    isLive
-                      ? "bg-[var(--brand-accent)] text-[var(--brand-text)] shadow-[0_10px_24px_rgba(255,59,92,0.25)]"
-                      : "bg-[var(--brand-primary)] text-white shadow-[0_10px_24px_rgba(124,106,230,0.4)]"
-                  }`}
+                  className={`ui-btn ui-btn-md ${isLive ? "ui-btn-danger" : "ui-btn-primary"}`}
                 >
                   {isLive ? <StopIcon className="h-4 w-4" aria-hidden /> : <PlayIcon className="h-4 w-4" aria-hidden />}
                   {isLive ? tx("配信終了", "Stop Stream") : tx("配信開始", "Start Stream")}
@@ -1197,7 +1455,7 @@ export default function StudioLiveSessionPage() {
             </div>
           </section>
 
-          <section className="rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/25">
+          <section className="rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/10">
             <h2 className="mb-2 text-xs font-semibold tracking-wide text-[var(--brand-text-muted)]">{tx("配信設定", "Stream Settings")}</h2>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
@@ -1218,12 +1476,14 @@ export default function StudioLiveSessionPage() {
                   onConnectionChange={setObsConnected}
                 />
               </div>
+
+              <TroubleshootPanel sessionId={sessionId} collect={collectDiagnostics} />
             </div>
           </section>
         </section>
 
         <aside className="sticky top-4 max-h-[calc(100vh-88px)] self-start space-y-3 overflow-y-auto pr-1">
-          <section className="rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/25">
+          <section className="rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/10">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs font-semibold text-[var(--brand-text-muted)]">{tx("スピーカー予約", "Speaker Reservations")}</p>
               <span className="rounded-full bg-[var(--brand-primary)]/20 px-2 py-0.5 text-[10px] font-bold text-[var(--brand-primary)]">
@@ -1246,8 +1506,8 @@ export default function StudioLiveSessionPage() {
             )}
           </section>
 
-          <section className="flex h-[520px] flex-col overflow-hidden rounded-2xl bg-[var(--brand-surface)] shadow-lg shadow-black/25">
-            <div className="border-b border-black/20 px-3 py-2">
+          <section className="flex h-[520px] flex-col overflow-hidden rounded-2xl bg-[var(--brand-surface)] shadow-lg shadow-black/10">
+            <div className="border-b border-black/8 px-3 py-2">
               <p className="inline-flex items-center gap-1.5 text-sm font-semibold">
                 <ChatBubbleLeftRightIcon className="h-4 w-4" aria-hidden />
                 {tx("配信者チャット", "Host Chat")}
@@ -1260,9 +1520,26 @@ export default function StudioLiveSessionPage() {
                     key={m.id}
                     className={`rounded-lg px-3 py-2 ${m.mine ? "ml-6 bg-[var(--brand-primary)]/20" : "mr-6 bg-[var(--brand-bg-900)]"}`}
                   >
-                    <p className="mb-1 text-[11px] font-semibold text-[var(--brand-primary)]">{m.senderName ?? m.senderRole}</p>
-                    <p className="text-sm text-[var(--brand-text)]">{primaryTextForMessage(m)}</p>
-                    {secondaryTextForMessage(m) ? (
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <p className="text-[11px] font-semibold text-[var(--brand-primary)]">{m.senderName ?? m.senderRole}</p>
+                      {!m.deletedAt ? (
+                        <button
+                          type="button"
+                          onClick={() => retractChatMessage(m.id)}
+                          className="rounded-full bg-[var(--brand-bg-900)] px-2 py-0.5 text-[10px] font-bold text-[var(--brand-text-muted)] ring-1 ring-black/5 hover:text-[var(--brand-accent)]"
+                        >
+                          {tx("取消", "Undo")}
+                        </button>
+                      ) : null}
+                    </div>
+                    {m.deletedAt ? (
+                      <p className="text-sm italic text-[var(--brand-text-muted)]">
+                        {tx("このコメントは取り消されました。", "This comment was retracted.")}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-[var(--brand-text)]">{primaryTextForMessage(m)}</p>
+                    )}
+                    {!m.deletedAt && secondaryTextForMessage(m) ? (
                       <p className="mt-1 text-xs leading-relaxed text-[var(--brand-text-muted)]">{secondaryTextForMessage(m)}</p>
                     ) : null}
                   </div>
@@ -1273,13 +1550,13 @@ export default function StudioLiveSessionPage() {
                   type="button"
                   onClick={() => scrollChatToBottom("smooth")}
                   aria-label={tx("最新コメントへ移動", "Jump to latest comments")}
-                  className="absolute bottom-3 right-3 z-10 rounded-full bg-[var(--brand-primary)] px-3 py-2 text-sm font-bold text-white shadow-lg shadow-black/25"
+                  className="ui-btn ui-btn-sm ui-btn-primary absolute bottom-3 right-3 z-10 h-10 w-10 rounded-full p-0"
                 >
                   <ArrowDownCircleIcon className="h-5 w-5" aria-hidden />
                 </button>
               )}
             </div>
-            <div className="border-t border-black/20 p-3">
+            <div className="border-t border-black/8 p-3">
               <div className="flex gap-2">
                 <input
                   value={chatInput}
@@ -1292,7 +1569,7 @@ export default function StudioLiveSessionPage() {
                   placeholder={tx("告知・案内を入力", "Type announcement")}
                   className="flex-1 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-sm text-[var(--brand-text)] outline-none placeholder:text-[var(--brand-text-muted)]"
                 />
-                <button onClick={sendChat} className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white">
+                <button onClick={sendChat} className="ui-btn ui-btn-sm ui-btn-primary">
                   <PaperAirplaneIcon className="h-4 w-4" aria-hidden />
                   {tx("送信", "Send")}
                 </button>
@@ -1309,7 +1586,7 @@ export default function StudioLiveSessionPage() {
 
       {showStopConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-[var(--brand-surface)] p-6 shadow-2xl shadow-black/50">
+          <div className="w-full max-w-sm rounded-2xl bg-[var(--brand-surface)] p-6 shadow-2xl shadow-black/20">
             <h2 className="text-base font-bold text-[var(--brand-text)]">
               {tx("配信を停止しますか？", "Stop the stream?")}
             </h2>
@@ -1322,7 +1599,7 @@ export default function StudioLiveSessionPage() {
             <div className="mt-5 flex gap-3">
               <button
                 onClick={() => setShowStopConfirm(false)}
-                className="flex-1 rounded-xl bg-[var(--brand-bg-900)] px-4 py-2.5 text-sm font-semibold text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+                className="ui-btn ui-btn-md ui-btn-ghost flex-1"
               >
                 {tx("キャンセル", "Cancel")}
               </button>
@@ -1331,7 +1608,7 @@ export default function StudioLiveSessionPage() {
                   setShowStopConfirm(false);
                   void stopBroadcast();
                 }}
-                className="flex-1 rounded-xl bg-[var(--brand-accent)] px-4 py-2.5 text-sm font-extrabold text-white"
+                className="ui-btn ui-btn-md ui-btn-danger flex-1"
               >
                 {tx("配信を停止する", "Stop Stream")}
               </button>

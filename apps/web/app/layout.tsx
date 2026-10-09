@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { RouteTransitionProvider } from "./components/ui/RouteTransition";
 import { I18nProvider } from "./lib/i18n";
 import { UserSessionProvider } from "./lib/userSession";
 
@@ -40,15 +41,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja" suppressHydrationWarning>
+    // UI ver0.3: dark mode is retired, the app is light only.
+    <html lang="ja" data-theme="light" style={{ colorScheme: "light" }}>
       <body className="antialiased">
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem("aiment-theme")||((window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches)?"light":"dark");document.documentElement.dataset.theme=t;document.documentElement.style.colorScheme=t;}catch(e){}`,
-          }}
-        />
         <UserSessionProvider>
-          <I18nProvider>{children}</I18nProvider>
+          <I18nProvider>
+            <RouteTransitionProvider>{children}</RouteTransitionProvider>
+          </I18nProvider>
         </UserSessionProvider>
       </body>
     </html>

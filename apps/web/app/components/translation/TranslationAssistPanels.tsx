@@ -100,7 +100,7 @@ function CompactTranslationTool({
             placeholder={inputPlaceholder}
             className="w-full resize-none bg-transparent px-3 py-2 text-sm leading-relaxed text-[var(--brand-text)] outline-none placeholder:text-[var(--brand-text-muted)]"
           />
-          <div className="border-t border-white/10 px-3 py-2">
+          <div className="border-t border-black/8 px-3 py-2">
             <p className="mb-1 text-[10px] font-bold text-[var(--brand-text-muted)]">{outputLabel}</p>
             <p className={`min-h-[30px] text-sm leading-relaxed ${translatedText ? "text-[var(--brand-text)]" : "text-[var(--brand-text-muted)]"}`}>
               {translatedText || "-"}
@@ -111,7 +111,7 @@ function CompactTranslationTool({
           type="button"
           disabled={!sourceText.trim() || loading}
           onClick={() => void handleTranslate()}
-          className="w-full rounded-xl bg-[var(--brand-secondary)] px-3 py-2 text-xs font-extrabold text-black disabled:opacity-50"
+          className="ui-btn ui-btn-sm ui-btn-primary w-full"
         >
           {loading ? translatingLabel : translateLabel}
         </button>
@@ -167,7 +167,7 @@ function PictureInPictureButton({
     <button
       type="button"
       onClick={onClick}
-      className="w-full rounded-xl bg-[var(--brand-secondary)] px-3 py-2.5 text-sm font-extrabold text-black"
+      className="ui-btn ui-btn-md ui-btn-primary w-full"
     >
       {children}
     </button>
@@ -254,7 +254,7 @@ export function SpeakerTranslationAssistPanel({ sessionId, messages, className =
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="w-full rounded-xl bg-[var(--brand-secondary)] px-3 py-2.5 text-sm font-extrabold text-black"
+        className="ui-btn ui-btn-md ui-btn-primary w-full"
       >
         {open ? "Close Translation Assist" : "Translation Assist"}
       </button>

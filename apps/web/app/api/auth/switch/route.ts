@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { getUserById } from "@/app/lib/server/aimentStore";
 import { withSessionCookie } from "@/app/lib/server/auth";
+import { rejectInProduction } from "@/app/lib/server/devOnly";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  // パスワードなしで任意ユーザーにログインできるため開発専用。
+  const rejected = rejectInProduction();
+  if (rejected) return rejected;
+
   const body = (await request.json().catch(() => null)) as { userId?: string } | null;
   const userId = body?.userId?.trim();
 
@@ -19,5 +24,5 @@ export async function POST(request: Request) {
   }
 
   const response = NextResponse.json({ user, isAuthenticated: true });
-  return withSessionCookie(response, user.id);
+  return await withSessionCookie(response, user.id);
 }

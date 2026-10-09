@@ -6,6 +6,9 @@ import type {
   AuthProvider,
   CreateReservationInput,
   CreateStreamSessionInput,
+  ParticipationTicket,
+  ParticipationTicketScope,
+  SessionComment,
   Reservation,
   ReservationStatus,
   ReservationType,
@@ -19,6 +22,7 @@ import type {
 } from "../apiTypes";
 import { DEFAULT_AJL_LEVEL, normalizeAjlLevel } from "../ajl";
 import { canAccessPlan, getEffectivePlanForUser } from "./billingStore";
+import { SPEAKER_FEE_ENABLED } from "@/lib/speakerFee";
 
 type StoredUser = SessionUser & {
   passwordHash?: string;
@@ -31,6 +35,8 @@ type StoreFile = {
   users: StoredUser[];
   streamSessions: StreamSession[];
   reservations: Reservation[];
+  sessionComments: SessionComment[];
+  participationTickets: ParticipationTicket[];
 };
 
 const LEGACY_USER_DEFAULTS: Record<string, Partial<StoredUser>> = {};
@@ -53,6 +59,8 @@ const DEFAULT_STORE: StoreFile = {
   users: [],
   streamSessions: [],
   reservations: [],
+  sessionComments: [],
+  participationTickets: [],
 };
 
 let writeQueue: Promise<unknown> = Promise.resolve();
@@ -109,6 +117,39 @@ function normalizeReservation(entry: Partial<Reservation>): Reservation | null {
     status,
     type,
     cancelledAt: typeof entry.cancelledAt === "string" ? entry.cancelledAt : undefined,
+    paymentIntentId: typeof entry.paymentIntentId === "string" ? entry.paymentIntentId : undefined,
+  };
+}
+
+function normalizeSessionComment(entry: Partial<SessionComment>): SessionComment | null {
+  if (
+    typeof entry.id !== "string" ||
+    typeof entry.sessionId !== "string" ||
+    typeof entry.senderId !== "string" ||
+    typeof entry.senderName !== "string" ||
+    typeof entry.originalText !== "string" ||
+    typeof entry.createdAt !== "string"
+  ) {
+    return null;
+  }
+
+  const senderRole = entry.senderRole === "vtuber" || entry.senderRole === "speaker" ? entry.senderRole : "listener";
+  const originalLang = entry.originalLang === "ja" || entry.originalLang === "en" ? entry.originalLang : senderRole === "vtuber" ? "ja" : "en";
+  const translatedLang = entry.translatedLang === "ja" || entry.translatedLang === "en" ? entry.translatedLang : undefined;
+
+  return {
+    id: entry.id,
+    sessionId: entry.sessionId,
+    senderId: entry.senderId,
+    senderRole,
+    senderName: entry.senderName,
+    originalText: entry.originalText,
+    originalLang,
+    translatedText: typeof entry.translatedText === "string" ? entry.translatedText : undefined,
+    translatedLang,
+    createdAt: entry.createdAt,
+    deletedAt: typeof entry.deletedAt === "string" ? entry.deletedAt : undefined,
+    deletedBy: typeof entry.deletedBy === "string" ? entry.deletedBy : undefined,
   };
 }
 
@@ -404,13 +445,42 @@ async function initSchema() {
   await db`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'listener'`;
   await db`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS cancelled_at TEXT`;
   await db`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS email TEXT`;
-
-  // 一覧/ホスト別/予約照会のフルスキャンを避けるためのインデックス（往復遅延の体感改善）
+  await db`
+    CREATE TABLE IF NOT EXISTS session_comments (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      sender_id TEXT NOT NULL,
+      sender_role TEXT NOT NULL,
+      sender_name TEXT NOT NULL,
+      original_text TEXT NOT NULL,
+      original_lang TEXT NOT NULL,
+      translated_text TEXT,
+      translated_lang TEXT,
+      created_at TEXT NOT NULL,
+      deleted_at TEXT,
+      deleted_by TEXT
+    )
+  `;
+  await db`
+    CREATE TABLE IF NOT EXISTS participation_tickets (
+      ticket_id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      scope TEXT NOT NULL,
+      session_id TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
+      granted_by TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      used_at TEXT,
+      used_session_id TEXT
+    )
+  `;
+  await db`CREATE INDEX IF NOT EXISTS idx_tickets_user_status ON participation_tickets (user_id, status)`;
   await db`CREATE INDEX IF NOT EXISTS idx_stream_sessions_status ON stream_sessions (status)`;
   await db`CREATE INDEX IF NOT EXISTS idx_stream_sessions_host_user_id ON stream_sessions (host_user_id)`;
   await db`CREATE INDEX IF NOT EXISTS idx_stream_sessions_starts_at ON stream_sessions (starts_at)`;
   await db`CREATE INDEX IF NOT EXISTS idx_reservations_session_id ON reservations (session_id)`;
   await db`CREATE INDEX IF NOT EXISTS idx_reservations_user_id ON reservations (user_id)`;
+  await db`CREATE INDEX IF NOT EXISTS idx_session_comments_session_created ON session_comments (session_id, created_at)`;
 }
 
 // Row → TypeScript type converters
@@ -475,6 +545,39 @@ function rowToStreamSession(row: any): StreamSession {
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToSessionComment(row: any): SessionComment {
+  return {
+    id: row.id as string,
+    sessionId: row.session_id as string,
+    senderId: row.sender_id as string,
+    senderRole: row.sender_role as SessionComment["senderRole"],
+    senderName: row.sender_name as string,
+    originalText: row.original_text as string,
+    originalLang: row.original_lang as SessionComment["originalLang"],
+    translatedText: row.translated_text ?? undefined,
+    translatedLang: row.translated_lang ?? undefined,
+    createdAt: row.created_at as string,
+    deletedAt: row.deleted_at ?? undefined,
+    deletedBy: row.deleted_by ?? undefined,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToTicket(row: any): ParticipationTicket {
+  return {
+    ticketId: row.ticket_id as string,
+    userId: row.user_id as string,
+    scope: row.scope as ParticipationTicketScope,
+    sessionId: row.session_id ?? undefined,
+    status: row.status as ParticipationTicket["status"],
+    grantedBy: row.granted_by as string,
+    createdAt: row.created_at as string,
+    usedAt: row.used_at ?? undefined,
+    usedSessionId: row.used_session_id ?? undefined,
+  };
+}
+
 function attachHostFields(
   sessions: StreamSession[],
   users: Pick<StoredUser, "id" | "avatarUrl" | "channelName" | "name">[],
@@ -531,6 +634,8 @@ function cloneStore(store: StoreFile): StoreFile {
     users: [...store.users],
     streamSessions: [...store.streamSessions],
     reservations: [...store.reservations],
+    sessionComments: [...store.sessionComments],
+    participationTickets: [...store.participationTickets],
   };
 }
 
@@ -603,6 +708,14 @@ function parseStoreFile(raw: string): StoreFile {
           .map((entry) => normalizeReservation(entry as Partial<Reservation>))
           .filter((entry): entry is Reservation => entry != null)
       : [],
+    sessionComments: Array.isArray(parsed.sessionComments)
+      ? parsed.sessionComments
+          .map((entry) => normalizeSessionComment(entry as Partial<SessionComment>))
+          .filter((entry): entry is SessionComment => entry != null)
+      : [],
+    participationTickets: Array.isArray(parsed.participationTickets)
+      ? (parsed.participationTickets as ParticipationTicket[])
+      : [],
   };
   syncSessionSlots(store);
   return store;
@@ -667,13 +780,9 @@ async function mutateStore<T>(mutator: (store: StoreFile) => Promise<T> | T): Pr
 // ---------------------------------------------------------------------------
 
 export async function resetStore() {
+  // ローカルから本番DBに繋いでいても全削除できないよう、Neonには一切実行しない。
   if (USE_NEON) {
-    await ensureSchema();
-    const db = getDb();
-    await db`DELETE FROM reservations`;
-    await db`DELETE FROM stream_sessions`;
-    await db`DELETE FROM users`;
-    return;
+    throw new Error("resetStore is disabled when DATABASE_URL is set");
   }
   const seed = await getSeedStore();
   await writeFile(STORE_FILE, JSON.stringify(seed, null, 2), "utf8");
@@ -1301,7 +1410,7 @@ export async function listSessionsStartingBetween(windowStart: Date, windowEnd: 
           userId: row.user_id as string,
           userName: row.user_name as string,
           email: row.email as string,
-          isPaid: Boolean(row.payment_intent_id),
+          isPaid: !SPEAKER_FEE_ENABLED || Boolean(row.payment_intent_id),
         })),
       });
     }
@@ -1320,7 +1429,12 @@ export async function listSessionsStartingBetween(windowStart: Date, windowEnd: 
       .filter((r) => r.sessionId === session.sessionId && r.type === "speaker" && r.status === "reserved")
       .map((r) => {
         const u = store.users.find((u) => u.id === r.userId);
-        return { userId: r.userId, userName: r.userName, email: u?.email ?? "", isPaid: Boolean(r.paymentIntentId) };
+        return {
+          userId: r.userId,
+          userName: r.userName,
+          email: u?.email ?? "",
+          isPaid: !SPEAKER_FEE_ENABLED || Boolean(r.paymentIntentId),
+        };
       });
     return { session, reservations };
   });
@@ -1566,15 +1680,28 @@ export async function updateStreamSession(
 
 export async function deleteStreamSession(sessionId: string, actor: SessionUser) {
   requireVerifiedVtuber(actor);
+  return removeStreamSession(sessionId, (current) => {
+    if (current.hostUserId !== actor.id) throw new Error("Cannot delete another VTuber's session");
+  });
+}
 
+/** 管理者用: ホストに関係なく配信枠を削除し、削除した枠を返す。呼び出し側で管理者確認を済ませること。 */
+export async function adminDeleteStreamSession(sessionId: string) {
+  return removeStreamSession(sessionId, () => undefined);
+}
+
+/** 配信枠を削除し、有効な予約をキャンセルする。削除した枠を返す(無ければ null)。権限確認は authorize に任せる。 */
+async function removeStreamSession(
+  sessionId: string,
+  authorize: (current: StreamSession) => void,
+): Promise<StreamSession | null> {
   if (USE_NEON) {
     await ensureSchema();
     const db = getDb();
     const rows = await db`SELECT * FROM stream_sessions WHERE session_id = ${sessionId}`;
     if (!rows[0]) return null;
     const current = rowToStreamSession(rows[0]);
-    if (current.hostUserId !== actor.id)
-      throw new Error("Cannot delete another VTuber's session");
+    authorize(current);
     if (current.status === "live")
       throw new Error("Cannot delete a session that is currently live");
 
@@ -1583,8 +1710,9 @@ export async function deleteStreamSession(sessionId: string, actor: SessionUser)
       UPDATE reservations SET status = 'cancelled', cancelled_at = ${now}
       WHERE session_id = ${sessionId} AND status = 'reserved'
     `;
-    await db`DELETE FROM stream_sessions WHERE session_id = ${sessionId}`;
-    return true;
+    // 実際に削除した行を返す(読み取りから削除までの間に配信キーが替わっていても、削除時点の値で後片付けできる)
+    const deleted = await db`DELETE FROM stream_sessions WHERE session_id = ${sessionId} RETURNING *`;
+    return deleted[0] ? rowToStreamSession(deleted[0]) : null;
   }
 
   return mutateStore((store) => {
@@ -1594,7 +1722,7 @@ export async function deleteStreamSession(sessionId: string, actor: SessionUser)
     if (index === -1) return null;
 
     const current = store.streamSessions[index];
-    if (current.hostUserId !== actor.id) throw new Error("Cannot delete another VTuber's session");
+    authorize(current);
     if (current.status === "live") throw new Error("Cannot delete a session that is currently live");
 
     store.streamSessions.splice(index, 1);
@@ -1604,7 +1732,7 @@ export async function deleteStreamSession(sessionId: string, actor: SessionUser)
         reservation.cancelledAt = new Date().toISOString();
       }
     }
-    return true;
+    return current;
   });
 }
 
@@ -1652,15 +1780,29 @@ export async function setStreamSessionStatus(
   status: StreamSessionStatus,
 ) {
   requireVerifiedVtuber(actor);
+  return updateStreamSessionStatus(sessionId, status, (current) => {
+    if (current.hostUserId !== actor.id) throw new Error("Cannot change another VTuber's session");
+  });
+}
 
+/** 管理者用: ホストに関係なく配信を終了する(放置された配信中の枠の後始末など)。呼び出し側で管理者確認を済ませること。 */
+export async function adminEndStreamSession(sessionId: string) {
+  return updateStreamSessionStatus(sessionId, "ended", () => undefined);
+}
+
+/** 配信枠のステータスを変更する。権限確認は authorize に任せる。 */
+async function updateStreamSessionStatus(
+  sessionId: string,
+  status: StreamSessionStatus,
+  authorize: (current: StreamSession) => void,
+) {
   if (USE_NEON) {
     await ensureSchema();
     const db = getDb();
     const rows = await db`SELECT * FROM stream_sessions WHERE session_id = ${sessionId}`;
     if (!rows[0]) return null;
     const current = rowToStreamSession(rows[0]);
-    if (current.hostUserId !== actor.id)
-      throw new Error("Cannot change another VTuber's session");
+    authorize(current);
     validateTransition(current.status, status);
 
     await db`UPDATE stream_sessions SET status = ${status} WHERE session_id = ${sessionId}`;
@@ -1677,7 +1819,7 @@ export async function setStreamSessionStatus(
     if (index === -1) return null;
 
     const current = store.streamSessions[index];
-    if (current.hostUserId !== actor.id) throw new Error("Cannot change another VTuber's session");
+    authorize(current);
 
     validateTransition(current.status, status);
 
@@ -1685,6 +1827,125 @@ export async function setStreamSessionStatus(
     store.streamSessions[index] = next;
     syncSessionSlots(store);
     return next;
+  });
+}
+
+export const SESSION_COMMENT_LIMIT = 300;
+
+/**
+ * `since` を省略すると最新 SESSION_COMMENT_LIMIT 件、指定するとそれ以降に
+ * 投稿 or 取り消しされたコメントだけを返す(古い順)。
+ * 視聴中のポーリングを差分取得にして、Neonの転送量を抑えるため。
+ */
+export async function listSessionComments(sessionId: string, since?: string): Promise<SessionComment[]> {
+  if (USE_NEON) {
+    await ensureSchema();
+    const db = getDb();
+    const rows = since
+      ? await db`
+          SELECT * FROM session_comments
+          WHERE session_id = ${sessionId}
+            AND (created_at > ${since} OR deleted_at > ${since})
+          ORDER BY created_at ASC
+          LIMIT ${SESSION_COMMENT_LIMIT}
+        `
+      : await db`
+          SELECT * FROM (
+            SELECT * FROM session_comments
+            WHERE session_id = ${sessionId}
+            ORDER BY created_at DESC
+            LIMIT ${SESSION_COMMENT_LIMIT}
+          ) latest
+          ORDER BY created_at ASC
+        `;
+    return rows.map(rowToSessionComment);
+  }
+
+  const store = await readStore();
+  return store.sessionComments
+    .filter((comment) => comment.sessionId === sessionId)
+    .filter((comment) => !since || comment.createdAt > since || (comment.deletedAt !== undefined && comment.deletedAt > since))
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    .slice(-SESSION_COMMENT_LIMIT);
+}
+
+export async function createSessionComment(input: Omit<SessionComment, "id" | "createdAt"> & { id?: string; createdAt?: string }) {
+  const comment: SessionComment = {
+    id: input.id ?? `comment_${Date.now().toString(36)}_${randomUUID().slice(0, 8)}`,
+    sessionId: input.sessionId,
+    senderId: input.senderId,
+    senderRole: input.senderRole,
+    senderName: input.senderName,
+    originalText: input.originalText,
+    originalLang: input.originalLang,
+    translatedText: input.translatedText,
+    translatedLang: input.translatedLang,
+    createdAt: input.createdAt ?? new Date().toISOString(),
+  };
+
+  if (USE_NEON) {
+    await ensureSchema();
+    const db = getDb();
+    await db`
+      INSERT INTO session_comments (
+        id, session_id, sender_id, sender_role, sender_name, original_text, original_lang,
+        translated_text, translated_lang, created_at
+      )
+      VALUES (
+        ${comment.id}, ${comment.sessionId}, ${comment.senderId}, ${comment.senderRole}, ${comment.senderName},
+        ${comment.originalText}, ${comment.originalLang}, ${comment.translatedText ?? null}, ${comment.translatedLang ?? null},
+        ${comment.createdAt}
+      )
+      ON CONFLICT (id) DO NOTHING
+    `;
+    return comment;
+  }
+
+  return mutateStore((store) => {
+    const exists = store.sessionComments.some((entry) => entry.id === comment.id);
+    if (!exists) store.sessionComments.push(comment);
+    return comment;
+  });
+}
+
+export async function retractSessionComment(input: {
+  sessionId: string;
+  commentId: string;
+  actorId: string;
+}) {
+  const now = new Date().toISOString();
+  const session = await getStreamSessionById(input.sessionId);
+  const canModerate = session?.hostUserId === input.actorId;
+
+  if (USE_NEON) {
+    await ensureSchema();
+    const db = getDb();
+    const rows = await db`
+      SELECT * FROM session_comments
+      WHERE id = ${input.commentId} AND session_id = ${input.sessionId}
+      LIMIT 1
+    `;
+    const current = rows[0] ? rowToSessionComment(rows[0]) : null;
+    if (!current) throw new Error("Comment not found");
+    if (current.senderId !== input.actorId && !canModerate) throw new Error("Cannot retract this comment");
+    const updated = await db`
+      UPDATE session_comments
+      SET deleted_at = ${now}, deleted_by = ${input.actorId}
+      WHERE id = ${input.commentId}
+      RETURNING *
+    `;
+    return rowToSessionComment(updated[0]);
+  }
+
+  return mutateStore((store) => {
+    const current = store.sessionComments.find(
+      (comment) => comment.id === input.commentId && comment.sessionId === input.sessionId,
+    );
+    if (!current) throw new Error("Comment not found");
+    if (current.senderId !== input.actorId && !canModerate) throw new Error("Cannot retract this comment");
+    current.deletedAt = now;
+    current.deletedBy = input.actorId;
+    return current;
   });
 }
 
@@ -1848,6 +2109,164 @@ export async function confirmSpeakerPayment(
   });
 }
 
+export async function grantParticipationTickets(input: {
+  grantedBy: string;
+  userId: string;
+  scope: ParticipationTicketScope;
+  sessionId?: string;
+  quantity: number;
+}): Promise<number> {
+  const quantity = Math.max(1, Math.min(100, Math.floor(input.quantity)));
+  if (input.scope === "session" && !input.sessionId?.trim()) {
+    throw new Error("session スコープには sessionId が必要です");
+  }
+  const sessionId = input.scope === "session" ? input.sessionId!.trim() : null;
+  const now = new Date().toISOString();
+
+  const tickets: ParticipationTicket[] = Array.from({ length: quantity }, () => ({
+    ticketId: `pt_${Date.now().toString(36)}_${randomUUID().slice(0, 8)}`,
+    userId: input.userId,
+    scope: input.scope,
+    sessionId: sessionId ?? undefined,
+    status: "active",
+    grantedBy: input.grantedBy,
+    createdAt: now,
+  }));
+
+  if (USE_NEON) {
+    await ensureSchema();
+    const db = getDb();
+    for (const ticket of tickets) {
+      await db`
+        INSERT INTO participation_tickets (ticket_id, user_id, scope, session_id, status, granted_by, created_at)
+        VALUES (${ticket.ticketId}, ${ticket.userId}, ${ticket.scope}, ${sessionId}, 'active', ${ticket.grantedBy}, ${now})
+      `;
+    }
+    return quantity;
+  }
+
+  await mutateStore((store) => {
+    store.participationTickets.push(...tickets);
+  });
+  return quantity;
+}
+
+export async function listParticipationTicketsForUser(userId: string): Promise<ParticipationTicket[]> {
+  if (USE_NEON) {
+    await ensureSchema();
+    const db = getDb();
+    const rows = await db`
+      SELECT * FROM participation_tickets
+      WHERE user_id = ${userId}
+      ORDER BY created_at DESC
+    `;
+    return rows.map(rowToTicket);
+  }
+
+  const store = await readStore();
+  return store.participationTickets
+    .filter((ticket) => ticket.userId === userId)
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+export async function countUsableTickets(userId: string, sessionId: string): Promise<number> {
+  if (USE_NEON) {
+    await ensureSchema();
+    const db = getDb();
+    const rows = await db`
+      SELECT COUNT(*)::int AS n FROM participation_tickets
+      WHERE user_id = ${userId} AND status = 'active'
+        AND (scope = 'all' OR (scope = 'session' AND session_id = ${sessionId}))
+    `;
+    return Number(rows[0].n);
+  }
+
+  const store = await readStore();
+  return store.participationTickets.filter(
+    (ticket) =>
+      ticket.userId === userId &&
+      ticket.status === "active" &&
+      (ticket.scope === "all" || (ticket.scope === "session" && ticket.sessionId === sessionId)),
+  ).length;
+}
+
+export async function redeemParticipationTicket(
+  userId: string,
+  sessionId: string,
+): Promise<Reservation> {
+  if (USE_NEON) {
+    await ensureSchema();
+    const db = getDb();
+    const resRows = await db`
+      SELECT * FROM reservations
+      WHERE session_id = ${sessionId} AND user_id = ${userId} AND status = 'reserved' AND type = 'speaker'
+    `;
+    if (!resRows[0]) throw new Error("先にスピーカー枠を予約してください");
+    if (resRows[0].payment_intent_id) return rowToReservation(resRows[0]);
+
+    const now = new Date().toISOString();
+    const claimed = await db`
+      UPDATE participation_tickets
+      SET status = 'used', used_at = ${now}, used_session_id = ${sessionId}
+      WHERE ticket_id = (
+        SELECT ticket_id FROM participation_tickets
+        WHERE user_id = ${userId} AND status = 'active'
+          AND (scope = 'all' OR (scope = 'session' AND session_id = ${sessionId}))
+        ORDER BY (scope = 'session') DESC, created_at ASC
+        LIMIT 1
+      )
+      RETURNING ticket_id
+    `;
+    if (!claimed[0]) throw new Error("使えるチケットがありません");
+
+    const ticketRef = `ticket:${claimed[0].ticket_id}`;
+    await db`
+      UPDATE reservations
+      SET payment_intent_id = ${ticketRef}
+      WHERE reservation_id = ${resRows[0].reservation_id}
+    `;
+    const updated = await db`
+      SELECT * FROM reservations
+      WHERE reservation_id = ${resRows[0].reservation_id}
+    `;
+    return rowToReservation(updated[0]);
+  }
+
+  return mutateStore((store) => {
+    const reservation = store.reservations.find(
+      (entry) =>
+        entry.sessionId === sessionId &&
+        entry.userId === userId &&
+        entry.status === "reserved" &&
+        entry.type === "speaker",
+    );
+    if (!reservation) throw new Error("先にスピーカー枠を予約してください");
+    if (reservation.paymentIntentId) return reservation;
+
+    const usable = store.participationTickets
+      .filter(
+        (ticket) =>
+          ticket.userId === userId &&
+          ticket.status === "active" &&
+          (ticket.scope === "all" || (ticket.scope === "session" && ticket.sessionId === sessionId)),
+      )
+      .sort((a, b) => {
+        const aSession = a.scope === "session" ? 1 : 0;
+        const bSession = b.scope === "session" ? 1 : 0;
+        if (aSession !== bSession) return bSession - aSession;
+        return a.createdAt < b.createdAt ? -1 : 1;
+      });
+    const ticket = usable[0];
+    if (!ticket) throw new Error("使えるチケットがありません");
+
+    ticket.status = "used";
+    ticket.usedAt = new Date().toISOString();
+    ticket.usedSessionId = sessionId;
+    reservation.paymentIntentId = `ticket:${ticket.ticketId}`;
+    return reservation;
+  });
+}
+
 export async function hasActiveReservation(
   userId: string,
   sessionId: string,
@@ -1904,37 +2323,53 @@ export async function cancelReservation(actor: SessionUser, reservationId: strin
   });
 }
 
+/**
+ * 配信枠に配信キー(Ingress)を紐づける。終了済みの枠には紐づけず false を返す
+ * (強制終了の後片付け中に作成が完了したIngressが残らないよう、呼び出し側で削除する)。
+ */
 export async function setSessionIngress(
   sessionId: string,
   ingressId: string,
   streamKey: string,
   rtmpUrl: string,
-): Promise<void> {
+): Promise<boolean> {
   if (USE_NEON) {
     await ensureSchema();
     const db = getDb();
-    await db`
+    const rows = await db`
       UPDATE stream_sessions
       SET ingress_id = ${ingressId}, stream_key = ${streamKey}, rtmp_url = ${rtmpUrl}
-      WHERE session_id = ${sessionId}
+      WHERE session_id = ${sessionId} AND status <> 'ended'
+      RETURNING session_id
     `;
-    return;
+    return rows.length > 0;
   }
-  await mutateStore((store) => {
+  return mutateStore((store) => {
     const session = store.streamSessions.find((s) => s.sessionId === sessionId);
-    if (session) {
-      session.ingressId = ingressId;
-      session.streamKey = streamKey;
-      session.rtmpUrl = rtmpUrl;
-    }
-    return null;
+    if (!session || session.status === "ended") return false;
+    session.ingressId = ingressId;
+    session.streamKey = streamKey;
+    session.rtmpUrl = rtmpUrl;
+    return true;
   });
 }
 
-export async function clearSessionIngress(sessionId: string): Promise<void> {
+/**
+ * 配信枠の配信キー(Ingress)情報を消す。expectedIngressId を渡すと、その Ingress が
+ * まだ紐づいている場合だけ消す(削除処理中に回線切替で新しいIngressに替わっていたら残す)。
+ */
+export async function clearSessionIngress(sessionId: string, expectedIngressId?: string): Promise<void> {
   if (USE_NEON) {
     await ensureSchema();
     const db = getDb();
+    if (expectedIngressId) {
+      await db`
+        UPDATE stream_sessions
+        SET ingress_id = NULL, stream_key = NULL, rtmp_url = NULL
+        WHERE session_id = ${sessionId} AND ingress_id = ${expectedIngressId}
+      `;
+      return;
+    }
     await db`
       UPDATE stream_sessions
       SET ingress_id = NULL, stream_key = NULL, rtmp_url = NULL
@@ -1944,7 +2379,7 @@ export async function clearSessionIngress(sessionId: string): Promise<void> {
   }
   await mutateStore((store) => {
     const session = store.streamSessions.find((s) => s.sessionId === sessionId);
-    if (session) {
+    if (session && (!expectedIngressId || session.ingressId === expectedIngressId)) {
       delete session.ingressId;
       delete session.streamKey;
       delete session.rtmpUrl;

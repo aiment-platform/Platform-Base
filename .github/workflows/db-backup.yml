@@ -1,0 +1,66 @@
+name: DB Backup
+
+# 本番Neon DBを毎日 pg_dump し、非公開のR2バケットへ保存する。
+# Neonの無料プランは巻き戻せる期間が短いため、Neonとは別の場所に世代を持つ。
+# 手順・リストア方法は docs/db-backup.md を参照。
+
+on:
+  schedule:
+    - cron: "0 18 * * *" # 毎日 03:00 JST
+  workflow_dispatch:
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: pg_dump → R2
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_BACKUP_ACCOUNT_ID }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_BACKUP_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_BACKUP_SECRET_ACCESS_KEY }}
+      R2_BUCKET: ${{ secrets.R2_BACKUP_BUCKET }}
+      AWS_DEFAULT_REGION: auto
+      # 新しいaws-cliのデフォルトのチェックサム付与はR2で失敗することがあるため必要時のみにする
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+      # pg_dumpの読み出しもNeonの転送量に計上される。DBが想定外に膨らんでいたら止める。
+      MAX_DB_MB: "200"
+    steps:
+      - name: Check secrets
+        run: |
+          for name in DATABASE_URL R2_ACCOUNT_ID AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY R2_BUCKET; do
+            if [ -z "${!name}" ]; then
+              echo "::error::secret for $name is not set"
+              exit 1
+            fi
+          done
+
+      - name: Check database size
+        run: |
+          size_mb=$(docker run --rm postgres:18 psql "$DATABASE_URL" -tAc \
+            "SELECT pg_database_size(current_database()) / 1024 / 1024")
+          echo "database size: ${size_mb} MB"
+          if [ "$size_mb" -gt "$MAX_DB_MB" ]; then
+            echo "::error::DB is ${size_mb}MB (> ${MAX_DB_MB}MB). base64画像の残存などを確認してから MAX_DB_MB を見直すこと"
+            exit 1
+          fi
+
+      - name: Dump
+        run: |
+          docker run --rm -v "$PWD:/out" postgres:18 \
+            pg_dump "$DATABASE_URL" --format=custom --no-owner --no-privileges --file=/out/backup.dump
+          # 復元できる形式かを確認（壊れたダンプを保存しない）
+          docker run --rm -v "$PWD:/out" postgres:18 pg_restore --list /out/backup.dump > /dev/null
+          ls -lh backup.dump
+
+      - name: Upload to R2
+        run: |
+          key="db-backups/$(date -u +%Y-%m-%dT%H%M%SZ).dump"
+          aws s3 cp backup.dump "s3://${R2_BUCKET}/${key}" \
+            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          echo "uploaded: ${key}"

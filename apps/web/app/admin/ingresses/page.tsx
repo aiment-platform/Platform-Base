@@ -67,19 +67,19 @@ export default function AdminIngressPage() {
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Ingress 管理</h1>
-            <p className="mt-1 text-sm text-white/40">LiveKit Ingress（OBSなどの配信キー）</p>
+            <p className="mt-1 text-sm text-[var(--brand-text-muted)]">LiveKit Ingress（OBSなどの配信キー）</p>
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => void load()}
-              className="rounded-lg bg-white/10 px-4 py-2 text-sm"
+              className="ui-btn ui-btn-md ui-btn-ghost"
             >
               Refresh
             </button>
             {ingresses.length > 0 && (
               <button
                 onClick={() => void handleDeleteAll()}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                className="ui-btn ui-btn-md ui-btn-danger"
               >
                 Delete All ({ingresses.length})
               </button>
@@ -88,30 +88,30 @@ export default function AdminIngressPage() {
         </div>
 
         {error && (
-          <div className="mb-4 rounded-xl bg-red-500/15 p-3 text-sm text-red-400">{error}</div>
+          <div className="mb-4 rounded-xl bg-[var(--brand-accent)]/15 p-3 text-sm text-[var(--brand-accent)]">{error}</div>
         )}
 
         {loading ? (
-          <p className="text-white/40">Loading...</p>
+          <p className="text-[var(--brand-text-muted)]">Loading...</p>
         ) : ingresses.length === 0 ? (
-          <div className="rounded-2xl bg-white/5 p-8 text-center text-white/40">
+          <div className="rounded-2xl bg-black/[0.04] p-8 text-center text-[var(--brand-text-muted)]">
             No ingresses found.
           </div>
         ) : (
           <div className="space-y-3">
             {ingresses.map((ing) => (
-              <div key={ing.ingressId} className="rounded-2xl bg-white/5 p-4">
+              <div key={ing.ingressId} className="rounded-2xl bg-black/[0.04] p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1 space-y-1">
                     <p className="font-semibold">{ing.name || "(no name)"}</p>
-                    <p className="text-xs text-white/40">ID: {ing.ingressId}</p>
-                    <p className="text-xs text-white/40">Room: {ing.roomName || "—"}</p>
-                    <p className="text-xs text-white/40">State: {ing.state}</p>
+                    <p className="text-xs text-[var(--brand-text-muted)]">ID: {ing.ingressId}</p>
+                    <p className="text-xs text-[var(--brand-text-muted)]">Room: {ing.roomName || "—"}</p>
+                    <p className="text-xs text-[var(--brand-text-muted)]">State: {ing.state}</p>
                   </div>
                   <button
                     onClick={() => void handleDelete(ing.ingressId)}
                     disabled={deleting === ing.ingressId}
-                    className="shrink-0 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                    className="ui-btn ui-btn-sm ui-btn-danger shrink-0"
                   >
                     {deleting === ing.ingressId ? "Deleting..." : "Delete"}
                   </button>

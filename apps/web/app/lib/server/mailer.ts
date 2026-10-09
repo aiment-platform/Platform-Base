@@ -10,6 +10,62 @@ function getSendGridClient(): typeof sgMail | null {
 
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL?.trim() ?? "noreply@aiment.jp";
 
+const OPS_NOTIFY_ADDRESSES = ["kmc2427@kamiyama.ac.jp", "kmc2408@kamiyama.ac.jp"];
+
+export async function sendTroubleshootingReport(opts: {
+  reporterName: string;
+  reporterEmail: string;
+  sessionId: string;
+  sessionTitle: string;
+  note: string;
+  diagnostics: Record<string, string | number | boolean | null>;
+}): Promise<void> {
+  const client = getSendGridClient();
+  const { reporterName, reporterEmail, sessionId, sessionTitle, note, diagnostics } = opts;
+  const rows = Object.entries(diagnostics)
+    .map(([k, v]) => `${k}: ${String(v)}`)
+    .join("\n");
+
+  if (!client) {
+    console.info(`[mailer] Troubleshooting report from ${reporterName} <${reporterEmail}> for "${sessionTitle}"\n${rows}`);
+    return;
+  }
+
+  const diagHtml = Object.entries(diagnostics)
+    .map(
+      ([k, v]) =>
+        `<tr><td style="color:#9090a0;padding:6px 0;border-bottom:1px solid #1a1a2e;">${k}</td><td style="padding:6px 0;border-bottom:1px solid #1a1a2e;">${String(v)}</td></tr>`,
+    )
+    .join("");
+
+  await Promise.all(
+    OPS_NOTIFY_ADDRESSES.map((to) =>
+      client.send({
+        to,
+        from: { email: FROM_EMAIL, name: "Aiment" },
+        subject: `【Aiment】配信トラブル報告「${sessionTitle}」`,
+        text: `配信者からトラブル報告が届きました。\n\n配信者: ${reporterName} <${reporterEmail}>\n枠: ${sessionTitle} (${sessionId})\n\n内容:\n${note || "(記載なし)"}\n\n--- 診断 ---\n${rows}`,
+        html: `
+          <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#0f0f14;color:#e8e8f0;border-radius:16px;">
+            <h2 style="color:#a78bfa;margin-bottom:4px;">Aiment</h2>
+            <p style="color:#9090a0;margin:0 0 20px;font-size:13px;">配信トラブル報告</p>
+            <div style="background:#1a1a2e;border-radius:12px;padding:16px;margin-bottom:16px;">
+              <p style="margin:0 0 4px;font-size:13px;color:#9090a0;">配信者</p>
+              <p style="margin:0 0 12px;font-weight:bold;">${reporterName} &lt;${reporterEmail}&gt;</p>
+              <p style="margin:0 0 4px;font-size:13px;color:#9090a0;">枠</p>
+              <p style="margin:0;font-weight:bold;">${sessionTitle}</p>
+            </div>
+            <p style="margin:0 0 4px;font-size:13px;color:#9090a0;">内容</p>
+            <p style="margin:0 0 16px;white-space:pre-wrap;">${note || "(記載なし)"}</p>
+            <p style="margin:0 0 4px;font-size:13px;color:#9090a0;">診断</p>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">${diagHtml}</table>
+          </div>
+        `,
+      }),
+    ),
+  );
+}
+
 export async function sendEarlyAccessNotification(opts: {
   participantName: string;
   participantEmail: string;

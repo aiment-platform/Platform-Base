@@ -165,7 +165,7 @@ export function SmartPhraseAssist({ sessionState, onSendPhrase, onInsertPhrase, 
   return (
     <div className={`relative ${className}`.trim()}>
       {expanded ? (
-        <div className="mb-2 max-h-[280px] overflow-y-auto rounded-2xl border border-white/10 bg-[var(--brand-bg-900)] p-3 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
+        <div className="mb-2 max-h-[280px] overflow-y-auto rounded-2xl bg-[var(--brand-surface)] p-3 shadow-[0_14px_30px_rgba(73,71,70,0.16)]">
           <div className="mb-3 flex items-center justify-between gap-2">
             <div>
               <p className="text-sm font-bold text-[var(--brand-text)]">日本語フレーズ</p>
@@ -175,7 +175,7 @@ export function SmartPhraseAssist({ sessionState, onSendPhrase, onInsertPhrase, 
               type="button"
               onClick={() => setExpanded(false)}
               aria-label="Smart Phrase Assistを閉じる"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-[var(--brand-text)] transition hover:bg-white/15"
+              className="ui-btn ui-btn-sm ui-btn-ghost h-8 w-8 rounded-full p-0"
             >
               <ChevronUpIcon className="h-4 w-4" aria-hidden />
             </button>
@@ -186,7 +186,7 @@ export function SmartPhraseAssist({ sessionState, onSendPhrase, onInsertPhrase, 
               const groupPhrases = phrases.filter((phrase) => phrase.category === group.id);
               return (
                 <section key={group.id}>
-                  <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--brand-secondary)]">{group.label}</p>
+                  <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--brand-primary-dark)]">{group.label}</p>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {groupPhrases.map((phrase) => {
                       const pinned = pinnedIds.includes(phrase.id);
@@ -223,11 +223,11 @@ export function SmartPhraseAssist({ sessionState, onSendPhrase, onInsertPhrase, 
                           onPointerUp={clearLongPressTimer}
                           onPointerCancel={clearLongPressTimer}
                           onPointerLeave={clearLongPressTimer}
-                          className="group relative min-h-[74px] cursor-pointer rounded-xl bg-[var(--brand-surface)] px-3 py-2 text-left shadow-[0_10px_24px_rgba(0,0,0,0.16)] transition duration-150 hover:scale-[1.018] hover:bg-[var(--brand-surface-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-secondary)]/70"
+                          className="group relative min-h-[74px] cursor-pointer rounded-xl bg-[var(--brand-surface)] px-3 py-2 text-left shadow-[0_10px_24px_rgba(73,71,70,0.12)] transition duration-150 hover:scale-[1.018] hover:bg-[var(--brand-surface-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-secondary)]/70"
                         >
                           <span className="absolute right-2 top-2 flex items-center gap-1">
                             {sent ? (
-                              <span className="rounded-full bg-black px-2 py-0.5 text-[10px] font-bold text-[var(--brand-secondary)] shadow-lg shadow-black/15">
+                              <span className="rounded-full bg-black px-2 py-0.5 text-[10px] font-bold text-[var(--brand-primary-dark)] shadow-lg shadow-black/8">
                                 Sent
                               </span>
                             ) : null}
@@ -245,13 +245,13 @@ export function SmartPhraseAssist({ sessionState, onSendPhrase, onInsertPhrase, 
                                 event.stopPropagation();
                                 togglePinned(phrase.id);
                               }}
-                              className={`inline-flex h-6 w-6 items-center justify-center rounded-full transition ${pinned ? "bg-black text-[var(--brand-secondary)]" : "bg-black/15 text-black/55 hover:text-black"
+                              className={`inline-flex h-6 w-6 items-center justify-center rounded-full transition ${pinned ? "bg-black text-[var(--brand-primary-dark)]" : "bg-black/8 text-black/55 hover:text-black"
                                 }`}
                             >
                               <StarIcon className="h-3.5 w-3.5" aria-hidden />
                             </span>
                           </span>
-                          <span className="block pr-16 text-base font-bold leading-snug text-[var(--brand-secondary)]">{phrase.ja}</span>
+                          <span className="block pr-16 text-base font-bold leading-snug text-[var(--brand-primary-dark)]">{phrase.ja}</span>
                           <span className="mt-1 block text-xs leading-snug text-[var(--brand-text)]">{phrase.romaji}</span>
                           <span className="mt-0.5 block text-[11px] leading-snug text-[var(--brand-text-muted)]">{phrase.en}</span>
                         </div>
@@ -268,14 +268,14 @@ export function SmartPhraseAssist({ sessionState, onSendPhrase, onInsertPhrase, 
       <button
         type="button"
         onClick={() => setExpanded((value) => !value)}
-        className="flex w-full items-center justify-between rounded-xl bg-[var(--brand-secondary)] px-3 py-2 text-sm font-bold text-black shadow-[0_12px_28px_rgba(0,229,255,0.16)] transition hover:scale-[1.01] hover:brightness-95"
+        className="ui-btn ui-btn-md ui-btn-primary w-full justify-between"
         aria-expanded={expanded}
       >
         <span className="inline-flex items-center gap-2">
-          <ChatBubbleLeftRightIcon className="h-4 w-4 text-black" aria-hidden />
+          <ChatBubbleLeftRightIcon className="h-4 w-4" aria-hidden />
           comment in Japanese
         </span>
-        <span className={`text-[11px] text-black/70 transition ${expanded ? "rotate-180" : ""}`}>↑</span>
+        <span className={`text-[11px] opacity-70 transition ${expanded ? "rotate-180" : ""}`}>↑</span>
       </button>
     </div>
   );

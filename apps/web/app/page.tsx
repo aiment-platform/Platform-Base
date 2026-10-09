@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Footer } from "./components/home/Footer";
 import { TopNav } from "./components/home/TopNav";
 import { NowLiveSection } from "./components/home/sections/NowLiveSection";
@@ -9,6 +8,7 @@ import { StartingSoonSection } from "./components/home/sections/StartingSoonSect
 import { UpcomingTicker } from "./components/home/UpcomingTicker";
 import { LiveSession, StartingSoonSession } from "./components/home/types";
 import { SlowLoadingScreen } from "./components/ui/SlowLoadingScreen";
+import { useRouteTransition } from "./components/ui/RouteTransition";
 import { matchesFilter } from "./components/home/utils";
 import { useI18n } from "./lib/i18n";
 import { getCachedActiveSessions, listActiveStreamSessions, subscribeStreamSessions, type StreamSession } from "./lib/streamSessions";
@@ -19,7 +19,7 @@ function toSecondsUntil(startsAt: string) {
 }
 
 export default function HomePage() {
-  const router = useRouter();
+  const { navigate } = useRouteTransition();
   const { tx } = useI18n();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -146,12 +146,14 @@ export default function HomePage() {
     [allLive, searchQuery],
   );
 
+  // 一覧から詳細へ移るだけなので、画面は覆わず下部バーだけ出す。
+  // 読み込み中も他の枠が見えている方が親切なため。
   const goPreJoin = (sessionId: string) => {
-    router.push(`/join/${encodeURIComponent(sessionId)}`);
+    navigate(`/join/${encodeURIComponent(sessionId)}`, "bar");
   };
 
   const goChannel = (userId: string) => {
-    router.push(`/channels/${encodeURIComponent(userId)}`);
+    navigate(`/channels/${encodeURIComponent(userId)}`, "bar");
   };
 
   return (

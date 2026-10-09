@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRightOnRectangleIcon, Cog6ToothIcon, VideoCameraIcon } from "@heroicons/react/24/outline";
+import { ArrowRightOnRectangleIcon, Cog6ToothIcon, RectangleStackIcon } from "@heroicons/react/24/outline";
 import { useUserSession } from "../../lib/userSession";
 import { Button, buttonClassName } from "../ui/Button";
 import { Card } from "../ui/Card";
 
 function AuthDropdown({ onClose }: { onClose: () => void }) {
-  const { isAuthenticated, isVtuber, logout } = useUserSession();
+  const { isAuthenticated, logout } = useUserSession();
   const router = useRouter();
 
   const handleGoogleLogin = () => {
@@ -46,12 +46,10 @@ function AuthDropdown({ onClose }: { onClose: () => void }) {
         </div>
       ) : (
         <div className="space-y-2">
-          {isVtuber && (
-            <Link href="/channel" onClick={onClose} className={buttonClassName({ variant: "soft", size: "md", fullWidth: true, className: "justify-start" })}>
-              <VideoCameraIcon className="h-4 w-4" aria-hidden />
-              チャンネル管理
-            </Link>
-          )}
+          <Link href="/channel" onClick={onClose} className={buttonClassName({ variant: "soft", size: "md", fullWidth: true, className: "justify-start" })}>
+            <RectangleStackIcon className="h-4 w-4" aria-hidden />
+            チャンネル
+          </Link>
           <Link href="/account" onClick={onClose} className={buttonClassName({ variant: "ghost", size: "md", fullWidth: true, className: "justify-start" })}>
             <Cog6ToothIcon className="h-4 w-4" aria-hidden />
             アカウント設定
@@ -105,7 +103,7 @@ export function AuthProfileControl() {
         <button
           type="button"
           onClick={() => setOpen((prev) => !prev)}
-          className="h-10 rounded-xl bg-[var(--brand-secondary)] px-4 text-sm font-bold text-black transition-all hover:brightness-110"
+          className="ui-btn ui-btn-md ui-btn-primary h-10"
         >
           {hydrated ? "ログイン" : "..."}
         </button>
