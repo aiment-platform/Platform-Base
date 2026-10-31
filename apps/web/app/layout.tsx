@@ -2,25 +2,20 @@ import type { Metadata } from "next";
 import { M_PLUS_Rounded_1c, Nunito } from "next/font/google";
 import "./globals.css";
 import { RouteTransitionProvider } from "./components/ui/RouteTransition";
-import { UiVersionToggle } from "./components/ui/UiVersionToggle";
 import { I18nProvider } from "./lib/i18n";
-import { UI_VERSION_BOOT_SCRIPT } from "./lib/uiVersionBoot";
 import { UserSessionProvider } from "./lib/userSession";
 
-// UI ver0.4（試作）の丸い書体。CSS 変数として置くだけで、v04.css が使ったときだけ読み込まれる
-// （preload: false なので、今の UI のままなら書体ファイルは1つもダウンロードされない）。
+// UI ver0.4 の丸い書体。CSS 変数として置き、v04.css の --font-latin / --font-jp から使う。
 const roundedJp = M_PLUS_Rounded_1c({
   weight: ["500", "700", "800", "900"],
   subsets: ["latin"],
   display: "swap",
-  preload: false,
   variable: "--font-rounded-jp",
 });
 const roundedLatin = Nunito({
   weight: ["600", "700", "800", "900"],
   subsets: ["latin"],
   display: "swap",
-  preload: false,
   adjustFontFallback: false,
   variable: "--font-rounded-latin",
 });
@@ -63,25 +58,20 @@ export default function RootLayout({
 }>) {
   return (
     // UI ver0.3: dark mode is retired, the app is light only.
-    // data-ui は描画前のスクリプトが付ける（UI ver0.4 の試作）。サーバーの HTML には無いので、
-    // その食い違いの警告だけ止めている（suppressHydrationWarning は html 要素の属性にしか効かない）
+    // data-ui="0.4" で app/styles/v04.css が効く（UI ver0.4 が既定）
     <html
       lang="ja"
       data-theme="light"
+      data-ui="0.4"
       style={{ colorScheme: "light" }}
       className={`${roundedJp.variable} ${roundedLatin.variable}`}
-      suppressHydrationWarning
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: UI_VERSION_BOOT_SCRIPT }} />
-      </head>
       <body className="antialiased">
         <UserSessionProvider>
           <I18nProvider>
             <RouteTransitionProvider>{children}</RouteTransitionProvider>
           </I18nProvider>
         </UserSessionProvider>
-        {process.env.NODE_ENV !== "production" ? <UiVersionToggle /> : null}
       </body>
     </html>
   );

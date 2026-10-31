@@ -1,15 +1,14 @@
 "use client";
 
 /**
- * UI ver0.4（試作）のデザインルール。
+ * UI ver0.4（現行）のデザインルール。
  *
- * ver0.4 は ver0.31 の上に app/styles/v04.css を重ねたもの（<html data-ui="0.4"> のときだけ効く）。
+ * ver0.4 は ver0.31 の上に app/styles/v04.css を重ねたもの（<html data-ui="0.4"> のときだけ効き、layout.tsx で常に付けている）。
  * なのでこのページは「0.31 から何が変わるか」だけを並べる。書いていないことは 0.31 のまま。
  * v04.css を変えたら、このページも一緒に直す。
  */
 import type { ReactNode } from "react";
 import { Button } from "../../components/ui/Button";
-import { setUiVersion, useUiVersion } from "../../lib/uiVersion";
 import { CardShowcase, SectionNote, SwatchTable, type SwatchGroup } from "./shared";
 
 /* --- 色（app/styles/v04.css の「1・2. 書体と色」と同じ並び） ------------------ */
@@ -85,29 +84,6 @@ function Code({ children }: { children: ReactNode }) {
   return <code className="rounded-md bg-[var(--brand-bg-900)] px-1.5 py-0.5 font-mono text-xs text-[var(--brand-text)]">{children}</code>;
 }
 
-/* 見本は本物の部品なので、0.4 表示になっていないと 0.31 の見た目で出る。その切り替え口 */
-function PreviewSwitch() {
-  const version = useUiVersion();
-  if (version === "0.4") {
-    return (
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-[var(--brand-primary-soft)] px-4 py-3 text-sm text-[var(--brand-primary-ink)]">
-        <span>いま ver0.4 で表示しています。下の見本は 0.4 の見た目です。</span>
-        <Button size="sm" variant="ghost" onClick={() => setUiVersion("0.31")}>
-          0.31 に戻す
-        </Button>
-      </div>
-    );
-  }
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-[var(--brand-warning-soft)] px-4 py-3 text-sm text-[var(--brand-warning-ink)]">
-      <span>いまは ver0.31 で表示中です。下のボタン・カードの見本を 0.4 で見るには切り替えてください。</span>
-      <Button size="sm" onClick={() => setUiVersion("0.4")}>
-        0.4 で表示する
-      </Button>
-    </div>
-  );
-}
-
 function ChangeTable() {
   return (
     <div className="overflow-x-auto">
@@ -175,15 +151,13 @@ export function GuidelineV04() {
         <Section
           id="v04-about"
           title="0.4 とは"
-          lead="ムードボード「A1 Soft Arcade ＋ 書体 まるっと標準」を本物の画面に当てた試作。0.31 の上に差分を重ねている。"
+          lead="ムードボード「A1 Soft Arcade ＋ 書体 まるっと標準」を本物の画面に当てたもの。今の既定の見た目で、0.31 の上に差分を重ねている。"
         >
-          <PreviewSwitch />
           <SectionNote
             lines={[
-              "1. <html data-ui=\"0.4\"> のときだけ app/styles/v04.css が効く。付いていなければ 0.31 のまま",
-              "2. 切り替えは画面右下のスイッチ、または URL に ?ui=0.4 / ?ui=0.31。選んだ値はこのブラウザにだけ保存される",
-              "3. ここに書いていないルール（角丸・ボタンの種類・入力欄など）は 0.31 タブのとおり",
-              "4. やめるときは v04.css と globals.css の import を消すだけで跡形もなく戻る",
+              "1. <html data-ui=\"0.4\">（layout.tsx で常に付けている）のときに app/styles/v04.css が効く",
+              "2. ここに書いていないルール（角丸・ボタンの種類・入力欄など）は 0.31 タブのとおり",
+              "3. 0.31 に戻すときは layout.tsx の data-ui を外すだけでよい",
             ]}
           />
         </Section>
@@ -229,7 +203,7 @@ export function GuidelineV04() {
             </div>
             <div className="flex flex-wrap items-baseline justify-between gap-2 py-3">
               <span className="ui-count">12</span>
-              <span className="text-xs text-[var(--brand-text-muted)]">.ui-count / 12px / 800・沈んだ面の丸い札（0.4 表示時）</span>
+              <span className="text-xs text-[var(--brand-text-muted)]">.ui-count / 12px / 800・沈んだ面の丸い札</span>
             </div>
             <div className="flex flex-wrap items-baseline justify-between gap-2 py-3">
               <span className="text-sm" style={{ fontWeight: 800 }}>
@@ -246,7 +220,7 @@ export function GuidelineV04() {
           />
         </Section>
 
-        <Section id="v04-depth" title="厚み" lead="押せるものには厚み、置いてあるだけのものは平ら。0.4 表示にすると下の見本が 0.4 の見た目になる。">
+        <Section id="v04-depth" title="厚み" lead="押せるものには厚み、置いてあるだけのものは平ら。">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="ui-sunken p-4">
               <Label>押せるもの</Label>
@@ -282,9 +256,6 @@ export function GuidelineV04() {
           <div className="divide-y divide-[var(--line)]">
             {[
               { file: "app/styles/v04.css", what: "0.4 の差分すべて。値もルールもここ" },
-              { file: "app/lib/uiVersion.ts", what: "切り替え（setUiVersion / useUiVersion）" },
-              { file: "app/lib/uiVersionBoot.ts", what: "最初の描画より前に data-ui を付ける小さなスクリプト（一瞬 0.31 が見えるのを防ぐ）" },
-              { file: "app/components/ui/UiVersionToggle.tsx", what: "画面右下のスイッチ（開発中だけ表示）" },
               { file: "public/svg/session_*_v04.svg", what: "配信枠カードの形（角丸を直したもの）" },
             ].map((row) => (
               <div key={row.file} className="grid gap-1 py-3 sm:grid-cols-[260px_minmax(0,1fr)] sm:gap-4">

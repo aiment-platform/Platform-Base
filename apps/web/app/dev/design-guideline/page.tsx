@@ -3,8 +3,8 @@
 /**
  * /dev/design-guideline — デザインルールの見本帳。
  *
- *   GuidelineV031.tsx   … 現行（ver0.31）。新しい画面はこれに従う
- *   GuidelineV04.tsx    … 試作（ver0.4）。0.31 からの差分だけを並べる
+ *   GuidelineV04.tsx    … 現行（ver0.4）。0.31 からの差分だけを並べる
+ *   GuidelineV031.tsx   … ver0.31。0.4 に書いていないルールはこちら
  *   GuidelineLegacy.tsx … 旧版（ver0.3 / ver0.2）。参考として残しているだけ
  *   Moodboard.tsx       … ブランドの方向性を比べるムードボード（未決定の案）
  *   shared.tsx          … 両方で使う見本部品
@@ -20,8 +20,8 @@ import { GuidelineV04 } from "./GuidelineV04";
 import { Moodboard } from "./Moodboard";
 
 const VERSIONS = [
-  { id: "0.31", label: "ver0.31（現行）" },
-  { id: "0.4", label: "ver0.4（試作）" },
+  { id: "0.4", label: "ver0.4（現行）" },
+  { id: "0.31", label: "ver0.31（土台）" },
   { id: "0.3", label: "ver0.3（旧）" },
   { id: "0.2", label: "ver0.2（旧）" },
   { id: "mood", label: "ムードボード" },
@@ -36,11 +36,11 @@ function subscribeToHash(onChange: () => void) {
 
 function readVersionFromHash(): UiVersion {
   const hash = window.location.hash.replace("#ver", "");
-  return VERSIONS.find((version) => version.id === hash)?.id ?? "0.31";
+  return VERSIONS.find((version) => version.id === hash)?.id ?? "0.4";
 }
 
 function serverVersion(): UiVersion {
-  return "0.31";
+  return "0.4";
 }
 
 export default function DesignGuidelinePage() {
@@ -55,7 +55,7 @@ export default function DesignGuidelinePage() {
           <p className="text-xs font-bold text-[var(--brand-text-muted)]">Developer Page</p>
           <h1 className="mt-1 text-2xl font-bold">Design Guideline</h1>
           <p className="mt-2 max-w-[720px] text-sm leading-relaxed text-[var(--brand-text-muted)]">
-            色・文字・角丸・ボタン・面・配信枠カードのルールと実物の見本。新しい画面は現行（ver0.31）に従う。
+            色・文字・角丸・ボタン・面・配信枠カードのルールと実物の見本。新しい画面は現行（ver0.4）に従い、0.4 に書いていないことは ver0.31 に従う。
           </p>
 
           <div className="ui-segment mt-5" role="group" aria-label="バージョン">
@@ -74,8 +74,8 @@ export default function DesignGuidelinePage() {
           </div>
         </header>
 
-        {version === "0.31" ? <GuidelineV031 /> : null}
         {version === "0.4" ? <GuidelineV04 /> : null}
+        {version === "0.31" ? <GuidelineV031 /> : null}
         {version === "0.3" ? <GuidelineV03Legacy /> : null}
         {version === "0.2" ? <GuidelineV02Legacy /> : null}
         {version === "mood" ? <Moodboard /> : null}

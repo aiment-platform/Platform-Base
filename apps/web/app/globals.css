@@ -15,5 +15,5 @@
 @import "./styles/landing/for-mates.css";
 @import "./styles/landing/scenes.css";
 @import "./styles/landing/role-diagram.css";
-/* UI ver0.4 の試作。<html data-ui="0.4"> のときだけ効く。最後に読み込んで、上のすべてより優先させる */
+/* UI ver0.4（既定）。<html data-ui="0.4">（layout.tsx）で効く。最後に読み込んで、上のすべてより優先させる */
 @import "./styles/v04.css";
