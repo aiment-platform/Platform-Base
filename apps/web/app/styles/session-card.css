@@ -1,0 +1,409 @@
+/* 配信枠カード（StreamSessionCard.tsx）。フォルダ形の型抜きで作る。 */
+
+.aiment-session-card {
+  /* ver0.3: the frame is a white outline and the bar is light purple.
+     Everything below is derived from session_container.svg (594 x 396,
+     corner radius 24, right-hand section starts at y=60). The masked shape is
+     painted into the box inset by the ring, so the SVG landmarks must be
+     mapped through that inset — otherwise the thumbnail sits a couple of
+     pixels off the frame and its corners are rounded more than the card.
+     The inset box is not exactly 3:2, so the SVG carries
+     preserveAspectRatio="none" to stretch into it. Without that it keeps 3:2
+     and leaves ~1.5px gaps left and right, and the bar sits inside the
+     thumbnail's left edge. */
+  /* マット化で白フチはなし（幅0）。幅を戻せば以前のフチ付きに戻せる。 */
+  --card-ring: var(--surface-ring);
+  --card-ring-w: 0px;
+  --card-inner-w: calc(100cqw - var(--card-ring-w) * 2);
+  --card-inner-h: calc(66.6667cqw - var(--card-ring-w) * 2);
+  --card-radius: calc(var(--card-inner-w) * 0.040404);
+  --card-bar-height: calc(var(--card-ring-w) + var(--card-inner-h) * 0.151515);
+  --card-bar-center: calc((var(--card-ring-w) + var(--card-bar-height)) / 2);
+  --card-surface: var(--brand-primary-light);
+  --card-bg: var(--brand-bg-900);
+  --card-secondary: #9dea70; /* レベル不明時の札の色（AJL3 と同じ）。サブの青緑とは別物 */
+  --card-track: var(--track);
+  --card-level-ring: 0px;
+  --card-level-drop: clamp(1.4px, 0.58cqw, 2.4px);
+  position: relative;
+  container-type: inline-size;
+  display: block;
+  /* 幅は並べる側（グリッドの列）が決める。単体で置くときは親で幅を絞る */
+  width: 100%;
+  padding: 0;
+  border: 0;
+  appearance: none;
+  background: transparent;
+  color: var(--brand-text);
+  cursor: pointer;
+}
+
+.aiment-session-card-grid {
+  display: grid;
+  /* 列は画面幅いっぱいに伸ばす（右に余白を残さない）。1枚は 240px 以上 */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 34px 22px;
+}
+
+.aiment-session-card__hitbox {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  appearance: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.aiment-session-card__media-shell {
+  position: relative;
+  display: block;
+  aspect-ratio: 594 / 396;
+}
+
+.aiment-session-card__frame {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: block;
+  background: var(--card-ring);
+  mask: url("/svg/session_container.svg") center / 100% 100% no-repeat;
+  -webkit-mask: url("/svg/session_container.svg") center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+
+.aiment-session-card__frame::before {
+  position: absolute;
+  inset: var(--card-ring-w);
+  display: block;
+  content: "";
+  background: var(--card-surface);
+  mask: url("/svg/session_container.svg") center / 100% 100% no-repeat;
+  -webkit-mask: url("/svg/session_container.svg") center / 100% 100% no-repeat;
+}
+
+.aiment-session-card__level {
+  position: absolute;
+  left: clamp(8px, 2.6cqw, 10px);
+  top: var(--card-bar-center);
+  z-index: 4;
+  display: grid;
+  height: clamp(14px, 5.86cqw, 22px);
+  width: clamp(14px, 5.86cqw, 22px);
+  place-items: center;
+  border-radius: clamp(3px, 1.15cqw, 5px);
+  background: var(--level-face, var(--card-secondary));
+  box-shadow:
+    0 0 0 var(--card-level-ring) var(--card-ring),
+    0 var(--card-level-drop) 0 var(--card-level-ring) var(--level-drop, var(--card-secondary));
+  color: #ffffff;
+  font-size: clamp(11px, 3.6cqw, 13px);
+  font-weight: 700;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+.aiment-session-card__progress {
+  position: absolute;
+  left: clamp(42px, 14cqw, 64px);
+  right: clamp(118px, 32cqw, 172px);
+  top: var(--card-bar-center);
+  z-index: 4;
+  height: clamp(6px, 2.2cqw, 10px);
+  max-width: none;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--card-track);
+  transition: opacity 150ms ease;
+  transform: translateY(-50%);
+}
+
+.aiment-session-card__progress-fill {
+  display: block;
+  height: 100%;
+  width: var(--slot-progress, 0%);
+  background: var(--slot-color, var(--brand-primary-dark));
+}
+
+.aiment-session-card:hover .aiment-session-card__progress,
+.aiment-session-card:focus-within .aiment-session-card__progress {
+  opacity: 0;
+}
+
+.aiment-session-card__hover-meta {
+  position: absolute;
+  left: clamp(34px, 12cqw, 52px);
+  right: clamp(76px, 36cqw, 122px);
+  top: var(--card-bar-center);
+  z-index: 4;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: clamp(6px, 2cqw, 14px);
+  align-items: center;
+  opacity: 0;
+  transform: translateY(-45%);
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.aiment-session-card:hover .aiment-session-card__hover-meta,
+.aiment-session-card:focus-within .aiment-session-card__hover-meta {
+  opacity: 1;
+  transform: translateY(-50%);
+}
+
+.aiment-session-card__ajl-label {
+  overflow: hidden;
+  color: #ffffff;
+  font-size: clamp(12px, 4cqw, 16px);
+  font-weight: 700;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aiment-session-card__spots {
+  color: #ffffff;
+  font-size: clamp(12px, 4.4cqw, 18px);
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.aiment-session-card__detail {
+  position: absolute;
+  right: 3%;
+  top: 2%;
+  padding-left: 4%;
+  padding-bottom: 1%;
+  z-index: 1;
+  display: grid;
+  height: var(--card-bar-height);
+  width: 26%;
+  place-items: center;
+  background: var(--card-ring);
+  mask: url("/svg/session_detail.svg") center / 100% 100% no-repeat;
+  -webkit-mask: url("/svg/session_detail.svg") center / 100% 100% no-repeat;
+  color: #ffffff;
+  font-size: clamp(12px, 4.3cqw, 17px);
+  font-weight: 600;
+  line-height: 1;
+  opacity: 1;
+  transition: opacity 150ms ease, transform 180ms ease;
+  transform: translateY(100%);
+}
+
+.aiment-session-card__detail::before {
+  position: absolute;
+  inset: var(--card-ring-w);
+  display: block;
+  content: "";
+  background: var(--brand-primary-dark);
+  mask: url("/svg/session_detail.svg") center / 100% 100% no-repeat;
+  -webkit-mask: url("/svg/session_detail.svg") center / 100% 100% no-repeat;
+}
+
+/* The ::before is positioned, so the label needs its own layer to stay on top. */
+.aiment-session-card__detail-label {
+  position: relative;
+  z-index: 1;
+}
+
+.aiment-session-card:hover .aiment-session-card__detail,
+.aiment-session-card:focus-within .aiment-session-card__detail {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.aiment-session-card__image {
+  position: absolute;
+  display: block;
+  z-index: 3;
+  left: var(--card-ring-w);
+  right: var(--card-ring-w);
+  top: var(--card-bar-height);
+  bottom: var(--card-ring-w);
+  overflow: hidden;
+  border-radius: 0 var(--card-radius) var(--card-radius) var(--card-radius);
+  clip-path: inset(0 round 0 var(--card-radius) var(--card-radius) var(--card-radius));
+  background: var(--placeholder);
+  isolation: isolate;
+}
+
+.aiment-session-card__image img {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+  transition: transform 220ms ease;
+  will-change: transform;
+}
+
+.aiment-session-card:hover .aiment-session-card__image img,
+.aiment-session-card:focus-within .aiment-session-card__image img {
+  transform: scale(1.025);
+}
+
+.aiment-session-card__time {
+  position: absolute;
+  right: 16px;
+  bottom: 10px;
+  z-index: 2;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 4px 9px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.15;
+  backdrop-filter: blur(4px);
+}
+
+.aiment-session-card__body {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding-top: 12px;
+}
+
+.aiment-session-card__avatar {
+  display: grid;
+  height: 40px;
+  width: 40px;
+  padding: 0;
+  border: 0;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 999px;
+  appearance: none;
+  background: var(--placeholder);
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  transition: transform 150ms ease;
+}
+
+.aiment-session-card__avatar:hover,
+.aiment-session-card__avatar:focus-visible {
+  transform: scale(1.06);
+}
+
+.aiment-session-card__avatar img {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+}
+
+.aiment-session-card__title {
+  display: block;
+  overflow: hidden;
+  color: var(--brand-text);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.18;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aiment-session-card__channel {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--brand-text-muted);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* /dev/design-guideline 用。ホバー状態を固定して、通常時と並べて見せる。 */
+.card-hover-preview .aiment-session-card__progress {
+  opacity: 0;
+}
+
+.card-hover-preview .aiment-session-card__hover-meta {
+  opacity: 1;
+  transform: translateY(-50%);
+}
+
+.card-hover-preview .aiment-session-card__detail {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.card-hover-preview .aiment-session-card__image img {
+  transform: scale(1.025);
+}
+
+/* --- AJL の札（カードの外で使う単体版） ------------------------------------
+   配信枠カード左上の札（.aiment-session-card__level）と同じ比率で、大きさだけ
+   --level-size で変えられる。比率はカード最大時（22px 四方・角丸5px・文字13px・
+   厚み2.4px）から出している。
+     角丸 = 大きさ × 0.23 / 文字 = × 0.59 / 厚み = × 0.11
+   大きさは --level-size、色は style で --level-face / --level-drop を渡す（ajl.ts の color / dropColor）。
+
+   ボタンとして使うと押せる札になる。選択中（aria-checked="true"）の紫の枠は
+   ::after で「面＋厚み」をまとめて囲むので、厚みの分だけ下にずれない。 */
+.ui-level-badge {
+  /* --level-size は使う側（[--level-size:36px] など）で決める。既定は 22px。
+     ここで --level-size 自体に値を入れると、Tailwind の指定より強くなって
+     上書きできなくなるので、別名の --_s で受ける。 */
+  --_s: var(--level-size, 22px);
+  --level-drop-h: calc(var(--_s) * 0.11);
+  position: relative;
+  display: grid;
+  width: var(--_s);
+  height: var(--_s);
+  flex-shrink: 0;
+  place-items: center;
+  margin-bottom: var(--level-drop-h);
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--_s) * 0.23);
+  background: var(--level-face, var(--card-secondary, #9dea70));
+  box-shadow: 0 var(--level-drop-h) 0 0 var(--level-drop, var(--level-face, #9dea70));
+  color: #ffffff;
+  font-size: calc(var(--_s) * 0.59);
+  font-weight: 700;
+  line-height: 1;
+}
+
+button.ui-level-badge {
+  cursor: pointer;
+  transition: opacity 120ms ease, transform 90ms ease, box-shadow 90ms ease;
+}
+
+button.ui-level-badge:active {
+  box-shadow: 0 0 0 0 var(--level-drop, var(--level-face));
+  transform: translateY(var(--level-drop-h));
+}
+
+/* 選択肢として並べたとき、選んでいないものは薄くする */
+.ui-level-badge[aria-checked="false"] {
+  opacity: 0.4;
+}
+
+.ui-level-badge[aria-checked="false"]:hover {
+  opacity: 0.8;
+}
+
+.ui-level-badge[aria-checked="true"]::after {
+  --ring-gap: 3px;
+  position: absolute;
+  inset: calc(var(--ring-gap) * -2) calc(var(--ring-gap) * -2) calc(var(--ring-gap) * -2 - var(--level-drop-h));
+  border: 3px solid var(--brand-primary);
+  border-radius: calc(var(--_s) * 0.23 + var(--ring-gap) * 2);
+  content: "";
+  pointer-events: none;
+}
+
+.ui-level-badge:focus-visible {
+  outline: none;
+  box-shadow:
+    0 var(--level-drop-h) 0 0 var(--level-drop, var(--level-face)),
+    var(--ui-focus);
+}

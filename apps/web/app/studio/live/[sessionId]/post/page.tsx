@@ -181,9 +181,9 @@ export default function StudioPostLivePage() {
   if (!hydrated || !isVtuber) return null;
 
   return (
-    <div className="min-h-screen bg-[var(--brand-bg-900)] text-[var(--brand-text)]">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
       <TopNav mode="studio" />
-      <main className="mx-auto max-w-6xl px-4 py-8 lg:px-6">
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:py-8 lg:px-6">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <Link href="/studio/sessions" className="inline-flex items-center gap-2 text-sm text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]">
             <ArrowLeftIcon className="h-4 w-4" aria-hidden />
@@ -200,7 +200,7 @@ export default function StudioPostLivePage() {
           <Card className="p-8 text-center text-sm text-[var(--brand-text-muted)]">{tx("読み込み中...", "Loading...")}</Card>
         ) : loadError || !session ? (
           <Card className="p-6">
-            <div className="flex items-center gap-3 text-[var(--brand-accent)]">
+            <div className="flex items-center gap-3 text-[var(--brand-accent-ink)]">
               <ExclamationTriangleIcon className="h-5 w-5" aria-hidden />
               <p className="text-sm font-bold">{loadError ?? tx("配信枠を読み込めませんでした。", "Failed to load session.")}</p>
             </div>
@@ -209,7 +209,7 @@ export default function StudioPostLivePage() {
           <div className="grid gap-5 lg:grid-cols-[1fr_380px]">
             <section className="space-y-5">
               <div>
-                <p className="text-sm font-bold text-[var(--brand-secondary)]">Post Live</p>
+                <p className="text-sm font-bold text-[var(--brand-primary-ink)]">Post Live</p>
                 <h1 className="mt-1 text-2xl font-extrabold">{session.title}</h1>
                 <p className="mt-2 text-sm text-[var(--brand-text-muted)]">
                   {session.hostName} / {categoryLabel(session.category, tx)} / {formatDateTime(session.startsAt)}
@@ -217,21 +217,22 @@ export default function StudioPostLivePage() {
               </div>
 
               {session.status !== "ended" ? (
-                <div className="rounded-xl bg-[var(--brand-accent)]/15 px-4 py-3 text-sm text-[var(--brand-accent)]">
+                <div className="rounded-xl bg-[var(--brand-accent-soft)] px-4 py-3 text-sm text-[var(--brand-accent-ink)]">
                   {tx("この配信はまだ終了状態ではありません。配信終了後の確認ページとして利用してください。", "This session is not marked as ended yet. Use this page after closing the stream.")}
                 </div>
               ) : null}
 
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {/* スマホでも2列にする。1列だと数字1つのカードが4枚縦に並び、本題の報告フォームが遠くなる */}
+              <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
                 {metrics.map((item) => {
                   const Icon = item.icon;
                   return (
-                    <Card key={item.label} className="p-4">
-                      <div className="flex items-center justify-between gap-3">
+                    <Card key={item.label} className="p-3 sm:p-4">
+                      <div className="flex items-start justify-between gap-2">
                         <p className="text-xs font-bold text-[var(--brand-text-muted)]">{item.label}</p>
-                        <Icon className="h-5 w-5 text-[var(--brand-secondary)]" aria-hidden />
+                        <Icon className="h-5 w-5 shrink-0 text-[var(--brand-primary)]" aria-hidden />
                       </div>
-                      <p className="mt-3 text-2xl font-extrabold text-[var(--brand-secondary)]">{item.value}</p>
+                      <p className="mt-3 text-2xl font-extrabold text-[var(--brand-text)]">{item.value}</p>
                       <p className="mt-1 text-xs text-[var(--brand-text-muted)]">{item.note}</p>
                     </Card>
                   );
@@ -305,8 +306,8 @@ export default function StudioPostLivePage() {
                     {tx("サポートからの返信を希望する", "Request a reply from support")}
                   </label>
 
-                  {formError ? <p className="rounded-xl bg-[var(--brand-accent)]/15 px-3 py-2 text-sm text-[var(--brand-accent)]">{formError}</p> : null}
-                  {sent ? <p className="rounded-xl bg-green-500/15 px-3 py-2 text-sm text-green-300">{tx("送信しました。ありがとうございます。", "Sent. Thank you.")}</p> : null}
+                  {formError ? <p className="rounded-xl bg-[var(--brand-accent-soft)] px-3 py-2 text-sm text-[var(--brand-accent-ink)]">{formError}</p> : null}
+                  {sent ? <p className="rounded-xl bg-[var(--brand-primary-soft)] px-3 py-2 text-sm text-[var(--brand-primary-ink)]">{tx("送信しました。ありがとうございます。", "Sent. Thank you.")}</p> : null}
 
                   <Button type="submit" variant="secondary" fullWidth disabled={submitting}>
                     {submitting ? tx("送信中...", "Sending...") : tx("サポートに送信", "Send to Support")}

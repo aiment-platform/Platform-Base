@@ -1,25 +1,20 @@
 "use client";
 
-import { type ComponentType, type FormEvent, type SVGProps, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import {
-  ArrowRightIcon,
-  CalendarDaysIcon,
-  ClockIcon,
-  LanguageIcon,
-  QuestionMarkCircleIcon,
-  UserGroupIcon,
-} from "@heroicons/react/24/outline";
-import { ChevronDownIcon, MicrophoneIcon } from "@heroicons/react/24/solid";
+import { MicrophoneIcon } from "@heroicons/react/24/solid";
+import { SelectField } from "../../components/ui/Field";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { formatSessionStartTime, getAjlInfo } from "../../lib/ajl";
+import { getAjlInfo } from "../../lib/ajl";
+import { HOST_TIME_ZONE, formatInTimeZone, sameWallClock, timeZoneLabel, useViewerTimeZone } from "../../lib/timezone";
 import { useI18n } from "../../lib/i18n";
 import { participationLabel } from "../../lib/labels";
 import { getStreamSession } from "../../lib/streamSessions";
 import { useUserSession } from "../../lib/userSession";
 import { useRouteTransition } from "../../components/ui/RouteTransition";
+import { TopNav } from "../../components/home/TopNav";
+import { JoinHero, getStartState } from "./JoinHero";
 import { SPEAKER_FEE_ENABLED } from "@/lib/speakerFee";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -33,6 +28,10 @@ type SessionMeta = {
   title: string;
   description: string;
   duration: string;
+  durationMin: number;
+  status?: string;
+  hostUserId?: string;
+  hostAvatarUrl?: string;
   startsAt: string;
   japaneseLevel?: number;
   speakerSlotsLeft: number;
@@ -107,11 +106,11 @@ function PaymentForm({
   return (
     <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 space-y-4">
       <PaymentElement />
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-[var(--brand-accent-ink)]">{error}</p>}
       <button
         type="submit"
         disabled={!stripe || loading}
-        className="w-full rounded-xl bg-[var(--brand-primary)] py-3 text-sm font-bold text-white disabled:opacity-60"
+        className="ui-btn ui-btn-md ui-btn-primary w-full"
       >
         {loading ? "処理中..." : `₱${amountPhp} を支払う`}
       </button>
@@ -119,67 +118,11 @@ function PaymentForm({
         type="button"
         onClick={onCancel}
         disabled={loading}
-        className="w-full rounded-xl bg-[var(--brand-surface)] py-2.5 text-sm text-[var(--brand-text-muted)] disabled:opacity-60"
+        className="ui-btn ui-btn-md ui-btn-ghost w-full"
       >
         キャンセル
       </button>
     </form>
-  );
-}
-
-function InfoPill({
-  icon: Icon,
-  label,
-  value,
-  help,
-  tone = "surface",
-}: {
-  icon: ComponentType<SVGProps<SVGSVGElement>>;
-  label: string;
-  value: string;
-  help?: string;
-  tone?: "surface" | "accent";
-}) {
-  return (
-    <div
-      className={`flex min-w-0 items-center gap-3 rounded-2xl border px-4 py-3 ${
-        tone === "accent"
-          ? "border-[var(--brand-primary)]/35 bg-[var(--brand-primary)]/14"
-          : "border-white/8 bg-[var(--brand-bg-800)]/82"
-      }`}
-    >
-      <span
-        className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
-          tone === "accent" ? "bg-[var(--brand-primary)] text-white" : "bg-[var(--brand-surface)] text-[var(--brand-secondary)]"
-        }`}
-      >
-        <Icon className="h-5 w-5" aria-hidden />
-      </span>
-      <div className="min-w-0">
-        <p className="flex items-center gap-1.5 text-xs font-semibold text-[var(--brand-text-muted)]">
-          <span>{label}</span>
-          {help ? <HelpTooltip label={label} body={help} /> : null}
-        </p>
-        <p className="truncate text-sm font-extrabold text-[var(--brand-text)]">{value}</p>
-      </div>
-    </div>
-  );
-}
-
-function HelpTooltip({ label, body }: { label: string; body: string }) {
-  return (
-    <span className="group relative inline-flex">
-      <button
-        type="button"
-        aria-label={`${label} help`}
-        className="grid h-4 w-4 place-items-center rounded-full bg-white/10 text-[var(--brand-text-muted)] transition-colors hover:bg-[var(--brand-primary)] hover:text-white focus:bg-[var(--brand-primary)] focus:text-white focus:outline-none"
-      >
-        <QuestionMarkCircleIcon className="h-3.5 w-3.5" aria-hidden />
-      </button>
-      <span className="pointer-events-none absolute left-1/2 top-6 z-30 hidden w-64 -translate-x-1/2 rounded-xl border border-white/10 bg-[var(--brand-surface)] px-3 py-2 text-left text-xs font-medium leading-5 text-[var(--brand-text)] shadow-xl shadow-black/35 group-hover:block group-focus-within:block">
-        {body}
-      </span>
-    </span>
   );
 }
 
@@ -188,6 +131,7 @@ export function JoinPageClient() {
   const router = useRouter();
   const { navigate } = useRouteTransition();
   const { tx } = useI18n();
+  const viewerTimeZone = useViewerTimeZone();
   const params = useParams<{ sessionId: string }>();
   const sessionId = params?.sessionId ?? "";
   const [dynamicSession, setDynamicSession] = useState<Awaited<ReturnType<typeof getStreamSession>>>(null);
@@ -196,7 +140,14 @@ export function JoinPageClient() {
   const [paymentWindowOpen, setPaymentWindowOpen] = useState(false);
   const [usableTicketCount, setUsableTicketCount] = useState(0);
   const [redeemingTicket, setRedeemingTicket] = useState(false);
-  const [selectedPath, setSelectedPath] = useState<"watch" | "speaker" | null>(null);
+  // 支払い済みの人が「マイクを確認する」を押したら "speaker"。マイクの許可はこのときに初めて求める
+  const [selectedPath, setSelectedPath] = useState<"speaker" | null>(null);
+  // 「あと何時間」を進めるための今の時刻。1分ごとに更新する
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   // Payment flow
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -351,7 +302,6 @@ export function JoinPageClient() {
   const [micLevel, setMicLevel] = useState(0);
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedAudioDeviceId, setSelectedAudioDeviceId] = useState("");
-  const [showMicMenu, setShowMicMenu] = useState(false);
 
   useEffect(() => {
     if (!(authStatus === "logged-in" && reservationStatus === "paid" && selectedPath === "speaker")) {
@@ -438,10 +388,6 @@ export function JoinPageClient() {
     navigate(`/room/${roomId}?${query}`);
   };
 
-  const watchNow = () => {
-    navigate(`/room/${encodeURIComponent(session.id)}?role=listener`);
-  };
-
   const session = useMemo<SessionMeta>(() => {
     if (dynamicSession) {
       return {
@@ -449,10 +395,12 @@ export function JoinPageClient() {
         vtuber: dynamicSession.hostName,
         title: dynamicSession.title,
         description: dynamicSession.description,
-        duration:
-          dynamicSession.status === "live"
-            ? tx("配信中", "Live now")
-            : tx(`約${dynamicSession.plannedDurationMin ?? 60}分`, `About ${dynamicSession.plannedDurationMin ?? 60} min`),
+        // 配信中かどうかはチケットの半券で出すので、ここは長さだけ
+        duration: tx(`約${dynamicSession.plannedDurationMin ?? 60}分`, `About ${dynamicSession.plannedDurationMin ?? 60} min`),
+        durationMin: dynamicSession.plannedDurationMin ?? 60,
+        status: dynamicSession.status,
+        hostUserId: dynamicSession.hostUserId,
+        hostAvatarUrl: dynamicSession.hostAvatarUrl,
         startsAt: dynamicSession.startsAt,
         japaneseLevel: dynamicSession.japaneseLevel,
         speakerSlotsLeft: dynamicSession.speakerSlotsLeft,
@@ -467,6 +415,7 @@ export function JoinPageClient() {
       title: tx("配信枠を読み込んでいます", "Loading session"),
       description: "",
       duration: "",
+      durationMin: 60,
       startsAt: "",
       speakerSlotsLeft: 0,
       speakerSlotsTotal: 0,
@@ -476,13 +425,43 @@ export function JoinPageClient() {
   }, [dynamicSession, sessionId, tx]);
 
   const ajl = getAjlInfo(session.japaneseLevel);
+  // 開始時刻は「あなたの時刻＋地域名」。VTuber（日本時間）とずれる人には日本時間も添える
+  const startsAtLabel =
+    session.startsAt && viewerTimeZone
+      ? `${formatInTimeZone(session.startsAt, viewerTimeZone)} ${timeZoneLabel(viewerTimeZone)}`
+      : null;
+  const startsAtHostLabel =
+    session.startsAt && viewerTimeZone && !sameWallClock(viewerTimeZone, HOST_TIME_ZONE)
+      ? tx(
+          `日本時間 ${formatInTimeZone(session.startsAt, HOST_TIME_ZONE, { hour: "2-digit", minute: "2-digit" })}`,
+          `${formatInTimeZone(session.startsAt, HOST_TIME_ZONE, { hour: "2-digit", minute: "2-digit" })} in Japan (JST)`,
+        )
+      : null;
+
+  const start = getStartState(session.startsAt, session.durationMin, session.status, now);
+  const isEnded = start.kind === "ended";
+  const isLive = start.kind === "live";
+  // 管理者は予約なしで入れるので、印は付けない
+  const hasReservation = authStatus === "logged-in" && !isAdmin && (reservationStatus === "reserved" || reservationStatus === "paid");
+  // スマホの下に固定するボタンの文言。今の手続きの段階に合わせる（終了したら出さない）
+  const mobileCtaLabel = isEnded || sessionLoading
+    ? null
+    : authStatus === "guest"
+      ? tx("ログインして参加する", "Log in to join")
+      : reservationStatus === "paid"
+        ? isLive
+          ? tx("今すぐ入る", "Join now")
+          : tx("参加の準備へ", "Get ready to join")
+        : reservationStatus === "reserved"
+          ? tx("予約の状況を見る", "View my reservation")
+          : tx("スピーカー枠を予約する", "Reserve a speaker spot");
 
   if (!sessionLoading && !dynamicSession) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[var(--brand-bg-900)] text-[var(--brand-text)]">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[var(--bg)] text-[var(--brand-text)]">
         <p className="text-lg font-semibold">{tx("配信枠が見つかりません", "Session not found")}</p>
         <p className="text-sm text-[var(--brand-text-muted)]">{tx("この枠はすでに終了しているか、存在しません。", "This session has ended or does not exist.")}</p>
-        <button onClick={() => router.push("/")} className="rounded-xl bg-[var(--brand-primary)] px-6 py-2.5 text-sm font-bold text-white">
+        <button onClick={() => router.push("/")} className="ui-btn ui-btn-md ui-btn-primary">
           {tx("ホームに戻る", "Back to Home")}
         </button>
       </div>
@@ -490,204 +469,94 @@ export function JoinPageClient() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--brand-bg-900)] text-[var(--brand-text)]">
-      <header className="bg-[var(--brand-bg-900)]">
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-8 py-5 lg:px-12">
-          <button onClick={() => router.push("/")} className="flex items-center">
-            <Image src="/logo/aiment_logotype.svg" alt="aiment" width={150} height={50} className="h-10 w-auto object-contain brightness-0 invert" />
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
+      <TopNav />
+
+      {/* スマホでは、右の手続き欄が説明の下に回るので、画面の下に参加ボタンを固定して、手続き欄へ飛べるようにする。
+          この帯が出る幅（lg 未満）では、いつも下固定のナビ（TopNav, 52px）があるので、その上に置く */}
+      {mobileCtaLabel ? (
+        <div className="fixed inset-x-0 bottom-[calc(52px+env(safe-area-inset-bottom,0px))] z-30 border-t border-[var(--line)] bg-[var(--brand-surface)]/95 px-4 py-3 backdrop-blur lg:hidden">
+          <button
+            type="button"
+            onClick={() => document.getElementById("join-panel")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            className="ui-btn ui-btn-md ui-btn-primary w-full"
+          >
+            {mobileCtaLabel}
           </button>
-          <p className="text-sm text-[var(--brand-text-muted)]">{tx("視聴・参加の案内", "Viewing & participation")}</p>
         </div>
-      </header>
+      ) : null}
 
-      <main className="mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-5 px-4 pb-8 pt-3 lg:grid-cols-[minmax(0,1fr)_420px] lg:px-8">
-        <section className="min-w-0 space-y-5">
-          <div className="overflow-hidden rounded-[28px] border border-white/8 bg-[var(--brand-bg-800)] shadow-2xl shadow-black/30">
-            <div className="relative min-h-[520px] lg:min-h-[620px]" style={{ aspectRatio: "16/9" }}>
-              {session.thumbnail ? (
-                <img src={session.thumbnail} alt={session.vtuber} className="h-full w-full object-cover" />
-              ) : (
-                <div className="h-full w-full bg-[radial-gradient(circle_at_30%_20%,rgba(124,106,230,0.35),transparent_32%),var(--brand-surface)]" />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-bg-900)] via-[var(--brand-bg-900)]/42 to-[var(--brand-bg-900)]/10" />
-              <div className="absolute left-4 top-4 flex flex-wrap gap-2">
-                <span className="rounded-full bg-black/62 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-md">{tx("共有用レッスンページ", "Shareable lesson page")}</span>
-                <span className="rounded-full bg-[var(--brand-secondary)] px-3 py-1.5 text-xs font-black text-[var(--brand-text)]">AJL {ajl.level}</span>
-              </div>
-              <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-7 lg:p-8">
-                <div className="max-w-4xl">
-                  <p className="mb-3 text-sm font-bold text-[var(--brand-secondary)]">{tx(`${session.vtuber} のライブレッスン`, `${session.vtuber}'s live lesson`)}</p>
-                  <h1 className="text-3xl font-black leading-tight text-white sm:text-4xl lg:text-5xl">{session.title}</h1>
-                  {session.description ? (
-                    <p className="mt-4 max-w-3xl text-base leading-8 text-white/82 sm:text-lg">{session.description}</p>
-                  ) : null}
-                  <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <InfoPill
-                      icon={CalendarDaysIcon}
-                      label={tx("開始", "Starts")}
-                      value={session.startsAt ? formatSessionStartTime(session.startsAt) : tx("未定", "TBD")}
-                      help={tx("レッスンの開始予定時刻です。時間は端末の表示設定に合わせて表示されます。", "Scheduled lesson start time. It follows your device display settings.")}
-                    />
-                    <InfoPill
-                      icon={ClockIcon}
-                      label={tx("時間", "Duration")}
-                      value={session.duration || "-"}
-                      help={tx("配信枠の予定時間です。進行により前後する場合があります。", "Planned session length. The actual ending time may vary.")}
-                    />
-                    <InfoPill
-                      icon={LanguageIcon}
-                      label={tx("目安レベル", "Level")}
-                      value={`AJL ${ajl.level} / JF ${ajl.jfStandard}`}
-                      help={tx(
-                        `AJLはaiment Japanese Levelの略です。この枠はAJL ${ajl.level}（${ajl.label}）で、${ajl.description} が目安です。`,
-                        `AJL means aiment Japanese Level. This session is AJL ${ajl.level} (${ajl.label}); recommended ability: ${ajl.description}.`,
-                      )}
-                      tone="accent"
-                    />
-                    <InfoPill
-                      icon={UserGroupIcon}
-                      label={tx("スピーカー枠", "Speaker spots")}
-                      value={`${session.speakerSlotsLeft}/${session.speakerSlotsTotal}`}
-                      help={tx("声で会話に参加できるスピーカー枠の残数です。視聴だけの場合はこの枠を使いません。", "Remaining speaker slots for people joining by voice. Watching does not use these slots.")}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <section className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/8 bg-[var(--brand-bg-800)] px-4 py-3 shadow-lg shadow-black/12">
-            <p className="text-sm font-bold text-[var(--brand-text)]">{tx("aimentライブレッスン", "aiment live lesson")}</p>
-            <HelpTooltip
-              label={tx("aimentとは", "What is aiment?")}
-              body={tx(
-                "aimentは、配信を見ながら日本語で会話に参加できるライブレッスンです。視聴だけでも、スピーカーとして声で参加しても大丈夫です。",
-                "aiment is a live lesson where you can watch a stream and join the conversation in Japanese. You can watch quietly or join by voice as a speaker.",
-              )}
-            />
-            <span className="text-sm text-[var(--brand-text-muted)]">
-              {tx("見るだけでも、話して参加してもOK。", "Watch quietly, or join the conversation.")}
-            </span>
-          </section>
-
-          <section className="rounded-2xl border border-white/8 bg-[var(--brand-bg-800)] p-5 shadow-lg shadow-black/12">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-text-muted)]">{tx("Join Guide", "Join Guide")}</p>
-                <h2 className="mt-1 flex items-center gap-2 text-xl font-black text-[var(--brand-text)]">
-                  <span>{tx("参加方法を選ぶ", "Choose how to join")}</span>
-                  <HelpTooltip
-                    label={tx("参加方法", "Join options")}
-                    body={tx(
-                      "視聴はログイン不要です。スピーカー参加はログイン、枠予約、支払い、マイク確認が必要です。",
-                      "Watching does not require login. Speaker participation requires login, a slot reservation, payment, and a microphone check.",
-                    )}
-                  />
-                </h2>
-              </div>
-              <span className="rounded-full bg-[var(--brand-surface)] px-3 py-1 text-xs font-bold text-[var(--brand-text-muted)]">
-                {session.participationType}
-              </span>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <button
-                type="button"
-                onClick={watchNow}
-                disabled
-                className="group cursor-not-allowed rounded-2xl border border-white/8 bg-[var(--brand-bg-900)] p-5 text-left opacity-60"
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <p className="text-lg font-black text-[var(--brand-text)]">{tx("視聴する", "Watch")}</p>
-                  <span className="rounded-full bg-[var(--brand-surface)] px-2.5 py-1 text-[11px] font-bold text-[var(--brand-text-muted)]">
-                    {tx("準備中", "Not available")}
-                  </span>
-                </div>
-                <p className="mt-3 text-sm leading-7 text-[var(--brand-text-muted)]">
-                  {tx(
-                    "視聴機能は現在準備中です。まもなく利用できるようになります。",
-                    "Watching is not available yet. It will be enabled soon.",
-                  )}
-                </p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedPath("speaker")}
-                className={`group rounded-2xl border p-5 text-left transition-colors ${
-                  selectedPath === "speaker"
-                    ? "border-[var(--brand-primary)]/55 bg-[var(--brand-primary)]/15"
-                    : "border-white/8 bg-[var(--brand-bg-900)] hover:border-[var(--brand-primary)]/45 hover:bg-[var(--brand-primary)]/10"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <p className="text-lg font-black text-[var(--brand-text)]">{tx("スピーカーとして参加", "Join as speaker")}</p>
-                  <ArrowRightIcon className="h-5 w-5 text-[var(--brand-text-muted)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-primary)]" aria-hidden />
-                </div>
-                <p className="mt-3 text-sm leading-7 text-[var(--brand-text-muted)]">
-                  {tx(
-                    "ログインして枠を予約。会話に参加する人向けです。",
-                    "Log in and reserve a slot. Best if you want to speak.",
-                  )}
-                </p>
-              </button>
-            </div>
-          </section>
+      <main className="mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-5 px-4 pb-40 pt-5 lg:grid-cols-[minmax(0,1fr)_420px] lg:px-8 lg:pb-12">
+        <section className="min-w-0">
+          <JoinHero
+            title={session.title}
+            description={session.description}
+            thumbnail={session.thumbnail}
+            host={{
+              name: session.vtuber,
+              avatarUrl: session.hostAvatarUrl,
+              onOpen: session.hostUserId ? () => navigate(`/channels/${encodeURIComponent(session.hostUserId!)}`) : undefined,
+            }}
+            ajl={ajl}
+            start={start}
+            startsAtLabel={startsAtLabel}
+            startsAtHostLabel={startsAtHostLabel}
+            durationLabel={session.duration}
+            slotsLeft={session.speakerSlotsLeft}
+            slotsTotal={session.speakerSlotsTotal}
+            participationType={session.participationType}
+            reserved={hasReservation}
+            tx={tx}
+          />
         </section>
 
-        <aside className="self-start rounded-2xl border border-white/8 bg-[var(--brand-bg-800)] p-5 shadow-xl shadow-black/20 lg:sticky lg:top-5">
-          <div className="rounded-2xl bg-[var(--brand-bg-900)] p-4">
-            <p className="text-base font-black text-[var(--brand-text)]">{tx("参加の準備", "Get ready to join")}</p>
-            <p className="mt-2 text-sm leading-6 text-[var(--brand-text-muted)]">
-              {tx("視聴機能は現在準備中です。話す場合はスピーカー枠の申し込みへ進んでください。", "Watching is not available yet. To speak, continue to the speaker application flow.")}
-            </p>
-            <div className="mt-4 grid gap-2">
-              <button
-                type="button"
-                onClick={watchNow}
-                disabled
-                className="w-full cursor-not-allowed rounded-xl bg-[var(--brand-surface)] px-4 py-3 text-sm font-extrabold text-[var(--brand-text-muted)] opacity-70"
-              >
-                {tx("視聴は準備中", "Watching not available yet")}
-              </button>
-              <button
-                onClick={() => setSelectedPath("speaker")}
-                className={`w-full rounded-xl px-4 py-3 text-sm font-bold transition-colors ${
-                  selectedPath === "speaker"
-                    ? "bg-[var(--brand-primary)]/15 text-[var(--brand-primary)]"
-                    : "bg-[var(--brand-surface)] text-[var(--brand-text)]"
-                }`}
-              >
-                {tx("スピーカー参加を進める", "Continue as speaker")}
-              </button>
+        {/* 参加の手続きは、ここ1か所だけ。PC では画面に付いてくる */}
+        <aside id="join-panel" className="ui-panel grid scroll-mt-24 gap-4 self-start p-5 lg:sticky lg:top-24">
+          {isEnded ? (
+            <div className="grid gap-3">
+              <p className="text-lg font-black text-[var(--brand-text)]">{tx("この配信は終了しました", "This session has ended")}</p>
+              <p className="text-sm leading-6 text-[var(--brand-text-muted)]">
+                {tx("次の配信は、チャンネルのスケジュールから探せます。", "Find the next session on the channel schedule.")}
+              </p>
+              {session.hostUserId ? (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/channels/${encodeURIComponent(session.hostUserId!)}/schedule`)}
+                  className="ui-btn ui-btn-md ui-btn-primary w-full"
+                >
+                  {tx("チャンネルのスケジュールを見る", "See the channel schedule")}
+                </button>
+              ) : null}
             </div>
-          </div>
-
-          {selectedPath !== "speaker" && (
-            <div className="mt-4 rounded-2xl bg-[var(--brand-bg-900)] p-4">
-              <p className="text-sm font-bold text-[var(--brand-text)]">{tx("初めての方へ", "For first-time visitors")}</p>
-              <p className="mt-2 text-sm leading-7 text-[var(--brand-text-muted)]">
-                {tx(
-                  "共有リンクから来た場合は、まず日時とAJLを確認してください。迷ったら視聴で入って、雰囲気を見てから次回スピーカー参加でも大丈夫です。",
-                  "If you arrived from a shared link, first check the time and AJL level. If unsure, start as a viewer and join as a speaker another time.",
-                )}
+          ) : (
+            <div>
+              <h2 className="text-lg font-black text-[var(--brand-text)]">
+                {isLive ? tx("いま配信中です", "Live now") : hasReservation ? tx("予約済みです", "You're booked") : tx("スピーカーとして参加", "Join as a speaker")}
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-[var(--brand-text-muted)]">
+                {isLive && hasReservation
+                  ? tx("マイクを確認したら、すぐに入れます。", "Check your microphone and jump right in.")
+                  : hasReservation
+                    ? tx("チケットに予約済みの印が付いています。始まる前にマイクを確かめておきましょう。", "Your ticket is stamped. Check your microphone before it starts.")
+                    : tx("声で会話に参加します。見るだけの視聴は準備中です。", "Join the conversation by voice. Watch-only viewing is coming soon.")}
               </p>
             </div>
           )}
 
-          {selectedPath === "speaker" && (authStatus === "loading" || reservationStatus === "loading") && (
-            <div className="mt-4 flex h-40 items-center justify-center">
+          {!isEnded && (authStatus === "loading" || reservationStatus === "loading") && (
+            <div className="flex h-40 items-center justify-center">
               <p className="text-sm text-[var(--brand-text-muted)]">{tx("確認中...", "Checking...")}</p>
             </div>
           )}
 
-          {selectedPath === "speaker" && authStatus === "guest" && reservationStatus !== "loading" && (
-            <div className="mt-4 flex flex-col items-center gap-4 rounded-xl bg-[var(--brand-bg-900)] p-5 text-center">
+          {!isEnded && authStatus === "guest" && reservationStatus !== "loading" && (
+            <div className="flex flex-col items-center gap-4 rounded-xl bg-[var(--brand-bg-900)] p-5 text-center">
               <p className="text-sm text-[var(--brand-text)]">
                 {tx("スピーカーとして参加するにはアカウントが必要です。", "You need an account to join as a speaker.")}
               </p>
               <button
                 onClick={() => router.push(`/auth?redirect=${encodeURIComponent(`/join/${sessionId}`)}`)}
-                className="w-full rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-bold text-white"
+                className="ui-btn ui-btn-md ui-btn-primary w-full"
               >
                 {tx("ログイン / アカウント作成", "Log in / Sign up")}
               </button>
@@ -695,10 +564,10 @@ export function JoinPageClient() {
           )}
 
           {/* 管理者: 予約・支払い・上限を無視して参加 */}
-          {selectedPath === "speaker" && authStatus === "logged-in" && isAdmin && (
-            <div className="mt-4 flex flex-col gap-4 rounded-xl border border-[var(--brand-primary)]/40 bg-[var(--brand-bg-900)] p-5">
+          {!isEnded && authStatus === "logged-in" && isAdmin && (
+            <div className="flex flex-col gap-4 rounded-xl border border-[var(--brand-primary)]/40 bg-[var(--brand-bg-900)] p-5">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--brand-primary)]">{tx("管理者", "Admin")}</p>
+                <p className="text-xs font-bold text-[var(--brand-primary-ink)]">{tx("管理者", "Admin")}</p>
                 <h2 className="mt-2 text-base font-semibold text-[var(--brand-text)]">
                   {tx("管理者として参加", "Join as admin")}
                 </h2>
@@ -711,7 +580,7 @@ export function JoinPageClient() {
               </div>
               <button
                 onClick={() => navigate(`/room/${encodeURIComponent(session.id)}?role=speaker&mic=1`)}
-                className="w-full rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-bold text-white"
+                className="ui-btn ui-btn-md ui-btn-primary w-full"
               >
                 {tx("スピーカーとして入室", "Enter as speaker")}
               </button>
@@ -719,10 +588,10 @@ export function JoinPageClient() {
           )}
 
           {/* 未予約 → 予約ボタン */}
-          {selectedPath === "speaker" && authStatus === "logged-in" && !isAdmin && (reservationStatus === "none" || reservationStatus === "reserving") && (
-            <div className="mt-4 flex flex-col gap-4 rounded-xl bg-[var(--brand-bg-900)] p-5">
+          {!isEnded && authStatus === "logged-in" && !isAdmin && (reservationStatus === "none" || reservationStatus === "reserving") && (
+            <div className="flex flex-col gap-4 rounded-xl bg-[var(--brand-bg-900)] p-5">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--brand-text-muted)]">{tx("プロフィール確認", "Profile check")}</p>
+                <p className="text-xs font-bold text-[var(--brand-text-muted)]">{tx("プロフィール確認", "Profile check")}</p>
                 <p className="mt-2 text-sm font-semibold text-[var(--brand-text)]">{user?.name || tx("表示名未設定", "No display name set")}</p>
                 <p className="mt-1 text-xs text-[var(--brand-text-muted)]">{tx("この名前で参加者一覧に表示されます。", "This name will be shown in the participant list.")}</p>
               </div>
@@ -739,11 +608,11 @@ export function JoinPageClient() {
                     : tx("参加費は現在無料です。予約するだけで参加できます。", "Participation is currently free. Just reserve a slot to join.")}
                 </p>
               </div>
-              {paymentError && <p className="text-xs text-red-400">{paymentError}</p>}
+              {paymentError && <p className="text-xs text-[var(--brand-accent-ink)]">{paymentError}</p>}
               <button
                 onClick={() => void handleReserve()}
                 disabled={reservationStatus === "reserving" || (dynamicSession != null && dynamicSession.speakerSlotsLeft === 0)}
-                className="w-full rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="ui-btn ui-btn-md ui-btn-primary w-full"
               >
                 {reservationStatus === "reserving"
                   ? tx("予約中...", "Reserving...")
@@ -755,10 +624,10 @@ export function JoinPageClient() {
           )}
 
           {/* 予約完了後 — 24h以内: 支払いオプション / 24h超: 案内 */}
-          {selectedPath === "speaker" && authStatus === "logged-in" && !isAdmin && reservationStatus === "reserved" && !clientSecret && (
-            <div className="mt-4 flex flex-col gap-4 rounded-xl bg-[var(--brand-bg-900)] p-5">
+          {!isEnded && authStatus === "logged-in" && !isAdmin && reservationStatus === "reserved" && !clientSecret && (
+            <div className="flex flex-col gap-4 rounded-xl bg-[var(--brand-bg-900)] p-5">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--brand-primary)]">{tx("予約完了", "Reserved")}</p>
+                <p className="text-xs font-bold text-[var(--brand-primary-ink)]">{tx("予約完了", "Reserved")}</p>
                 <h2 className="mt-2 text-base font-semibold text-[var(--brand-text)]">
                   {paymentWindowOpen
                     ? tx("支払いを完了して参加を確定する", "Pay to confirm your participation")
@@ -776,7 +645,7 @@ export function JoinPageClient() {
                       )}
                 </p>
               </div>
-              {paymentError && <p className="text-xs text-red-400">{paymentError}</p>}
+              {paymentError && <p className="text-xs text-[var(--brand-accent-ink)]">{paymentError}</p>}
               {usableTicketCount > 0 && (
                 <div className="rounded-lg border border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 p-3">
                   <p className="text-xs font-semibold text-[var(--brand-primary)]">
@@ -788,7 +657,7 @@ export function JoinPageClient() {
                   <button
                     onClick={() => void handleRedeemTicket()}
                     disabled={redeemingTicket}
-                    className="mt-2 w-full rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-bold text-white disabled:opacity-60"
+                    className="ui-btn ui-btn-md ui-btn-primary mt-2 w-full"
                   >
                     {redeemingTicket
                       ? tx("使用中...", "Using...")
@@ -800,7 +669,7 @@ export function JoinPageClient() {
                 <button
                   onClick={() => void handleStartPayment()}
                   disabled={paymentLoading}
-                  className="w-full rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-bold text-white disabled:opacity-60"
+                  className="ui-btn ui-btn-md ui-btn-primary w-full"
                 >
                   {paymentLoading ? tx("準備中...", "Preparing...") : tx("今すぐ支払う →", "Pay now →")}
                 </button>
@@ -808,8 +677,8 @@ export function JoinPageClient() {
                 <div className="rounded-lg bg-[var(--brand-surface)] px-3 py-2.5 text-xs text-[var(--brand-text-muted)]">
                   {dynamicSession?.startsAt
                     ? tx(
-                        `支払い開始: ${new Date(new Date(dynamicSession.startsAt).getTime() - 24 * 60 * 60 * 1000).toLocaleString("ja-JP")}`,
-                        `Payment opens: ${new Date(new Date(dynamicSession.startsAt).getTime() - 24 * 60 * 60 * 1000).toLocaleString("en-US")}`,
+                        `支払い開始: ${new Date(new Date(dynamicSession.startsAt).getTime() - 24 * 60 * 60 * 1000).toLocaleString("ja-JP")}${viewerTimeZone ? ` ${timeZoneLabel(viewerTimeZone)}` : ""}`,
+                        `Payment opens: ${new Date(new Date(dynamicSession.startsAt).getTime() - 24 * 60 * 60 * 1000).toLocaleString("en-US")}${viewerTimeZone ? ` ${timeZoneLabel(viewerTimeZone)}` : ""}`,
                       )
                     : tx("配信24時間前から支払い可能です", "Payment opens 24h before the stream")}
                 </div>
@@ -818,12 +687,12 @@ export function JoinPageClient() {
           )}
 
           {/* 支払い Stripe フォーム（インライン） */}
-          {selectedPath === "speaker" && authStatus === "logged-in" && !isAdmin && reservationStatus === "reserved" && clientSecret && (
-            <div className="mt-4 rounded-xl bg-[var(--brand-bg-900)] p-5">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--brand-primary)]">{tx("参加費のお支払い", "Speaker Fee")}</p>
+          {!isEnded && authStatus === "logged-in" && !isAdmin && reservationStatus === "reserved" && clientSecret && (
+            <div className="rounded-xl bg-[var(--brand-bg-900)] p-5">
+              <p className="text-xs font-bold text-[var(--brand-primary-ink)]">{tx("参加費のお支払い", "Speaker Fee")}</p>
               <Elements
                 stripe={stripePromise}
-                options={{ clientSecret, appearance: { theme: "night" } }}
+                options={{ clientSecret, appearance: { theme: "stripe", variables: { colorPrimary: "#6248F7", borderRadius: "12px" } } }}
               >
                 <PaymentForm
                   sessionId={sessionId}
@@ -835,88 +704,108 @@ export function JoinPageClient() {
             </div>
           )}
 
-          {/* 支払い済み → マイクチェック → 入室 */}
-          {selectedPath === "speaker" && authStatus === "logged-in" && !isAdmin && reservationStatus === "paid" && (
-            <div className="mt-4 rounded-xl bg-[var(--brand-bg-900)] p-5">
-              <div className="mb-4">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--brand-text-muted)]">{tx("参加前の確認", "Before you join")}</p>
-                <p className="mt-2 text-sm font-semibold text-[var(--brand-text)]">{user?.name || tx("表示名未設定", "No display name set")}</p>
-                <p className="mt-1 text-xs text-[var(--brand-text-muted)]">{tx("必要ならアカウント設定で表示名やアイコンを整えてから参加してください。", "If needed, update your display name and avatar in account settings before joining.")}</p>
-              </div>
+          {/* 支払い済み → 「マイクを確認する」を押す → マイクチェック → 入室。マイクの許可は押したときに初めて求める */}
+          {!isEnded && authStatus === "logged-in" && !isAdmin && reservationStatus === "paid" && selectedPath !== "speaker" && (
+            // 説明は上の見出しとチケットのスタンプで足りるので、ここはボタンだけ。配信中は「入る」ことを前に出す
+            <button onClick={() => setSelectedPath("speaker")} className="ui-btn ui-btn-md ui-btn-primary w-full">
+              {isLive ? tx("マイクを確認して入る", "Check mic and join now") : tx("マイクを確認する", "Check my microphone")}
+            </button>
+          )}
 
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-sm font-semibold tracking-wide text-[var(--brand-text-muted)]">{tx("デバイス確認", "Device Check")}</h2>
-                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${ready ? "bg-[var(--brand-primary)]/20 text-[var(--brand-primary)]" : "bg-[var(--brand-accent)]/20 text-[var(--brand-accent)]"}`}>
-                  {ready ? tx("準備OK", "Ready") : tx("準備中", "Preparing")}
+          {!isEnded && authStatus === "logged-in" && !isAdmin && reservationStatus === "paid" && selectedPath === "speaker" && (
+            // スマホでは外のパネル（p-5）の内側にさらに箱が入るので、余白を少し詰めて横幅を残す
+            <div className="rounded-xl bg-[var(--brand-bg-900)] p-4 sm:p-5">
+              {/* マイクの確認。オン・オフの大きなボタン、声に合わせて光るメーター、マイクの選択だけにする */}
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <h2 className="text-base font-black text-[var(--brand-text)]">{tx("マイクの確認", "Microphone check")}</h2>
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-black ${
+                    ready ? "bg-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)]" : "bg-[var(--brand-surface)] text-[var(--brand-text-muted)]"
+                  }`}
+                >
+                  {ready ? tx("準備OK", "Ready") : tx("準備中…", "Preparing…")}
                 </span>
               </div>
 
-              <div className="relative overflow-hidden rounded-xl bg-[var(--brand-bg-900)]" style={{ aspectRatio: "16/10" }}>
-                <div className="absolute inset-0 flex items-center justify-center text-sm font-medium text-[var(--brand-text-muted)]">
-                  {tx("マイクをチェックしてください", "Check your microphone")}
-                </div>
-              </div>
-
-              <div className="mt-4 rounded-xl bg-[var(--brand-surface)] p-4">
-                <p className="mb-2 text-xs font-medium text-[var(--brand-text-muted)]">{tx("マイク入力レベル", "Mic input level")}</p>
-                <div className="h-2 overflow-hidden rounded-full bg-[var(--brand-bg-900)]">
-                  <div className="h-full rounded-full bg-[var(--brand-primary)] transition-all" style={{ width: `${micOn ? micLevel : 0}%` }} />
-                </div>
-              </div>
-
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <div className="relative inline-flex items-center rounded-full bg-[var(--brand-bg-900)]">
-                  <button
-                    onClick={() => applyMic(!micOn)}
-                    className={`flex h-12 w-12 items-center justify-center rounded-full transition-colors ${micOn ? "bg-[var(--brand-primary)] text-white" : "bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)]"}`}
-                  >
-                    {micOn ? (
-                      <MicrophoneIcon className="h-5 w-5" aria-hidden />
-                    ) : (
-                      <span className="relative flex h-5 w-5 items-center justify-center">
-                        <MicrophoneIcon className="h-5 w-5" aria-hidden />
-                        <span className="pointer-events-none absolute h-6 w-[5px] -rotate-45 rounded-full bg-black" aria-hidden />
-                        <span className="pointer-events-none absolute h-6 w-[2px] -rotate-45 rounded-full bg-current" aria-hidden />
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowMicMenu((v) => !v)}
-                    className="flex h-12 w-8 items-center justify-center border-l border-black/20 bg-transparent text-[var(--brand-text-muted)]"
-                  >
-                    <ChevronDownIcon className="h-4 w-4" aria-hidden />
-                  </button>
-                  {showMicMenu && (
-                    <div className="absolute left-0 top-14 z-20 min-w-[220px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/35">
-                      {audioDevices.map((device, index) => (
-                        <button
-                          key={device.deviceId}
-                          type="button"
-                          onClick={() => { setSelectedAudioDeviceId(device.deviceId); setShowMicMenu(false); }}
-                          className={`block w-full rounded-lg px-3 py-2 text-left text-sm ${selectedAudioDeviceId === device.deviceId ? "bg-[var(--brand-primary)] font-bold text-white" : "text-[var(--brand-text)] hover:bg-[var(--brand-bg-900)]"}`}
-                        >
-                          {device.label || `Microphone ${index + 1}`}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {errorMessage && <p className="mt-4 rounded-xl bg-[var(--brand-accent)]/15 px-4 py-3 text-sm text-[var(--brand-accent)]">{errorMessage}</p>}
-
-              <div className="mt-6 flex gap-2">
+              <div className="flex items-center gap-3 rounded-xl bg-[var(--brand-surface)] p-3 sm:gap-4 sm:p-4">
                 <button
-                  onClick={() => setSelectedPath(null)}
-                  className="flex-1 rounded-xl px-4 py-3 text-sm font-medium text-[var(--brand-text-muted)] transition-colors hover:text-[var(--brand-primary)]"
+                  type="button"
+                  onClick={() => applyMic(!micOn)}
+                  aria-pressed={micOn}
+                  aria-label={micOn ? tx("マイクをオフにする", "Turn microphone off") : tx("マイクをオンにする", "Turn microphone on")}
+                  className={`relative grid h-14 w-14 shrink-0 place-items-center rounded-full transition-colors ${
+                    micOn ? "bg-[var(--brand-primary)] text-white" : "bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)]"
+                  }`}
                 >
+                  <MicrophoneIcon className="h-6 w-6" aria-hidden />
+                  {/* オフのときの斜線。下の面の色で縁取って、アイコンの上にくっきり乗せる */}
+                  {micOn ? null : (
+                    <span
+                      className="pointer-events-none absolute h-8 w-[3px] -rotate-45 rounded-full bg-[var(--brand-accent)]"
+                      style={{ boxShadow: "0 0 0 2px var(--brand-bg-900)" }}
+                      aria-hidden
+                    />
+                  )}
+                </button>
+                <div className="min-w-0 flex-1">
+                  {/* 12本の棒が、声の大きさに合わせて左から光る */}
+                  <div className="flex h-8 items-end gap-1" aria-hidden>
+                    {Array.from({ length: 12 }, (_, index) => {
+                      const lit = micOn && micLevel > (index / 12) * 100;
+                      return (
+                        <span
+                          key={index}
+                          className="flex-1 rounded-full transition-colors duration-100"
+                          style={{ height: `${30 + index * 6}%`, background: lit ? "var(--brand-primary)" : "var(--track)" }}
+                        />
+                      );
+                    })}
+                  </div>
+                  <p className="mt-2 text-xs font-bold text-[var(--brand-text-muted)]">
+                    {!micOn
+                      ? tx("マイクはオフです", "Microphone is off")
+                      : micLevel > 8
+                        ? tx("聞こえています", "We can hear you")
+                        : tx("声を出してみてください", "Say something to test")}
+                  </p>
+                </div>
+              </div>
+
+              {audioDevices.length > 1 ? (
+                <label className="mt-3 grid gap-1.5">
+                  <span className="text-xs font-bold text-[var(--brand-text-muted)]">{tx("使うマイク", "Microphone")}</span>
+                  {/* 選択欄の地の色（--brand-bg-900）がこの箱と同じで、枠が見えなくなるので白い面にする。
+                      .ui-select は @layer の外にあり Tailwind の bg では上書きできないため style で渡す */}
+                  <SelectField
+                    value={selectedAudioDeviceId}
+                    onChange={(event) => setSelectedAudioDeviceId(event.target.value)}
+                    className="truncate"
+                    style={{ background: "var(--brand-surface)" }}
+                  >
+                    {audioDevices.map((device, index) => (
+                      <option key={device.deviceId} value={device.deviceId}>
+                        {device.label || `${tx("マイク", "Microphone")} ${index + 1}`}
+                      </option>
+                    ))}
+                  </SelectField>
+                </label>
+              ) : null}
+
+              <p className="mt-3 text-xs text-[var(--brand-text-muted)]">
+                {tx(`「${user?.name || "表示名未設定"}」として参加します。`, `You'll join as "${user?.name || "No display name"}".`)}
+              </p>
+
+              {errorMessage && <p className="mt-4 rounded-xl bg-[var(--brand-accent-soft)] px-4 py-3 text-sm text-[var(--brand-accent-ink)]">{errorMessage}</p>}
+
+              {/* 「戻る」は文字の幅だけ、「参加」に残りを渡す。半々にすると、スマホで「この設定で参加」が2行に折れる */}
+              <div className="mt-5 flex gap-2">
+                <button onClick={() => setSelectedPath(null)} className="ui-btn ui-btn-md ui-btn-ghost shrink-0 px-4">
                   {tx("戻る", "Back")}
                 </button>
                 <button
                   onClick={joinNow}
                   disabled={!ready || !!errorMessage}
-                  className="flex-1 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-bold text-white transition-colors disabled:cursor-not-allowed disabled:bg-[var(--brand-text-muted)]"
+                  className="ui-btn ui-btn-md ui-btn-primary min-w-0 flex-1 whitespace-nowrap"
                 >
                   {tx("この設定で参加", "Join with this setup")}
                 </button>

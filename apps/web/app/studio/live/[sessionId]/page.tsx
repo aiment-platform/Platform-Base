@@ -8,8 +8,6 @@ import {
   ArrowDownCircleIcon,
   ArrowTopRightOnSquareIcon,
   ChatBubbleLeftRightIcon,
-  ChevronUpIcon,
-  MicrophoneIcon,
   PaperAirplaneIcon,
   PlayIcon,
   StopIcon,
@@ -19,7 +17,6 @@ import {
 } from "@heroicons/react/24/solid";
 import { Room, RoomEvent, Track, type Participant } from "livekit-client";
 import { TopNav } from "../../../components/home/TopNav";
-import { VTuberTranslationAssistPanel } from "../../../components/translation/TranslationAssistPanels";
 import { StudioProgress } from "../../../components/ui/StudioProgress";
 import {
   isChatLanguage,
@@ -41,7 +38,8 @@ import {
 import { useUserSession } from "../../../lib/userSession";
 import { ObsStreamPanel } from "./ObsStreamPanel";
 import { TroubleshootPanel, type Diagnostics } from "./TroubleshootPanel";
-import { useRouteTransition } from "../../../components/ui/RouteTransition";
+import { useRouteTransition, useTransitionHold } from "../../../components/ui/RouteTransition";
+import { HOST_VIDEO_HIDDEN_ATTR, isIngressIdentity } from "../../../lib/hostVideo";
 
 type ParticipantItem = {
   id: string;
@@ -205,13 +203,13 @@ function SpeakerTalkOverlay({
     <aside className="h-screen overflow-hidden bg-transparent p-2 text-[var(--brand-text)]">
       <div className="flex items-center justify-between px-2 py-2">
         <p className="text-xs font-bold text-[var(--brand-text)]">{tx("スピーカー", "Speakers")}</p>
-        <span className="rounded-full bg-white/8 px-2 py-0.5 text-[10px] font-semibold text-[var(--brand-text-muted)]">
+        <span className="rounded-full bg-[var(--brand-bg-900)] px-2 py-0.5 text-[11px] font-semibold text-[var(--brand-text-muted)]">
           {participants.length}
         </span>
       </div>
       <div className="h-[calc(100vh-44px)] space-y-1.5 overflow-y-auto">
         {participants.length === 0 ? (
-          <p className="rounded-xl border border-white/10 bg-[var(--brand-bg-800)]/55 px-3 py-3 text-xs text-[var(--brand-text-muted)] backdrop-blur-xl">
+          <p className="rounded-xl bg-[var(--brand-bg-800)]/55 px-3 py-3 text-xs text-[var(--brand-text-muted)] backdrop-blur-xl">
             {tx("スピーカーはいません", "No speakers yet")}
           </p>
         ) : (
@@ -226,7 +224,7 @@ function SpeakerTalkOverlay({
                 className={`flex items-center gap-2.5 rounded-xl border px-2.5 py-2 transition-all duration-200 ${
                   isSpeaking
                     ? "border-[var(--brand-primary)]/65 bg-[var(--brand-primary)]/18 backdrop-blur-xl"
-                    : "border-white/10 bg-[var(--brand-bg-800)]/50 backdrop-blur-xl"
+                    : "border-transparent bg-[var(--brand-bg-800)]/50 backdrop-blur-xl"
                 }`}
               >
                 <div
@@ -246,7 +244,7 @@ function SpeakerTalkOverlay({
                   <div className="flex min-w-0 items-center gap-1.5">
                     <p className="truncate text-sm font-bold text-[var(--brand-text)]">{participant.name}</p>
                     {isSpeaking ? (
-                      <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-[var(--brand-primary)]/25 px-1.5 py-0.5 text-[9px] font-bold text-[var(--brand-primary)]">
+                      <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-[var(--brand-primary)]/25 px-1.5 py-0.5 text-[11px] font-bold text-[var(--brand-primary)]">
                         <span className="h-2 w-0.5 rounded-full bg-current opacity-60" style={{ transform: `scaleY(${0.6 + level * 0.7})` }} />
                         <span className="h-2.5 w-0.5 rounded-full bg-current" style={{ transform: `scaleY(${0.75 + level * 0.8})` }} />
                         <span className="h-2 w-0.5 rounded-full bg-current opacity-75" style={{ transform: `scaleY(${0.55 + level * 0.75})` }} />
@@ -255,15 +253,15 @@ function SpeakerTalkOverlay({
                     ) : null}
                   </div>
                   <div className="mt-1 flex items-center gap-2">
-                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--track)]">
                       <div
                         className={`h-full rounded-full transition-all duration-200 ${
-                          isSpeaking ? "bg-[var(--brand-primary)]" : "bg-white/18"
+                          isSpeaking ? "bg-[var(--brand-primary)]" : "bg-[var(--brand-primary)]/35"
                         }`}
                         style={{ width: `${Math.round(level * 100)}%` }}
                       />
                     </div>
-                    <span className={`text-[10px] font-semibold ${participant.muted ? "text-[var(--brand-accent)]" : "text-[var(--brand-text-muted)]"}`}>
+                    <span className={`text-[11px] font-semibold ${participant.muted ? "text-[var(--brand-accent-ink)]" : "text-[var(--brand-text-muted)]"}`}>
                       {participant.muted ? tx("ミュート", "Muted") : participant.status === "requested" ? tx("待機中", "Waiting") : tx("有効", "On")}
                     </span>
                     {participant.muted ? <span className="shrink-0 text-[var(--brand-text-muted)]"><MuteIcon /></span> : null}
@@ -279,7 +277,7 @@ function SpeakerTalkOverlay({
                 href={`/users/${encodeURIComponent(participant.id)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block rounded-xl hover:bg-white/5"
+                className="block rounded-xl hover:bg-[var(--brand-bg-900)]"
               >
                 {row}
               </a>
@@ -384,7 +382,8 @@ function SpeakerOverlayLauncher({
   };
 
   return (
-    <div className="relative inline-flex items-center">
+    // Document Picture-in-Picture はスマホのブラウザに無く、押してもエラーになるだけなので md 以上でのみ出す
+    <div className="relative hidden items-center md:inline-flex">
       <button
         type="button"
         onClick={() => void openOverlay()}
@@ -393,12 +392,12 @@ function SpeakerOverlayLauncher({
       >
         <ArrowTopRightOnSquareIcon className="h-5 w-5" aria-hidden />
         <span>{tx("スピーカー一覧", "Speakers")}</span>
-        <span className="min-w-4 rounded-full bg-black/15 px-1 text-center text-[10px] font-extrabold leading-4">
+        <span className="min-w-4 rounded-full bg-black/15 px-1 text-center text-[11px] font-extrabold leading-4">
           {participants.length}
         </span>
       </button>
       {error ? (
-        <p className="absolute left-0 top-11 z-20 w-[280px] rounded-lg bg-[var(--brand-accent)]/15 px-3 py-2 text-xs text-[var(--brand-accent)] shadow-lg shadow-black/10">
+        <p className="ui-float absolute left-0 top-11 z-20 w-[280px] rounded-lg bg-[var(--brand-accent-soft)] px-3 py-2 text-xs text-[var(--brand-accent-ink)]">
           {error}
         </p>
       ) : null}
@@ -418,8 +417,9 @@ export default function StudioLiveSessionPage() {
   const [session, setSession] = useState<StreamSession | null>(null);
   const [notFound, setNotFound] = useState(false);
 
-  const [micOn, setMicOn] = useState(searchParams.get("mic") !== "0");
-  const [camOn, setCamOn] = useState(searchParams.get("cam") !== "0");
+  // 視聴者に OBS の映像を見せないマスタースイッチ（音声は流れたまま）。
+  // ブラウザのカメラ/マイクは使わない。映像も音声もすべて OBS から来る。
+  const [videoHidden, setVideoHidden] = useState(false);
   const [participants, setParticipants] = useState<ParticipantItem[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chat, setChat] = useState<ChatItem[]>(() =>
@@ -433,17 +433,10 @@ export default function StudioLiveSessionPage() {
   const [monitorActive, setMonitorActive] = useState(false);
   const [speakerReservations, setSpeakerReservations] = useState<{ reservationId: string; userName: string }[]>([]);
   const [showStopConfirm, setShowStopConfirm] = useState(false);
-  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
-  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
-  const [selectedMicDeviceId, setSelectedMicDeviceId] = useState(searchParams.get("micDeviceId") ?? "");
-  const [selectedCamDeviceId, setSelectedCamDeviceId] = useState(searchParams.get("camDeviceId") ?? "");
-  const [showMicMenu, setShowMicMenu] = useState(false);
-  const [showCamMenu, setShowCamMenu] = useState(false);
 
-  const previewRef = useRef<HTMLVideoElement | null>(null);
   const monitorRef = useRef<HTMLVideoElement | null>(null);
-  // OBS接続の false→true 遷移を検知して一度だけブラウザのマイク/カメラを止める。
-  const prevObsConnectedRef = useRef(false);
+  // 接続直後に今のスイッチ状態を属性へ書くため、最新値を ref でも持つ
+  const videoHiddenRef = useRef(false);
   const remoteAudioContainerRef = useRef<HTMLDivElement | null>(null);
   const chatListRef = useRef<HTMLDivElement | null>(null);
   const shouldAutoScrollRef = useRef(true);
@@ -510,33 +503,6 @@ export default function StudioLiveSessionPage() {
       window.clearInterval(timer);
     };
   }, [sessionId, user?.id]);
-
-  useEffect(() => {
-    if (typeof navigator === "undefined" || !navigator.mediaDevices?.enumerateDevices) return;
-
-    let mounted = true;
-    const refreshDevices = async () => {
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        if (!mounted) return;
-        const audios = devices.filter((device) => device.kind === "audioinput");
-        const videos = devices.filter((device) => device.kind === "videoinput");
-        setAudioDevices(audios);
-        setVideoDevices(videos);
-        setSelectedMicDeviceId((current) => current || audios[0]?.deviceId || "");
-        setSelectedCamDeviceId((current) => current || videos[0]?.deviceId || "");
-      } catch {
-        // Browser permissions may hide device labels until camera/mic access is granted.
-      }
-    };
-
-    void refreshDevices();
-    navigator.mediaDevices.addEventListener("devicechange", refreshDevices);
-    return () => {
-      mounted = false;
-      navigator.mediaDevices.removeEventListener("devicechange", refreshDevices);
-    };
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -786,58 +752,12 @@ export default function StudioLiveSessionPage() {
     setParticipants([]);
   }, []);
 
-  const handleMicToggle = () => {
-    const next = !micOn;
-    setMicOn(next);
+  const handleVideoHiddenToggle = () => {
+    const next = !videoHidden;
+    setVideoHidden(next);
+    videoHiddenRef.current = next;
     if (roomRef.current && connectionStatus === "live") {
-      void roomRef.current.localParticipant.setMicrophoneEnabled(
-        next,
-        next && selectedMicDeviceId ? { deviceId: selectedMicDeviceId } : undefined,
-      );
-    }
-  };
-
-  const handleCamToggle = () => {
-    const next = !camOn;
-    setCamOn(next);
-    if (roomRef.current && connectionStatus === "live") {
-      void roomRef.current.localParticipant.setCameraEnabled(
-        next,
-        next && selectedCamDeviceId ? { deviceId: selectedCamDeviceId } : undefined,
-      );
-    }
-  };
-
-  // 二重音声/映像対策: OBS(ingress)が接続されたら、配信のA/VソースをOBSに一本化する。
-  // ブラウザのマイク/カメラを止めることで「二重音声」と「映像/音声のズレ」を防ぐ。
-  // 接続の false→true 遷移時に一度だけ実行し、その後の手動トグルは尊重する。
-  useEffect(() => {
-    const wasConnected = prevObsConnectedRef.current;
-    prevObsConnectedRef.current = obsConnected;
-    if (!obsConnected || wasConnected) return;
-    if (connectionStatus !== "live") return;
-    // OBSが新たに接続された → ブラウザのマイク・カメラを停止
-    if (micOn) {
-      setMicOn(false);
-      void roomRef.current?.localParticipant.setMicrophoneEnabled(false);
-    }
-    if (camOn) {
-      setCamOn(false);
-      void roomRef.current?.localParticipant.setCameraEnabled(false);
-    }
-  }, [obsConnected, connectionStatus, micOn, camOn]);
-
-  const handleMicDeviceChange = (deviceId: string) => {
-    setSelectedMicDeviceId(deviceId);
-    if (roomRef.current && connectionStatus === "live" && micOn) {
-      void roomRef.current.localParticipant.setMicrophoneEnabled(true, deviceId ? { deviceId } : undefined);
-    }
-  };
-
-  const handleCamDeviceChange = (deviceId: string) => {
-    setSelectedCamDeviceId(deviceId);
-    if (roomRef.current && connectionStatus === "live" && camOn) {
-      void roomRef.current.localParticipant.setCameraEnabled(true, deviceId ? { deviceId } : undefined);
+      void roomRef.current.localParticipant.setAttributes({ [HOST_VIDEO_HIDDEN_ATTR]: next ? "1" : "0" });
     }
   };
 
@@ -848,7 +768,7 @@ export default function StudioLiveSessionPage() {
     const el = monitorRef.current;
     if (!room || !el) return;
     for (const p of room.remoteParticipants.values()) {
-      if (!(p.identity.startsWith("obs-") || p.identity.startsWith("ingress-"))) continue;
+      if (!isIngressIdentity(p.identity)) continue;
       for (const pub of p.trackPublications.values()) {
         if (pub.kind === Track.Kind.Video && pub.track) {
           pub.track.attach(el);
@@ -861,8 +781,8 @@ export default function StudioLiveSessionPage() {
     }
   }, []);
 
-  // OBS接続中はモニタ映像を維持・復旧する。マイク/カメラのトグルで再ネゴが起きて
-  // モニタが消えても、micOn/camOn の変化を契機に再アタッチして必ず復旧させる。
+  // OBS接続中はモニタ映像を維持・復旧する。再ネゴでモニタが消えても、
+  // 少し時間をおいて再アタッチして必ず復旧させる。
   useEffect(() => {
     if (!obsConnected) return;
     attachObsMonitor();
@@ -872,15 +792,16 @@ export default function StudioLiveSessionPage() {
       window.clearTimeout(t1);
       window.clearTimeout(t2);
     };
-  }, [obsConnected, micOn, camOn, attachObsMonitor]);
+  }, [obsConnected, attachObsMonitor]);
 
   // トラブルシューティング用の診断値とチェック結果を集める。
   const collectDiagnostics = useCallback((): { diagnostics: Diagnostics; checks: { label: string; ok: boolean; hint?: string }[] } => {
     const online = typeof navigator !== "undefined" ? navigator.onLine : true;
     const roomConnected = connectionStatus === "live";
     const quality = roomRef.current?.localParticipant.connectionQuality ?? "unknown";
-    const hasAudio = obsConnected || micOn;
-    const hasVideo = obsConnected || camOn;
+    // 音声も映像も OBS だけが出どころ
+    const hasAudio = obsConnected;
+    const hasVideo = obsConnected;
 
     const diagnostics: Diagnostics = {
       online,
@@ -888,8 +809,7 @@ export default function StudioLiveSessionPage() {
       connectionQuality: String(quality),
       obsConnected,
       monitorActive,
-      micPublishing: micOn,
-      camPublishing: camOn,
+      videoHiddenForViewers: videoHidden,
       participantCount: participants.length,
       viewerCount: connectedViewers,
       userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "n/a",
@@ -898,8 +818,8 @@ export default function StudioLiveSessionPage() {
     const checks = [
       { label: tx("インターネット接続", "Internet connection"), ok: online, hint: tx("ネットワークを確認してください。", "Check your network.") },
       { label: tx("配信ルームに接続", "Connected to room"), ok: roomConnected, hint: tx("配信を開始してください。", "Start the broadcast.") },
-      { label: tx("音声ソースあり（OBSまたはマイク）", "Audio source present (OBS or mic)"), ok: hasAudio, hint: tx("マイクをONにするかOBSを接続してください。", "Turn on mic or connect OBS.") },
-      { label: tx("映像ソースあり（OBSまたはカメラ）", "Video source present (OBS or camera)"), ok: hasVideo, hint: tx("カメラをONにするかOBSを接続してください。", "Turn on camera or connect OBS.") },
+      { label: tx("音声ソースあり（OBS）", "Audio source present (OBS)"), ok: hasAudio, hint: tx("OBSを接続してください。", "Connect OBS.") },
+      { label: tx("映像ソースあり（OBS）", "Video source present (OBS)"), ok: hasVideo, hint: tx("OBSを接続してください。", "Connect OBS.") },
       {
         label: tx("OBS映像の受信（モニタ）", "Receiving OBS video (monitor)"),
         ok: !obsConnected || monitorActive,
@@ -907,7 +827,7 @@ export default function StudioLiveSessionPage() {
       },
     ];
     return { diagnostics, checks };
-  }, [connectionStatus, obsConnected, monitorActive, micOn, camOn, participants.length, connectedViewers, tx]);
+  }, [connectionStatus, obsConnected, monitorActive, videoHidden, participants.length, connectedViewers, tx]);
 
   const startBroadcast = async () => {
     if (!session) return;
@@ -951,12 +871,6 @@ export default function StudioLiveSessionPage() {
       setConnectedViewers(0);
       setParticipants([]);
       roomRef.current = null;
-    });
-
-    room.on(RoomEvent.LocalTrackPublished, (pub) => {
-      if (pub.source === Track.Source.Camera && previewRef.current && pub.track) {
-        pub.track.attach(previewRef.current);
-      }
     });
 
     room.on(RoomEvent.ParticipantConnected, (participant) => {
@@ -1032,7 +946,7 @@ export default function StudioLiveSessionPage() {
     });
 
     room.on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
-      const isObs = participant.identity.startsWith("obs-") || participant.identity.startsWith("ingress-");
+      const isObs = isIngressIdentity(participant.identity);
       // 配信モニタ: OBS(ingress)の映像を「視聴者に見えている画」として表示する。
       if (track.kind === Track.Kind.Video && isObs && monitorRef.current) {
         track.attach(monitorRef.current);
@@ -1067,7 +981,7 @@ export default function StudioLiveSessionPage() {
     });
 
     room.on(RoomEvent.TrackUnsubscribed, (track, _pub, participant) => {
-      const isObs = participant.identity.startsWith("obs-") || participant.identity.startsWith("ingress-");
+      const isObs = isIngressIdentity(participant.identity);
       if (track.kind === Track.Kind.Video && isObs) {
         track.detach();
         setMonitorActive(false);
@@ -1130,17 +1044,12 @@ export default function StudioLiveSessionPage() {
       return;
     }
 
+    // ブラウザのカメラ/マイクは出さない（トークンでも禁止済み）。
+    // 映像スイッチの状態だけを属性に書いて、視聴者に伝える。
     try {
-      await room.localParticipant.setCameraEnabled(
-        camOn,
-        camOn && selectedCamDeviceId ? { deviceId: selectedCamDeviceId } : undefined,
-      );
-      await room.localParticipant.setMicrophoneEnabled(
-        micOn,
-        micOn && selectedMicDeviceId ? { deviceId: selectedMicDeviceId } : undefined,
-      );
-    } catch (err) {
-      setMediaError(err instanceof Error ? err.message : tx("カメラ/マイクにアクセスできません。", "Camera/mic access denied."));
+      await room.localParticipant.setAttributes({ [HOST_VIDEO_HIDDEN_ATTR]: videoHiddenRef.current ? "1" : "0" });
+    } catch {
+      // 属性が書けなくても配信自体は続ける（映像は表示されたままになる）
     }
   };
 
@@ -1233,11 +1142,27 @@ export default function StudioLiveSessionPage() {
     return () => window.clearTimeout(timer);
   }, [shouldAutoStart, notFound, session, connectionStatus]);
 
+  // 遷移の演出（ワイプ）は、枠の読み込みと、自動開始なら LiveKit への接続が
+  // 終わるまで抜けさせない。接続は fetch ではないので、ページから申告する。
+  const sessionLoading = !session && !notFound;
+  const connecting =
+    connectionStatus === "starting" || (shouldAutoStart && connectionStatus === "idle" && !notFound);
+  useTransitionHold(sessionLoading || connecting);
+
   if (!sessionHydrated || !isVtuber) return null;
+
+  // 読み込み中に「枠が見つかりません」を一瞬出さない
+  if (sessionLoading) {
+    return (
+      <div className="min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
+        <TopNav mode="studio" />
+      </div>
+    );
+  }
 
   if (notFound || !session) {
     return (
-      <div className="min-h-screen bg-[var(--brand-bg-900)] pb-20 text-[var(--brand-text)] md:pb-0">
+      <div className="min-h-screen bg-[var(--bg)] pb-20 text-[var(--brand-text)] md:pb-0">
         <TopNav mode="studio" />
         <main className="mx-auto flex max-w-[900px] flex-col items-center gap-4 px-4 py-16 text-center">
           <h1 className="text-2xl font-bold">{tx("枠が見つかりません", "Session not found")}</h1>
@@ -1253,17 +1178,20 @@ export default function StudioLiveSessionPage() {
   const isLive = connectionStatus === "live" || session.status === "live";
 
   return (
-    <div className="min-h-screen bg-[var(--brand-bg-900)] text-[var(--brand-text)]">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
       <TopNav mode="studio" />
 
-      <main className="mx-auto grid max-w-[1440px] grid-cols-[1fr_320px] items-start gap-4 px-4 py-3 lg:grid-cols-[58px_1fr_360px] lg:px-6">
+      {/* スマホ（md未満）は1列。左カラムの section を contents にして中身を main の直下に並べ、
+          「モニタ＋操作 → チャット → 予約 → 配信設定」の順に order で並べ替える。
+          配信中にスマホで見るのは主にチャットなので、OBS設定より先に置く。 */}
+      <main className="mx-auto grid max-w-[1440px] grid-cols-1 items-start gap-3 px-4 py-3 md:grid-cols-[1fr_320px] md:gap-4 lg:grid-cols-[58px_1fr_360px] lg:px-6">
         <aside className="sticky top-4 hidden lg:block">
           <StudioProgress current="live" orientation="vertical" />
         </aside>
 
-        <section className="flex flex-col gap-3">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <div>
+        <section className="contents md:flex md:min-w-0 md:flex-col md:gap-3">
+          <div className="order-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 md:order-none md:mb-2">
+            <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-xl font-bold">Live Studio</h1>
                 <SpeakerOverlayLauncher participants={participants} tx={tx} />
@@ -1282,7 +1210,7 @@ export default function StudioLiveSessionPage() {
                   }
                   navigate("/");
                 }}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-surface)] px-3 py-2 text-sm font-semibold text-[var(--brand-text-muted)]"
+                className="ui-btn ui-btn-sm ui-btn-ghost"
               >
                 <XMarkIcon className="h-4 w-4" aria-hidden />
                 {tx("閉じる", "Close")}
@@ -1290,11 +1218,11 @@ export default function StudioLiveSessionPage() {
             </div>
           </div>
 
-          <section className="rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/10">
+          <section className="order-2 rounded-2xl bg-[var(--brand-surface)] p-3 md:order-none">
             {/* 配信モニタ: OBS接続中は「視聴者に見えている映像」を主表示にする */}
             <div className="relative mx-auto max-w-[640px] overflow-hidden rounded-xl bg-[var(--brand-bg-900)]" style={{ aspectRatio: "16/9" }}>
               {/* OBSモニタ（視聴者の見え方）。音声はミュート（自分の遅延音エコー防止）。
-                  マイク/カメラ操作に関わらず、OBSの受信が続く限り表示し続ける。 */}
+                  映像スイッチを切っても、配信者の手元ではOBSの受信を続けて表示する。 */}
               <video
                 ref={monitorRef}
                 autoPlay
@@ -1302,20 +1230,20 @@ export default function StudioLiveSessionPage() {
                 muted
                 className={`h-full w-full object-cover ${monitorActive ? "" : "hidden"}`}
               />
-              {/* ブラウザカメラのプレビュー。OBSモニタ表示中・カメラオフ時は隠す。 */}
-              <video
-                ref={previewRef}
-                autoPlay
-                playsInline
-                muted
-                className={`h-full w-full object-cover ${!monitorActive && camOn ? "" : "hidden"}`}
-              />
-              {/* カメラオフのプレースホルダ（OBS仮想カメラのデフォルト画面を出さない）。 */}
-              {!monitorActive && !camOn && (
+              {/* OBS の映像がまだ届いていないとき */}
+              {!monitorActive && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--placeholder)]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src="/logo/aiment_logo_white.svg" alt="aiment" className="h-10 w-auto opacity-70" />
-                  <span className="text-sm font-semibold text-white">{tx("カメラオフ", "Camera off")}</span>
+                  <span className="text-sm font-semibold text-white">{tx("OBSの映像を待っています", "Waiting for OBS video")}</span>
+                </div>
+              )}
+              {/* 映像を止めている間も、配信者には OBS の画を薄く見せておく（視聴者には届いていない） */}
+              {monitorActive && videoHidden && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/70 text-center">
+                  <VideoCameraSlashIcon className="h-8 w-8 text-white" aria-hidden />
+                  <span className="text-sm font-bold text-white">{tx("視聴者には映像を止めています", "Video is hidden from viewers")}</span>
+                  <span className="text-xs text-white/80">{tx("音声はそのまま届いています", "Audio is still on air")}</span>
                 </div>
               )}
               {monitorActive && (
@@ -1325,115 +1253,30 @@ export default function StudioLiveSessionPage() {
               )}
               <div ref={remoteAudioContainerRef} className="hidden" aria-hidden />
             </div>
-            {obsConnected && (
-              <p className="mt-2 rounded-lg bg-[var(--brand-primary)]/12 px-3 py-2 text-xs text-[var(--brand-primary)]">
-                {tx(
-                  "OBS接続中: 二重音声・映像のズレ防止のため、ブラウザのマイク/カメラは停止しています。OBSの音声・映像がそのまま配信されます。",
-                  "OBS connected: browser mic/camera are stopped to prevent double audio and A/V drift. OBS audio/video is broadcast as-is.",
-                )}
-              </p>
-            )}
-            {!camOn && !obsConnected && <p className="mt-2 text-xs text-[var(--brand-text-muted)]">{tx("カメラOFF", "Camera OFF")}</p>}
-            {mediaError && <p className="mt-2 text-xs text-[var(--brand-accent)]">{mediaError}</p>}
+            {mediaError && <p className="mt-2 text-xs text-[var(--brand-accent-ink)]">{mediaError}</p>}
 
             <div className="mt-3 rounded-[24px] bg-[var(--brand-bg-900)] px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="min-w-[180px]">
+                <div className="min-w-0 flex-1 basis-[180px]">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--brand-text-muted)]">
                     {tx("配信コントロール", "Stream controls")}
                   </p>
                   <p className="mt-1 text-xs text-[var(--brand-text-muted)]">
-                    {isLive
-                      ? tx("このバーでマイクとカメラを即時制御できます。", "Use this bar to control mic and camera instantly.")
-                      : tx("必要なデバイスだけONにして配信開始できます。", "Turn on only the devices you want to use before going live.")}
+                    {tx(
+                      "映像と音声はOBSから届きます。カメラボタンで、視聴者へのOBS映像だけを止められます。",
+                      "Video and audio come from OBS. The camera button hides the OBS video from viewers.",
+                    )}
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  <div className="relative">
-                    <div className="ui-ctl-group">
-                    <CircleControl label="MIC" icon={MicrophoneIcon} slashedWhenOff on={micOn} onToggle={handleMicToggle} />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowMicMenu((value) => !value);
-                        setShowCamMenu(false);
-                      }}
-                      aria-label={tx("マイク入力を選択", "Select microphone input")}
-                      className="ui-ctl ui-ctl-md ui-ctl-neutral w-9 px-0"
-                    >
-                      <ChevronUpIcon className="h-4 w-4" aria-hidden />
-                    </button>
-                    </div>
-                    {showMicMenu ? (
-                      <div className="absolute bottom-16 left-0 z-20 min-w-[240px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/10 ring-1 ring-black/5">
-                        {audioDevices.length === 0 ? (
-                          <p className="px-3 py-2 text-sm text-[var(--brand-text-muted)]">{tx("マイクが見つかりません", "No microphone found")}</p>
-                        ) : (
-                          audioDevices.map((device, index) => (
-                            <button
-                              key={device.deviceId}
-                              type="button"
-                              onClick={() => {
-                                handleMicDeviceChange(device.deviceId);
-                                setShowMicMenu(false);
-                              }}
-                              className={`block w-full rounded-lg px-3 py-2 text-left text-sm ${
-                                selectedMicDeviceId === device.deviceId
-                                  ? "bg-[var(--brand-primary)] font-bold text-white"
-                                  : "text-[var(--brand-text)] hover:bg-[var(--brand-bg-900)]"
-                              }`}
-                            >
-                              {device.label || `Microphone ${index + 1}`}
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <div className="relative">
-                    <div className="ui-ctl-group">
-                    <CircleControl label="CAM" icon={VideoCameraIcon} offIcon={VideoCameraSlashIcon} on={camOn} onToggle={handleCamToggle} />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowCamMenu((value) => !value);
-                        setShowMicMenu(false);
-                      }}
-                      aria-label={tx("カメラ入力を選択", "Select camera input")}
-                      className="ui-ctl ui-ctl-md ui-ctl-neutral w-9 px-0"
-                    >
-                      <ChevronUpIcon className="h-4 w-4" aria-hidden />
-                    </button>
-                    </div>
-                    {showCamMenu ? (
-                      <div className="absolute bottom-16 left-0 z-20 min-w-[240px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/10 ring-1 ring-black/5">
-                        {videoDevices.length === 0 ? (
-                          <p className="px-3 py-2 text-sm text-[var(--brand-text-muted)]">{tx("カメラが見つかりません", "No camera found")}</p>
-                        ) : (
-                          videoDevices.map((device, index) => (
-                            <button
-                              key={device.deviceId}
-                              type="button"
-                              onClick={() => {
-                                handleCamDeviceChange(device.deviceId);
-                                setShowCamMenu(false);
-                              }}
-                              className={`block w-full rounded-lg px-3 py-2 text-left text-sm ${
-                                selectedCamDeviceId === device.deviceId
-                                  ? "bg-[var(--brand-primary)] font-bold text-white"
-                                  : "text-[var(--brand-text)] hover:bg-[var(--brand-bg-900)]"
-                              }`}
-                            >
-                              {device.label || `Camera ${index + 1}`}
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
+                <div className="flex items-center gap-2">
+                <CircleControl
+                  label={videoHidden ? tx("映像を再開", "Show video") : tx("映像を止める", "Hide video")}
+                  icon={VideoCameraIcon}
+                  offIcon={VideoCameraSlashIcon}
+                  on={!videoHidden}
+                  onToggle={handleVideoHiddenToggle}
+                />
 
                 <button
                   onClick={
@@ -1450,25 +1293,26 @@ export default function StudioLiveSessionPage() {
                   {isLive ? <StopIcon className="h-4 w-4" aria-hidden /> : <PlayIcon className="h-4 w-4" aria-hidden />}
                   {isLive ? tx("配信終了", "Stop Stream") : tx("配信開始", "Start Stream")}
                 </button>
+                </div>
               </div>
 
             </div>
           </section>
 
-          <section className="rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/10">
+          <section className="order-4 rounded-2xl bg-[var(--brand-surface)] p-3 md:order-none">
             <h2 className="mb-2 text-xs font-semibold tracking-wide text-[var(--brand-text-muted)]">{tx("配信設定", "Stream Settings")}</h2>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 {metrics.map((item) => (
                   <div key={item.label} className="rounded-lg bg-[var(--brand-bg-900)] px-3 py-2">
-                    <p className="text-[10px] text-[var(--brand-text-muted)]">{item.label}</p>
+                    <p className="text-[11px] text-[var(--brand-text-muted)]">{item.label}</p>
                     <p className="text-sm font-bold text-[var(--brand-text)]">{item.value}</p>
                   </div>
                 ))}
               </div>
 
               <div className="rounded-xl bg-[var(--brand-bg-900)] p-3">
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-[var(--brand-text-muted)]">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-[var(--brand-text-muted)]">
                   {tx("OBS配信設定", "OBS Stream Setup")}
                 </p>
                 <ObsStreamPanel
@@ -1482,11 +1326,12 @@ export default function StudioLiveSessionPage() {
           </section>
         </section>
 
-        <aside className="sticky top-4 max-h-[calc(100vh-88px)] self-start space-y-3 overflow-y-auto pr-1">
-          <section className="rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/10">
+        <aside className="order-3 flex min-w-0 flex-col gap-3 md:sticky md:top-4 md:order-none md:max-h-[calc(100vh-88px)] md:self-start md:overflow-y-auto md:pr-1">
+          {/* スマホではチャットを予約一覧より上に出す */}
+          <section className="order-2 rounded-2xl bg-[var(--brand-surface)] p-3 md:order-none">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs font-semibold text-[var(--brand-text-muted)]">{tx("スピーカー予約", "Speaker Reservations")}</p>
-              <span className="rounded-full bg-[var(--brand-primary)]/20 px-2 py-0.5 text-[10px] font-bold text-[var(--brand-primary)]">
+              <span className="rounded-full bg-[var(--brand-primary)]/20 px-2 py-0.5 text-[11px] font-bold text-[var(--brand-primary)]">
                 {speakerReservations.length}
               </span>
             </div>
@@ -1496,7 +1341,7 @@ export default function StudioLiveSessionPage() {
               <ul className="space-y-1">
                 {speakerReservations.map((r) => (
                   <li key={r.reservationId} className="flex items-center gap-2 rounded-lg bg-[var(--brand-bg-900)] px-2.5 py-1.5">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/25 text-[10px] font-bold text-[var(--brand-primary)]">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/25 text-[11px] font-bold text-[var(--brand-primary)]">
                       {(r.userName || "?").charAt(0).toUpperCase()}
                     </span>
                     <span className="truncate text-xs font-semibold text-[var(--brand-text)]">{r.userName}</span>
@@ -1506,8 +1351,8 @@ export default function StudioLiveSessionPage() {
             )}
           </section>
 
-          <section className="flex h-[520px] flex-col overflow-hidden rounded-2xl bg-[var(--brand-surface)] shadow-lg shadow-black/10">
-            <div className="border-b border-black/8 px-3 py-2">
+          <section className="order-1 flex h-[min(520px,60dvh)] flex-col overflow-hidden rounded-2xl bg-[var(--brand-surface)] md:order-none md:h-[520px]">
+            <div className="border-b border-[var(--line)] px-3 py-2">
               <p className="inline-flex items-center gap-1.5 text-sm font-semibold">
                 <ChatBubbleLeftRightIcon className="h-4 w-4" aria-hidden />
                 {tx("配信者チャット", "Host Chat")}
@@ -1526,7 +1371,7 @@ export default function StudioLiveSessionPage() {
                         <button
                           type="button"
                           onClick={() => retractChatMessage(m.id)}
-                          className="rounded-full bg-[var(--brand-bg-900)] px-2 py-0.5 text-[10px] font-bold text-[var(--brand-text-muted)] ring-1 ring-black/5 hover:text-[var(--brand-accent)]"
+                          className="rounded-full bg-[var(--brand-bg-900)] px-2 py-0.5 text-[11px] font-bold text-[var(--brand-text-muted)] ring-1 ring-black/5 hover:text-[var(--brand-accent-ink)]"
                         >
                           {tx("取消", "Undo")}
                         </button>
@@ -1556,7 +1401,7 @@ export default function StudioLiveSessionPage() {
                 </button>
               )}
             </div>
-            <div className="border-t border-black/8 p-3">
+            <div className="border-t border-[var(--line)] p-3">
               <div className="flex gap-2">
                 <input
                   value={chatInput}
@@ -1567,7 +1412,7 @@ export default function StudioLiveSessionPage() {
                     sendChat();
                   }}
                   placeholder={tx("告知・案内を入力", "Type announcement")}
-                  className="flex-1 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-sm text-[var(--brand-text)] outline-none placeholder:text-[var(--brand-text-muted)]"
+                  className="min-w-0 flex-1 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-sm text-[var(--brand-text)] outline-none placeholder:text-[var(--brand-text-muted)]"
                 />
                 <button onClick={sendChat} className="ui-btn ui-btn-sm ui-btn-primary">
                   <PaperAirplaneIcon className="h-4 w-4" aria-hidden />
@@ -1576,17 +1421,12 @@ export default function StudioLiveSessionPage() {
               </div>
             </div>
           </section>
-          <VTuberTranslationAssistPanel
-            sessionId={sessionId}
-            messages={chat}
-            onSendMessage={sendTranslatedChatMessage}
-          />
         </aside>
       </main>
 
       {showStopConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-[var(--brand-surface)] p-6 shadow-2xl shadow-black/20">
+        <div className="fixed inset-0 z-50 flex items-center justify-center ui-scrim p-4">
+          <div className="ui-modal w-full max-w-sm p-6">
             <h2 className="text-base font-bold text-[var(--brand-text)]">
               {tx("配信を停止しますか？", "Stop the stream?")}
             </h2>

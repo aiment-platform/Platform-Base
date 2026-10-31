@@ -1,10 +1,12 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { statusDot, statusLabel, statusStyle, toMinutes } from "../../components/schedule/utils";
 import { getAjlInfo } from "../../lib/ajl";
 import { categoryLabel } from "../../lib/labels";
 import { useI18n } from "../../lib/i18n";
+import { timeZoneLabel, useViewerTimeZone } from "../../lib/timezone";
 
 type MultiDayBookingStatus = "available" | "booked" | "lottery";
 
@@ -53,10 +55,10 @@ function formatTime(minutes: number) {
   return `${hh}:${mm}`;
 }
 
-function formatDateLabel(ymd: string) {
+function formatDateLabel(ymd: string, intlLocale: string) {
   const date = new Date(`${ymd}T00:00:00`);
   if (Number.isNaN(date.getTime())) return ymd;
-  return new Intl.DateTimeFormat("ja-JP", { month: "2-digit", day: "2-digit", weekday: "short" }).format(date);
+  return new Intl.DateTimeFormat(intlLocale, { month: "2-digit", day: "2-digit", weekday: "short" }).format(date);
 }
 
 function getTodayKeyLocal() {
@@ -145,6 +147,7 @@ export function MultiDayScheduleGrid({
   endHour,
 }: MultiDayScheduleGridProps) {
   const { tx } = useI18n();
+  const viewerTimeZone = useViewerTimeZone();
   const rangeStart = startHour * 60;
   const rangeEnd = endHour * 60;
   const totalMinutes = Math.max(60, rangeEnd - rangeStart);
@@ -159,14 +162,16 @@ export function MultiDayScheduleGrid({
   const nowTop = (nowMinutes - rangeStart) * pxPerMinute;
 
   return (
-    <section className="overflow-hidden rounded-2xl bg-[var(--brand-surface)] shadow-lg shadow-black/25">
+    <section className="overflow-hidden rounded-2xl bg-[var(--brand-surface)]">
       <div className="overflow-auto">
+        {/* スマホでは時刻列を細くし、日の列には最低幅を持たせる。7日表示で列が
+            潰れる場合は、時刻列を左に固定したまま横スクロールさせる。 */}
         <div
-          className="grid w-full"
-          style={{ gridTemplateColumns: `88px repeat(${dates.length}, minmax(0, 1fr))` }}
+          className="grid w-full [grid-template-columns:48px_repeat(var(--days),minmax(96px,1fr))] sm:[grid-template-columns:88px_repeat(var(--days),minmax(96px,1fr))]"
+          style={{ "--days": dates.length } as CSSProperties}
         >
-          <div className="sticky left-0 top-0 z-30 border-r border-[var(--brand-text-muted)]/20 bg-[var(--brand-surface)] px-3 py-3 text-xs font-semibold text-[var(--brand-text-muted)]">
-            {tx("時間", "Time")}
+          <div className="sticky left-0 top-0 z-30 border-r border-[var(--line)] bg-[var(--brand-surface)] px-1.5 py-3 text-[11px] font-semibold text-[var(--brand-text-muted)] sm:px-3 sm:text-xs">
+            {viewerTimeZone ? timeZoneLabel(viewerTimeZone) : tx("時間", "Time")}
           </div>
 
           {dates.map((date, index) => {
@@ -174,16 +179,16 @@ export function MultiDayScheduleGrid({
             return (
             <div
               key={date}
-              className={`sticky top-0 z-10 px-3 py-2 ${index > 0 ? "border-l border-[var(--brand-text-muted)]/20" : ""} ${
+              className={`sticky top-0 z-10 px-2 py-2 sm:px-3 ${index > 0 ? "border-l border-[var(--line)]" : ""} ${
                 isToday
                   ? "bg-[var(--brand-primary)]/10"
                   : "bg-[var(--brand-surface)]"
               }`}
             >
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-[var(--brand-text)]">{formatDateLabel(date)}</p>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <p className="text-sm font-semibold text-[var(--brand-text)]">{formatDateLabel(date, tx("ja-JP", "en-US"))}</p>
                 {isToday && (
-                  <span className="rounded-full bg-[var(--brand-primary)]/20 px-2 py-0.5 text-[10px] font-bold text-[var(--brand-primary)]">
+                  <span className="rounded-full bg-[var(--brand-primary)]/20 px-2 py-0.5 text-[11px] font-bold text-[var(--brand-primary)]">
                     {tx("当日", "Today")}
                   </span>
                 )}
@@ -191,13 +196,13 @@ export function MultiDayScheduleGrid({
             </div>
           )})}
 
-          <div className="sticky left-0 z-20 border-r border-[var(--brand-text-muted)]/20 bg-[var(--brand-bg-900)]/60" style={{ height: canvasHeight }}>
+          <div className="sticky left-0 z-20 border-r border-[var(--line)] bg-[var(--brand-bg-900)]/60" style={{ height: canvasHeight }}>
             {hourMarks.map((minutes) => {
               const top = (minutes - rangeStart) * pxPerMinute;
               if (top < 0 || top > canvasHeight) return null;
               return (
                 <div key={`time-${minutes}`} className="absolute left-0 right-0" style={{ top }}>
-                  <span className="-translate-y-1/2 px-2 text-xs text-[var(--brand-text-muted)]">
+                  <span className="px-1.5 text-[11px] text-[var(--brand-text-muted)] sm:px-2 sm:text-xs">
                     {formatHour(minutes)}
                   </span>
                 </div>
@@ -213,7 +218,7 @@ export function MultiDayScheduleGrid({
             return (
               <div
                 key={`col-${date}`}
-                className={`relative border-l border-[var(--brand-text-muted)]/20 ${
+                className={`relative border-l border-[var(--line)] ${
                   isToday ? "bg-[var(--brand-primary)]/10" : "bg-[var(--brand-bg-900)]/50"
                 }`}
                 style={{ height: canvasHeight }}
@@ -251,7 +256,7 @@ export function MultiDayScheduleGrid({
                     <Link
                       key={event.id}
                       href={event.href}
-                      className="absolute overflow-hidden rounded-md bg-[var(--brand-bg-900)] p-2 shadow-md shadow-black/25"
+                      className="absolute overflow-hidden rounded-md bg-[var(--brand-bg-900)] p-2"
                       style={{
                         top,
                         height,
@@ -273,27 +278,27 @@ export function MultiDayScheduleGrid({
                               className="h-4 w-4 shrink-0 rounded-full object-cover"
                             />
                           ) : null}
-                          <p className="truncate text-[10px] font-semibold text-[var(--brand-text)]/85">
+                          <p className="truncate text-[11px] font-semibold text-[var(--brand-text)]/85">
                             {event.talentName}
                           </p>
                         </div>
                       ) : null}
-                      <p className="mb-1 text-[10px] text-[var(--brand-text-muted)]">
+                      <p className="mb-1 text-[11px] text-[var(--brand-text-muted)]">
                         {formatTime(clampedStart)} - {formatTime(clampedEnd)}
                       </p>
                       <div className="mb-1 flex flex-wrap gap-1">
-                        <span className="rounded bg-[var(--brand-secondary)]/40 px-1.5 py-0.5 text-[9px] font-black text-[var(--brand-text)]">AJL {ajl.level}</span>
+                        <span className="rounded px-1.5 py-0.5 text-[11px] font-black text-[var(--brand-text)]" style={{ background: ajl.color }}>AJL {ajl.level}</span>
                         {event.slotsLeft != null && event.slotsTotal != null ? (
-                          <span className="rounded bg-[var(--brand-surface)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--brand-text-muted)]">
+                          <span className="rounded bg-[var(--brand-surface)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--brand-text-muted)]">
                             {event.slotsLeft}/{event.slotsTotal}
                           </span>
                         ) : null}
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="truncate text-[10px] text-[var(--brand-text-muted)]">
+                        <span className="truncate text-[11px] text-[var(--brand-text-muted)]">
                           {categoryLabel(event.category, tx)}
                         </span>
-                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${statusStyle(event.status)}`}>
+                        <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${statusStyle(event.status)}`}>
                           {statusLabel(event.status, tx)}
                         </span>
                       </div>

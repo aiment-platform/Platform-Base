@@ -15,13 +15,12 @@ import {
   Cog6ToothIcon,
   MicrophoneIcon,
   PhoneXMarkIcon,
-  VideoCameraIcon,
   VideoCameraSlashIcon,
 } from "@heroicons/react/24/solid";
-import { Room, RoomEvent, Track, type Participant } from "livekit-client";
+import { Room, RoomEvent, Track, type Participant, type RemoteParticipant } from "livekit-client";
+import { isHostVideoHidden, isIngressIdentity } from "../../lib/hostVideo";
 import type { CueCategory, CueEvent } from "../../components/cue/CueMiniPanel";
 import { SmartPhraseAssist, type SmartPhraseSessionState } from "../../components/chat/SmartPhraseAssist";
-import { SpeakerTranslationAssistPanel } from "../../components/translation/TranslationAssistPanels";
 import type { SessionComment } from "../../lib/apiTypes";
 import {
   isChatLanguage,
@@ -36,7 +35,7 @@ import { useI18n } from "../../lib/i18n";
 import { getStreamSession, listActiveStreamSessions, type StreamSession } from "../../lib/streamSessions";
 import { useWatchTimeTracker } from "../../hooks/useWatchTimeTracker";
 import { useUserSession } from "../../lib/userSession";
-import { useRouteTransition } from "../../components/ui/RouteTransition";
+import { useRouteTransition, useTransitionHold } from "../../components/ui/RouteTransition";
 
 type Role = "host" | "listener" | "speaker" | "unknown";
 type RequestedRole = "host" | "listener" | "speaker";
@@ -252,8 +251,8 @@ function SpeakerParticipantRow({
         compact ? "px-2.5 py-2" : "px-3 py-2.5"
       } ${
         participant.isSpeaking
-          ? "border-[var(--brand-primary)]/70 bg-[var(--brand-primary)]/25 shadow-[0_0_22px_rgba(124,106,230,0.26)]"
-          : "border-white/10 bg-[var(--brand-bg-800)]/78"
+          ? "border-[var(--brand-primary)]/70 bg-[var(--brand-primary)]/25"
+          : "border-transparent bg-[var(--brand-bg-800)]/78"
       }`}
     >
       <div
@@ -271,19 +270,19 @@ function SpeakerParticipantRow({
         <div className="flex min-w-0 items-center gap-1.5">
           <p className="truncate text-sm font-bold text-[var(--brand-text)]">{participant.name}</p>
           {participant.isSpeaking ? (
-            <span className="shrink-0 rounded-full bg-[var(--brand-primary)]/25 px-1.5 py-0.5 text-[9px] font-bold text-[var(--brand-primary)]">
+            <span className="shrink-0 rounded-full bg-[var(--brand-primary)]/25 px-1.5 py-0.5 text-[11px] font-bold text-[var(--brand-primary)]">
               {tx("発話中", "Speaking")}
             </span>
           ) : null}
         </div>
         <div className="mt-1 flex items-center gap-2">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--track)]">
             <div
-              className={`h-full rounded-full transition-all duration-200 ${participant.isSpeaking ? "bg-[var(--brand-primary)]" : "bg-white/18"}`}
+              className={`h-full rounded-full transition-all duration-200 ${participant.isSpeaking ? "bg-[var(--brand-primary)]" : "bg-[var(--brand-primary)]/35"}`}
               style={{ width: `${Math.round(level * 100)}%` }}
             />
           </div>
-          <span className={`text-[10px] font-semibold ${participant.muted ? "text-[var(--brand-accent)]" : "text-[var(--brand-text-muted)]"}`}>
+          <span className={`text-[11px] font-semibold ${participant.muted ? "text-[var(--brand-accent-ink)]" : "text-[var(--brand-text-muted)]"}`}>
             {participant.muted ? tx("ミュート", "Muted") : tx("待機", "Ready")}
           </span>
         </div>
@@ -333,7 +332,7 @@ function SpeakerPictureInPictureButton({
       <main className="h-screen overflow-hidden bg-[var(--brand-surface)] p-2 text-[var(--brand-text)]">
         <div className="flex items-center justify-between px-2 py-2">
           <p className="text-xs font-bold">{tx("スピーカー", "Speakers")}</p>
-          <span className="rounded-full bg-[var(--brand-bg-900)] px-2 py-0.5 text-[10px] font-semibold text-[var(--brand-text-muted)]">
+          <span className="rounded-full bg-[var(--brand-bg-900)] px-2 py-0.5 text-[11px] font-semibold text-[var(--brand-text-muted)]">
             {participants.length}
           </span>
         </div>
@@ -402,7 +401,8 @@ function SpeakerPictureInPictureButton({
   };
 
   return (
-    <div className="relative shrink-0">
+    // Document Picture-in-Picture はスマホのブラウザに無く、押してもエラーになるだけなので md 以上でのみ出す
+    <div className="relative hidden shrink-0 md:block">
       <button
         type="button"
         onClick={() => void openPanel()}
@@ -412,7 +412,7 @@ function SpeakerPictureInPictureButton({
         <ArrowTopRightOnSquareIcon className="h-5 w-5" aria-hidden />
       </button>
       {error ? (
-        <p className="absolute bottom-12 right-0 z-20 w-[220px] rounded-lg bg-[var(--brand-accent)]/20 px-3 py-2 text-xs font-semibold text-[var(--brand-accent)] shadow-lg">
+        <p className="ui-float absolute bottom-12 right-0 z-20 w-[220px] rounded-lg bg-[var(--brand-accent-soft)] px-3 py-2 text-xs font-semibold text-[var(--brand-accent-ink)]">
           {error}
         </p>
       ) : null}
@@ -431,7 +431,7 @@ function SpeakerParticipantDock({
 
   return (
     <div className="flex min-h-0 shrink-0 items-center gap-2">
-      <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-[var(--brand-bg-800)]/86 p-2 shadow-[0_14px_32px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+      <div className="ui-float flex min-w-0 flex-1 gap-2 overflow-x-auto rounded-2xl bg-[var(--brand-bg-800)]/86 p-2 backdrop-blur-xl">
         {participants.map((participant) => (
           <div key={participant.id} className="w-[190px] shrink-0 sm:w-[210px]">
             <SpeakerParticipantRow participant={participant} tx={tx} compact />
@@ -488,14 +488,13 @@ export default function RoomPage() {
     speakerParticipants.length === 0;
   const visibleSpeakerParticipants = previewSpeakers ? PREVIEW_SPEAKER_PARTICIPANTS : speakerParticipants;
 
-  const [micOn, setMicOn] = useState(requestedRole !== "listener" && searchParams.get("mic") !== "0");
-  const [camOn, setCamOn] = useState(requestedRole === "host" && searchParams.get("cam") !== "0");
+  const [micOn, setMicOn] = useState(requestedRole === "speaker" && searchParams.get("mic") !== "0");
   const [selectedMicDeviceId, setSelectedMicDeviceId] = useState(searchParams.get("micDeviceId") ?? "");
-  const [selectedCamDeviceId, setSelectedCamDeviceId] = useState(searchParams.get("camDeviceId") ?? "");
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
-  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [showMicMenu, setShowMicMenu] = useState(false);
-  const [showCamMenu, setShowCamMenu] = useState(false);
+  // 配信者が「映像を止める」スイッチを切っている間は true（lib/hostVideo.ts）
+  const [hostVideoHidden, setHostVideoHidden] = useState(false);
+  const hostVideoHiddenRef = useRef(false);
   const [showDevicePanel, setShowDevicePanel] = useState(false);
 
   const videoShellRef = useRef<HTMLDivElement | null>(null);
@@ -518,8 +517,20 @@ export default function RoomPage() {
   const activeSpeakerIdsRef = useRef<Set<string>>(new Set());
   const speakingLingerTimersRef = useRef<Map<string, number>>(new Map());
 
-  const canSendMic = assignedRole === "host" || assignedRole === "speaker";
-  const canSendCam = assignedRole === "host";
+  // ブラウザから音を出せるのはスピーカーだけ。配信者の音声・映像はすべて OBS から来る
+  // ので、ここで host がマイク/カメラを出すことはない（トークンでも禁止している）。
+  const canSendMic = assignedRole === "speaker";
+
+  // 遷移の演出（ワイプ）は、LiveKit への接続と最初の映像の到着まで抜けさせない。
+  // OBS が映像を送っていない枠で延々と待たないよう、映像待ちは最大4秒で打ち切る。
+  const [videoWaitExpired, setVideoWaitExpired] = useState(false);
+  useEffect(() => {
+    if (status !== "connected") return;
+    const timer = window.setTimeout(() => setVideoWaitExpired(true), 4000);
+    return () => window.clearTimeout(timer);
+  }, [status]);
+  const waitingForFirstVideo = status === "connected" && !remoteConnected && !hostVideoHidden && !videoWaitExpired;
+  useTransitionHold(status === "idle" || status === "connecting" || waitingForFirstVideo);
   const senderRole = requestedRole === "host" ? "vtuber" : requestedRole;
 
   useWatchTimeTracker({
@@ -659,19 +670,18 @@ export default function RoomPage() {
     [canSendMic, selectedMicDeviceId],
   );
 
-  const applyCam = useCallback(
-    (enabled: boolean) => {
-      if (!canSendCam) return;
-      setCamOn(enabled);
-      if (roomRef.current) {
-        void roomRef.current.localParticipant.setCameraEnabled(
-          enabled,
-          enabled && selectedCamDeviceId ? { deviceId: selectedCamDeviceId } : undefined,
-        );
-      }
-    },
-    [canSendCam, selectedCamDeviceId],
-  );
+  // 配信者の「映像を止める」スイッチに合わせて、OBS 映像の受信そのものを止める／戻す。
+  // 隠すだけでなく unsubscribe するので、止めている間は映像のデータが届かない。
+  const applyHostVideoHidden = useCallback((room: Room, hidden: boolean) => {
+    hostVideoHiddenRef.current = hidden;
+    setHostVideoHidden(hidden);
+    room.remoteParticipants.forEach((participant: RemoteParticipant) => {
+      if (!isIngressIdentity(participant.identity)) return;
+      participant.videoTrackPublications.forEach((publication) => {
+        publication.setSubscribed(!hidden);
+      });
+    });
+  }, []);
 
   const publishTranslatedMessage = useCallback((message: BilingualChatMessage, mine = true) => {
     const room = roomRef.current;
@@ -896,7 +906,13 @@ export default function RoomPage() {
         setAssignedRole(requestedRole === "host" ? "host" : requestedRole);
         room.remoteParticipants.forEach((participant) => upsertSpeakerParticipant(participant));
 
-        if (requestedRole !== "listener") {
+        // 配信者がすでに映像を止めていたら、入った時点で合わせる
+        const hiddenOnJoin = Array.from(room.remoteParticipants.values()).some((participant) =>
+          isHostVideoHidden(participant.attributes),
+        );
+        if (hiddenOnJoin) applyHostVideoHidden(room, true);
+
+        if (requestedRole === "speaker") {
           void room.localParticipant.setMicrophoneEnabled(
             micOn,
             micOn && selectedMicDeviceId ? { deviceId: selectedMicDeviceId } : undefined,
@@ -910,13 +926,12 @@ export default function RoomPage() {
             });
           }
         }
-        // Publish camera for host only
-        if (requestedRole === "host") {
-          void room.localParticipant.setCameraEnabled(
-            camOn,
-            camOn && selectedCamDeviceId ? { deviceId: selectedCamDeviceId } : undefined,
-          );
-        }
+      });
+
+      room.on(RoomEvent.ParticipantAttributesChanged, (_changed, participant) => {
+        if (!mounted || participant.identity === room.localParticipant.identity) return;
+        const hidden = isHostVideoHidden(participant.attributes);
+        if (hidden !== hostVideoHiddenRef.current) applyHostVideoHidden(room, hidden);
       });
 
       room.on(RoomEvent.Disconnected, () => {
@@ -1004,8 +1019,12 @@ export default function RoomPage() {
       });
 
       room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
-        void publication;
         if (!mounted) return;
+        // 映像を止めている間に OBS がつなぎ直した等で新しく届いた映像も、受け取らない
+        if (track.kind === Track.Kind.Video && hostVideoHiddenRef.current && isIngressIdentity(participant.identity)) {
+          publication.setSubscribed(false);
+          return;
+        }
         if (track.kind === Track.Kind.Video && remoteVideoRef.current) {
           track.attach(remoteVideoRef.current);
           remoteVideoRef.current.muted = true;
@@ -1144,7 +1163,7 @@ export default function RoomPage() {
       mounted = false;
       cleanup();
     };
-  }, [cleanup, requestedRole, roomId, selectedMicDeviceId, selectedCamDeviceId]);
+  }, [applyHostVideoHidden, cleanup, requestedRole, roomId, selectedMicDeviceId]);
 
   // Fetch session metadata for the info panel
   useEffect(() => {
@@ -1163,11 +1182,8 @@ export default function RoomPage() {
         const devices = await navigator.mediaDevices.enumerateDevices();
         if (!mounted) return;
         const audios = devices.filter((d) => d.kind === "audioinput");
-        const videos = devices.filter((d) => d.kind === "videoinput");
         setAudioDevices(audios);
-        setVideoDevices(videos);
         if (!selectedMicDeviceId && audios.length > 0) setSelectedMicDeviceId(audios[0].deviceId);
-        if (!selectedCamDeviceId && videos.length > 0) setSelectedCamDeviceId(videos[0].deviceId);
       } catch {
         // no-op
       }
@@ -1179,7 +1195,7 @@ export default function RoomPage() {
       mounted = false;
       navigator.mediaDevices.removeEventListener("devicechange", refreshDevices);
     };
-  }, [selectedMicDeviceId, selectedCamDeviceId]);
+  }, [selectedMicDeviceId]);
 
   useEffect(() => {
     const el = chatListRef.current;
@@ -1231,22 +1247,24 @@ export default function RoomPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[var(--brand-bg-900)] text-[var(--brand-text)]">
-      <header className="shrink-0 bg-[var(--brand-bg-900)]">
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-8 py-3 lg:px-12">
-          <button onClick={() => navigate("/")} className="flex items-center">
+    // h-dvh: スマホのアドレスバーの出し入れで 100vh が画面より高くなり、下端が隠れるのを防ぐ
+    <div className="flex h-dvh flex-col overflow-hidden bg-[var(--bg)] text-[var(--brand-text)]">
+      <header className="shrink-0 border-b border-[var(--line)] bg-[var(--brand-surface)]">
+        <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-3 px-4 py-2 sm:px-8 sm:py-3 lg:px-12">
+          <button onClick={() => navigate("/")} className="flex shrink-0 items-center">
             <Image src="/logo/aiment_logotype.svg" alt="aiment" width={150} height={50} className="h-10 w-auto object-contain brightness-0 invert" />
           </button>
-          <div className="flex items-center gap-2">
-            <span className="max-w-[260px] truncate rounded-full bg-[var(--brand-surface)] px-3 py-1 text-xs font-medium text-[var(--brand-text-muted)]">
+          <div className="flex min-w-0 items-center gap-2">
+            {/* スマホではタイトルを動画の下に出しているので、ヘッダーでは省いて状態だけ見せる */}
+            <span className="hidden max-w-[260px] truncate rounded-full bg-[var(--brand-surface)] px-3 py-1 text-xs font-medium text-[var(--brand-text-muted)] sm:inline">
               {session?.title ?? tx("配信ルーム", "Live room")}
             </span>
-            <span className="rounded-full bg-[var(--brand-surface)] px-3 py-1 text-xs font-medium text-[var(--brand-text-muted)]">Role: {assignedRole}</span>
+            <span className="hidden whitespace-nowrap rounded-full bg-[var(--brand-surface)] px-3 py-1 text-xs font-medium text-[var(--brand-text-muted)] md:inline">Role: {assignedRole}</span>
             <span
-              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+              className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${
                 status === "connected"
                   ? "bg-[var(--brand-primary)]/20 text-[var(--brand-primary)]"
-                  : "bg-[var(--brand-accent)]/20 text-[var(--brand-accent)]"
+                  : "bg-[var(--brand-accent-soft)] text-[var(--brand-accent-ink)]"
               }`}
             >
               {statusLabel}
@@ -1262,7 +1280,7 @@ export default function RoomPage() {
       >
         <div className={`grid grid-cols-1 items-start gap-4 xl:grid-cols-[1fr_360px] ${!chatOpen ? "xl:grid-cols-[1fr_64px]" : ""}`}>
           <section className="min-w-0 space-y-3">
-            <div ref={videoShellRef} className="overflow-hidden rounded-2xl bg-black shadow-xl">
+            <div ref={videoShellRef} className="overflow-hidden rounded-2xl bg-black">
               <div
                 onMouseMove={revealVideoControls}
                 onMouseLeave={hideVideoControls}
@@ -1273,13 +1291,13 @@ export default function RoomPage() {
                 <div ref={remoteAudioContainerRef} className="hidden" aria-hidden />
                 {status === "failed" && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--brand-surface)] px-6 text-center">
-                    <p className="text-sm font-semibold text-[var(--brand-accent)]">{tx("接続に失敗しました", "Connection failed")}</p>
+                    <p className="text-sm font-semibold text-[var(--brand-accent-ink)]">{tx("接続に失敗しました", "Connection failed")}</p>
                     {failureReason && (
-                      <p className="rounded-xl bg-[var(--brand-accent)]/15 px-4 py-2 text-xs text-[var(--brand-accent)]">{failureReason}</p>
+                      <p className="rounded-xl bg-[var(--brand-accent-soft)] px-4 py-2 text-xs text-[var(--brand-accent-ink)]">{failureReason}</p>
                     )}
                     <button
                       onClick={() => router.back()}
-                      className="mt-1 rounded-xl bg-[var(--brand-primary)] px-5 py-2 text-sm font-bold text-white"
+                      className="ui-btn ui-btn-md ui-btn-primary mt-1"
                     >
                       {tx("戻る", "Back")}
                     </button>
@@ -1293,7 +1311,14 @@ export default function RoomPage() {
                     </p>
                   </div>
                 )}
-                {status !== "failed" && status !== "waitingForLive" && !remoteConnected && (
+                {status !== "failed" && status !== "waitingForLive" && hostVideoHidden && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[var(--brand-surface)] text-center">
+                    <VideoCameraSlashIcon className="h-7 w-7 text-[var(--brand-text-muted)]" aria-hidden />
+                    <p className="text-sm font-semibold text-[var(--brand-text)]">{tx("配信者が映像を止めています", "The host has paused the video")}</p>
+                    <p className="text-xs text-[var(--brand-text-muted)]">{tx("音声はそのまま聞こえます", "You can still hear the audio")}</p>
+                  </div>
+                )}
+                {status !== "failed" && status !== "waitingForLive" && !hostVideoHidden && !remoteConnected && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[var(--brand-surface)] text-center">
                     <p className="text-sm font-semibold text-[var(--brand-text)]">{tx("配信者の映像を待機中", "Waiting for host stream")}</p>
                     <p className="text-xs text-[var(--brand-text-muted)]">
@@ -1302,7 +1327,7 @@ export default function RoomPage() {
                   </div>
                 )}
 
-                {audioBlocked && remoteConnected && (
+                {audioBlocked && (remoteConnected || hostVideoHidden) && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <button
                       type="button"
@@ -1359,8 +1384,8 @@ export default function RoomPage() {
                           {s.thumbnail && <Image src={s.thumbnail} alt={s.title} width={72} height={48} className="h-12 w-18 shrink-0 rounded-lg object-cover" />}
                           <div className="min-w-0">
                             <p className="line-clamp-2 text-xs font-semibold">{s.title}</p>
-                            <p className="mt-1 truncate text-[10px] text-[var(--brand-text-muted)]">{s.hostName}</p>
-                            {s.status === "live" && <span className="inline-block rounded bg-[var(--brand-accent)] px-1.5 py-0.5 text-[9px] font-bold text-white">{tx("配信中", "LIVE")}</span>}
+                            <p className="mt-1 truncate text-[11px] text-[var(--brand-text-muted)]">{s.hostName}</p>
+                            {s.status === "live" && <span className="inline-block rounded bg-[var(--brand-accent)] px-1.5 py-0.5 text-[11px] font-bold text-white">{tx("配信中", "LIVE")}</span>}
                           </div>
                         </Link>
                       ))}
@@ -1402,7 +1427,7 @@ export default function RoomPage() {
             )}
           </section>
 
-          <aside className="sticky top-4 flex min-h-0 max-h-[calc(100vh-80px)] flex-col overflow-hidden rounded-2xl bg-[var(--brand-bg-800)]">
+          <aside className="flex min-h-0 flex-col overflow-hidden rounded-2xl bg-[var(--brand-bg-800)] xl:sticky xl:top-4 xl:max-h-[calc(100dvh-80px)]">
             {chatOpen ? (
               <>
             <div className="px-4 py-3">
@@ -1424,7 +1449,8 @@ export default function RoomPage() {
             </div>
 
             <div className="relative min-h-0 flex-1">
-              <div ref={chatListRef} onScroll={handleChatScroll} className="h-full space-y-3 overflow-y-auto px-3 py-3">
+              {/* 1列表示（xl未満）ではチャットが動画の下に来る。コメント0件でも欄が潰れないよう高さを確保し、伸びすぎないよう上限も付ける */}
+              <div ref={chatListRef} onScroll={handleChatScroll} className="h-full min-h-[160px] max-h-[50dvh] space-y-3 overflow-y-auto px-3 py-3 xl:max-h-none">
                 {chatMessages.map((message) => (
                   <div
                     key={message.id}
@@ -1444,7 +1470,7 @@ export default function RoomPage() {
                         <button
                           type="button"
                           onClick={() => retractChatMessage(message.id)}
-                          className="rounded-full bg-[var(--brand-bg-900)] px-2 py-0.5 text-[10px] font-bold text-[var(--brand-text-muted)] ring-1 ring-black/5 hover:text-[var(--brand-accent)]"
+                          className="rounded-full bg-[var(--brand-bg-900)] px-2 py-0.5 text-[11px] font-bold text-[var(--brand-text-muted)] ring-1 ring-black/5 hover:text-[var(--brand-accent-ink)]"
                         >
                           {tx("取消", "Undo")}
                         </button>
@@ -1481,7 +1507,7 @@ export default function RoomPage() {
 
             <div className="p-3">
               {latestCue ? (
-                <div className="mb-2 rounded-xl bg-[var(--brand-surface)] px-3 py-2 shadow-[0_10px_24px_rgba(73,71,70,0.12)]">
+                <div className="mb-2 rounded-xl bg-[var(--brand-surface)] px-3 py-2">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--brand-text-muted)]">Live cue</span>
                   </div>
@@ -1502,7 +1528,8 @@ export default function RoomPage() {
                     sendChat();
                   }}
                   placeholder={tx("チャットを入力", "Type a message")}
-                  className="flex-1 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-sm text-[var(--brand-text)] outline-none placeholder:text-[var(--brand-text-muted)]"
+                  // scroll-mb: フォーカス時の自動スクロールで、下に浮いている操作バーの裏に入力欄が隠れないようにする
+                  className="min-w-0 flex-1 scroll-mb-32 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-sm text-[var(--brand-text)] outline-none placeholder:text-[var(--brand-text-muted)]"
                 />
                 <button
                   onClick={sendChat}
@@ -1513,25 +1540,18 @@ export default function RoomPage() {
                 </button>
               </div>
               {chatSendError ? (
-                <p className="mt-2 rounded-lg bg-[var(--brand-accent)]/15 px-3 py-2 text-xs font-semibold text-[var(--brand-accent)]">
+                <p className="mt-2 rounded-lg bg-[var(--brand-accent-soft)] px-3 py-2 text-xs font-semibold text-[var(--brand-accent-ink)]">
                   {chatSendError}
                 </p>
               ) : null}
-              {requestedRole === "speaker" ? (
-                <SpeakerTranslationAssistPanel
-                  sessionId={roomId}
-                  messages={chatMessages.filter((message) => message.kind !== "cue")}
-                  onSendMessage={(message) => publishTranslatedMessage(message)}
-                  className="mt-2"
-                />
-              ) : (
+              {requestedRole !== "speaker" ? (
                 <SmartPhraseAssist
                   sessionState={phraseSessionState}
                   onSendPhrase={sendChatText}
                   onInsertPhrase={insertChatPhrase}
                   className="mt-2"
                 />
-              )}
+              ) : null}
             </div>
               </>
             ) : (
@@ -1539,10 +1559,11 @@ export default function RoomPage() {
                 type="button"
                 onClick={() => setChatOpen(true)}
                 aria-label={tx("コメントを開く", "Open comments")}
-                className="flex h-full min-h-[64px] w-full flex-col items-center justify-center gap-2 text-[var(--brand-text-muted)] transition-colors hover:bg-[var(--brand-bg-900)] hover:text-[var(--brand-primary)]"
+                className="flex h-full min-h-[48px] w-full items-center justify-center gap-2 text-[var(--brand-text-muted)] transition-colors hover:bg-[var(--brand-bg-900)] hover:text-[var(--brand-primary)] xl:min-h-[64px] xl:flex-col"
               >
                 <ChatBubbleLeftRightIcon className="h-6 w-6" aria-hidden />
-                <span className="text-[11px] font-bold [writing-mode:vertical-rl]">{tx("コメント", "Chat")}</span>
+                {/* 縦書きは xl の細い右カラム用。1列表示では横書きのボタンにする */}
+                <span className="text-[11px] font-bold xl:[writing-mode:vertical-rl]">{tx("コメント", "Chat")}</span>
               </button>
             )}
           </aside>
@@ -1550,8 +1571,8 @@ export default function RoomPage() {
       </main>
 
       {requestedRole !== "listener" && (
-        <div className="pointer-events-none fixed bottom-4 left-1/2 z-30 w-[calc(100%-24px)] max-w-[720px] -translate-x-1/2">
-          <div className="pointer-events-auto rounded-[28px] bg-[var(--brand-surface)]/95 px-4 py-3 shadow-[0_14px_34px_rgba(73,71,70,0.18)] backdrop-blur">
+        <div className="pointer-events-none fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-30 w-[calc(100%-24px)] max-w-[720px] -translate-x-1/2">
+          <div className="ui-float pointer-events-auto rounded-2xl bg-[var(--brand-surface)]/95 px-4 py-3 backdrop-blur">
             <div className="flex items-end justify-center gap-2 md:gap-3">
               <div className="relative">
                 <div className="ui-ctl-group">
@@ -1574,10 +1595,7 @@ export default function RoomPage() {
                 <button
                   type="button"
                   disabled={!canSendMic}
-                  onClick={() => {
-                    setShowMicMenu((v) => !v);
-                    setShowCamMenu(false);
-                  }}
+                  onClick={() => setShowMicMenu((v) => !v)}
                   aria-label={tx("マイク入力を選択", "Select microphone input")}
                   className="ui-ctl ui-ctl-md ui-ctl-neutral w-8 px-0"
                 >
@@ -1585,7 +1603,7 @@ export default function RoomPage() {
                 </button>
                 </div>
                 {showMicMenu && canSendMic && (
-                  <div className="absolute bottom-14 left-0 z-20 min-w-[220px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/10 ring-1 ring-black/5">
+                  <div className="ui-float absolute bottom-14 left-0 z-20 min-w-[220px] rounded-xl bg-[var(--brand-surface)] p-2">
                     {audioDevices.map((device, index) => (
                       <button
                         key={device.deviceId}
@@ -1610,61 +1628,11 @@ export default function RoomPage() {
                 )}
               </div>
 
-            {canSendCam && (
-              <div className="relative">
-                <div className="ui-ctl-group">
-                <button
-                  onClick={() => applyCam(!camOn)}
-                  aria-label={camOn ? tx("カメラをオフ", "Turn camera off") : tx("カメラをオン", "Turn camera on")}
-                  className={`ui-ctl ui-ctl-md ui-ctl-icon ${camOn ? "ui-ctl-primary" : "ui-ctl-neutral"}`}
-                >
-                  {camOn ? <VideoCameraIcon className="h-5 w-5" aria-hidden /> : <VideoCameraSlashIcon className="h-5 w-5" aria-hidden />}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCamMenu((v) => !v);
-                    setShowMicMenu(false);
-                  }}
-                  aria-label={tx("カメラ入力を選択", "Select camera input")}
-                  className="ui-ctl ui-ctl-md ui-ctl-neutral w-8 px-0"
-                >
-                  <ChevronUpIcon className="h-4 w-4" aria-hidden />
-                </button>
-                </div>
-                {showCamMenu && (
-                  <div className="absolute bottom-14 left-0 z-20 min-w-[220px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/10 ring-1 ring-black/5">
-                    {videoDevices.map((device, index) => (
-                      <button
-                        key={device.deviceId}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCamDeviceId(device.deviceId);
-                          setShowCamMenu(false);
-                          if (roomRef.current && camOn) {
-                            void roomRef.current.localParticipant.setCameraEnabled(true, { deviceId: device.deviceId });
-                          }
-                        }}
-                        className={`block w-full rounded-lg px-3 py-2 text-left text-sm ${
-                          selectedCamDeviceId === device.deviceId
-                            ? "bg-[var(--brand-primary)] text-white font-bold"
-                            : "text-[var(--brand-text)] hover:bg-[var(--brand-bg-900)]"
-                        }`}
-                      >
-                        {device.label || `Camera ${index + 1}`}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
             <button
               type="button"
               onClick={() => {
                 setShowDevicePanel((v) => !v);
                 setShowMicMenu(false);
-                setShowCamMenu(false);
               }}
               aria-pressed={showDevicePanel}
               aria-label={tx("入力設定を開く", "Open input settings")}
@@ -1687,22 +1655,16 @@ export default function RoomPage() {
           </div>
 
           {showDevicePanel && (
-            <div className="mt-3 rounded-2xl bg-[var(--brand-surface)] p-3 text-sm text-[var(--brand-text)] shadow-lg shadow-black/10">
-              <div className="grid gap-2 md:grid-cols-3">
+            <div className="mt-3 rounded-2xl bg-[var(--brand-surface)] p-3 text-sm text-[var(--brand-text)]">
+              <div className="grid gap-2 md:grid-cols-2">
                 <div className="rounded-xl bg-[var(--brand-bg-900)] px-3 py-2">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--brand-text-muted)]">{tx("役割", "Role")}</p>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--brand-text-muted)]">{tx("役割", "Role")}</p>
                   <p className="mt-1 font-semibold">{assignedRole}</p>
                 </div>
                 <div className="rounded-xl bg-[var(--brand-bg-900)] px-3 py-2">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--brand-text-muted)]">{tx("マイク", "Microphone")}</p>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--brand-text-muted)]">{tx("マイク", "Microphone")}</p>
                   <p className="mt-1 line-clamp-1 font-semibold">
                     {audioDevices.find((device) => device.deviceId === selectedMicDeviceId)?.label ?? tx("デフォルト", "Default")}
-                  </p>
-                </div>
-                <div className="rounded-xl bg-[var(--brand-bg-900)] px-3 py-2">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--brand-text-muted)]">{tx("カメラ", "Camera")}</p>
-                  <p className="mt-1 line-clamp-1 font-semibold">
-                    {videoDevices.find((device) => device.deviceId === selectedCamDeviceId)?.label ?? tx("未使用", "Unused")}
                   </p>
                 </div>
               </div>

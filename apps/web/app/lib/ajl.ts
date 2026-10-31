@@ -9,6 +9,8 @@ export type AjlInfo = {
   color: string;
   /** バッジの下に覗く同系色の厚み。 */
   dropColor: string;
+  /** 面の上に載せる数字の色（面との差が 4.5:1 以上になる、同じ色みの濃い色）。 */
+  inkColor: string;
 };
 
 export const DEFAULT_AJL_LEVEL: AjlLevel = 3;
@@ -21,6 +23,7 @@ export const AJL_LEVELS: AjlInfo[] = [
     description: "Words and simple greetings",
     color: "#69A7EF",
     dropColor: "#69A7EF",
+    inkColor: "#0B3866",
   },
   {
     level: 2,
@@ -29,6 +32,7 @@ export const AJL_LEVELS: AjlInfo[] = [
     description: "Simple self-introductions and short answers",
     color: "#86EACF",
     dropColor: "#86EACF",
+    inkColor: "#0C5444",
   },
   {
     level: 3,
@@ -37,6 +41,7 @@ export const AJL_LEVELS: AjlInfo[] = [
     description: "Basic conversation with support",
     color: "#9DEA70",
     dropColor: "#9DEA70",
+    inkColor: "#2C5A0C",
   },
   {
     level: 4,
@@ -45,6 +50,7 @@ export const AJL_LEVELS: AjlInfo[] = [
     description: "Natural conversation on familiar topics",
     color: "#F6C563",
     dropColor: "#F6C96B",
+    inkColor: "#5E4000",
   },
   {
     level: 5,
@@ -53,6 +59,7 @@ export const AJL_LEVELS: AjlInfo[] = [
     description: "Deep conversation and abstract topics",
     color: "#F09063",
     dropColor: "#F2AA66",
+    inkColor: "#6A2A08",
   },
   {
     level: 6,
@@ -61,6 +68,7 @@ export const AJL_LEVELS: AjlInfo[] = [
     description: "Near-native free conversation",
     color: "#EC649C",
     dropColor: "#EC649C",
+    inkColor: "#4E0727",
   },
 ];
 

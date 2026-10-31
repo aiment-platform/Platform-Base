@@ -226,7 +226,7 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
             : tx("ストリームキーを発行", "Generate Stream Key")}
         </button>
         {error && (
-          <div className="flex items-start gap-2 rounded-lg bg-[var(--brand-accent)]/10 px-3 py-2 text-xs text-[var(--brand-accent)]">
+          <div className="flex items-start gap-2 rounded-lg bg-[var(--brand-accent-soft)] px-3 py-2 text-xs text-[var(--brand-accent-ink)]">
             <ExclamationTriangleIcon className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -243,13 +243,13 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
           <div
             className={`flex flex-1 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold ${
               obsConnected
-                ? "bg-green-500/15 text-green-400"
+                ? "bg-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)]"
                 : "bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)]"
             }`}
           >
             <span
               className={`h-2 w-2 shrink-0 rounded-full ${
-                obsConnected ? "animate-pulse bg-green-400" : "bg-[var(--brand-text-muted)]"
+                obsConnected ? "animate-pulse bg-[var(--brand-primary)]" : "bg-[var(--brand-text-muted)]"
               }`}
             />
             {obsConnected
@@ -268,7 +268,7 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
 
         {/* RTMP URL */}
         <div className="space-y-1">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--brand-text-muted)]">
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--brand-text-muted)]">
             {tx("サーバー（RTMP URL）", "Server (RTMP URL)")}
           </span>
           <div className="flex gap-2">
@@ -280,7 +280,7 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
               className="flex shrink-0 items-center gap-1 rounded-lg bg-[var(--brand-surface)] px-3 py-2 text-xs font-semibold text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
             >
               {copiedUrl ? (
-                <CheckIcon className="h-3.5 w-3.5 text-green-400" />
+                <CheckIcon className="h-3.5 w-3.5 text-[var(--brand-primary-ink)]" />
               ) : (
                 <ClipboardDocumentIcon className="h-3.5 w-3.5" />
               )}
@@ -292,12 +292,12 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
         {/* ストリームキー */}
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--brand-text-muted)]">
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--brand-text-muted)]">
               {tx("ストリームキー", "Stream Key")}
             </span>
             <button
               onClick={() => setShowKey((v) => !v)}
-              className="flex items-center gap-1 text-[10px] text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+              className="flex items-center gap-1 text-[11px] text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
             >
               {showKey ? (
                 <EyeSlashIcon className="h-3.5 w-3.5" />
@@ -316,7 +316,7 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
               className="flex shrink-0 items-center gap-1 rounded-lg bg-[var(--brand-surface)] px-3 py-2 text-xs font-semibold text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
             >
               {copiedKey ? (
-                <CheckIcon className="h-3.5 w-3.5 text-green-400" />
+                <CheckIcon className="h-3.5 w-3.5 text-[var(--brand-primary-ink)]" />
               ) : (
                 <ClipboardDocumentIcon className="h-3.5 w-3.5" />
               )}
@@ -326,7 +326,7 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
         </div>
 
         {/* セキュリティ警告 */}
-        <div className="flex items-start gap-2 rounded-lg bg-yellow-500/10 px-3 py-2 text-xs text-yellow-400">
+        <div className="flex items-start gap-2 rounded-lg bg-[var(--brand-warning-soft)] px-3 py-2 text-xs text-[var(--brand-warning-ink)]">
           <ExclamationTriangleIcon className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
             {tx(
@@ -411,7 +411,7 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
         </div>
 
         {error && (
-          <div className="flex items-start gap-2 rounded-lg bg-[var(--brand-accent)]/10 px-3 py-2 text-xs text-[var(--brand-accent)]">
+          <div className="flex items-start gap-2 rounded-lg bg-[var(--brand-accent-soft)] px-3 py-2 text-xs text-[var(--brand-accent-ink)]">
             <ExclamationTriangleIcon className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -421,15 +421,15 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
       {/* 回線切替後: OBSへのストリームキー張り替え依頼ポップアップ */}
       {showSwapDone && ingress && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center ui-scrim p-4"
           onClick={() => setShowSwapDone(false)}
         >
           <div
-            className="w-full max-w-md rounded-2xl bg-[var(--brand-surface)] p-6 shadow-2xl shadow-black/50"
+            className="ui-modal w-full max-w-md p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center gap-2">
-              <ExclamationTriangleIcon className="h-5 w-5 text-yellow-400" />
+              <ExclamationTriangleIcon className="h-5 w-5 text-[var(--brand-warning-ink)]" />
               <h2 className="text-base font-bold text-[var(--brand-text)]">
                 {tx("OBSのストリームキーを張り替えてください", "Update the stream key in OBS")}
               </h2>
@@ -443,7 +443,7 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
 
             <div className="space-y-3">
               <div className="space-y-1">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--brand-text-muted)]">
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--brand-text-muted)]">
                   {tx("サーバー（RTMP URL）", "Server (RTMP URL)")}
                 </span>
                 <div className="flex gap-2">
@@ -454,14 +454,14 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
                     onClick={() => void copyToClipboard(ingress.rtmpUrl, setCopiedUrl)}
                     className="flex shrink-0 items-center gap-1 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-xs font-semibold text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
                   >
-                    {copiedUrl ? <CheckIcon className="h-3.5 w-3.5 text-green-400" /> : <ClipboardDocumentIcon className="h-3.5 w-3.5" />}
+                    {copiedUrl ? <CheckIcon className="h-3.5 w-3.5 text-[var(--brand-primary-ink)]" /> : <ClipboardDocumentIcon className="h-3.5 w-3.5" />}
                     {copiedUrl ? tx("コピー済", "Copied") : tx("コピー", "Copy")}
                   </button>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--brand-text-muted)]">
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--brand-text-muted)]">
                   {tx("新しいストリームキー", "New Stream Key")}
                 </span>
                 <div className="flex gap-2">
@@ -472,7 +472,7 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
                     onClick={() => void copyToClipboard(ingress.streamKey, setCopiedKey)}
                     className="flex shrink-0 items-center gap-1 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-xs font-semibold text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
                   >
-                    {copiedKey ? <CheckIcon className="h-3.5 w-3.5 text-green-400" /> : <ClipboardDocumentIcon className="h-3.5 w-3.5" />}
+                    {copiedKey ? <CheckIcon className="h-3.5 w-3.5 text-[var(--brand-primary-ink)]" /> : <ClipboardDocumentIcon className="h-3.5 w-3.5" />}
                     {copiedKey ? tx("コピー済", "Copied") : tx("コピー", "Copy")}
                   </button>
                 </div>
@@ -492,11 +492,11 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
       {/* OBSチュートリアルモーダル */}
       {showTutorial && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center ui-scrim p-4"
           onClick={() => setShowTutorial(false)}
         >
           <div
-            className="w-full max-w-sm rounded-2xl bg-[var(--brand-surface)] p-6 shadow-2xl shadow-black/50"
+            className="ui-modal w-full max-w-sm p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-5 flex items-center justify-between">
@@ -558,13 +558,13 @@ export function ObsStreamPanel({ sessionId, onConnectionChange }: Props) {
                 ] as [string, string | null][]
               ).map(([step, note], i) => (
                 <li key={i} className="flex gap-3">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)] text-[10px] font-bold text-white">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)] text-[11px] font-bold text-white">
                     {i + 1}
                   </span>
                   <div>
                     <p className="text-xs text-[var(--brand-text)]">{step}</p>
                     {note && (
-                      <p className="mt-0.5 text-[10px] text-[var(--brand-text-muted)]">{note}</p>
+                      <p className="mt-0.5 text-[11px] text-[var(--brand-text-muted)]">{note}</p>
                     )}
                   </div>
                 </li>

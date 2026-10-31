@@ -62,9 +62,9 @@ export default function AdminIngressPage() {
   };
 
   return (
-    <main className="p-8">
+    <main className="px-4 py-6 sm:p-8">
       <div className="max-w-4xl">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold">Ingress 管理</h1>
             <p className="mt-1 text-sm text-[var(--brand-text-muted)]">LiveKit Ingress（OBSなどの配信キー）</p>
@@ -88,24 +88,24 @@ export default function AdminIngressPage() {
         </div>
 
         {error && (
-          <div className="mb-4 rounded-xl bg-[var(--brand-accent)]/15 p-3 text-sm text-[var(--brand-accent)]">{error}</div>
+          <div className="mb-4 rounded-xl bg-[var(--brand-accent-soft)] p-3 text-sm text-[var(--brand-accent-ink)]">{error}</div>
         )}
 
         {loading ? (
           <p className="text-[var(--brand-text-muted)]">Loading...</p>
         ) : ingresses.length === 0 ? (
-          <div className="rounded-2xl bg-black/[0.04] p-8 text-center text-[var(--brand-text-muted)]">
+          <div className="ui-panel p-8 text-center text-[var(--brand-text-muted)]">
             No ingresses found.
           </div>
         ) : (
           <div className="space-y-3">
             {ingresses.map((ing) => (
-              <div key={ing.ingressId} className="rounded-2xl bg-black/[0.04] p-4">
+              <div key={ing.ingressId} className="ui-panel p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1 space-y-1">
-                    <p className="font-semibold">{ing.name || "(no name)"}</p>
-                    <p className="text-xs text-[var(--brand-text-muted)]">ID: {ing.ingressId}</p>
-                    <p className="text-xs text-[var(--brand-text-muted)]">Room: {ing.roomName || "—"}</p>
+                    <p className="break-all font-semibold">{ing.name || "(no name)"}</p>
+                    <p className="break-all text-xs text-[var(--brand-text-muted)]">ID: {ing.ingressId}</p>
+                    <p className="break-all text-xs text-[var(--brand-text-muted)]">Room: {ing.roomName || "—"}</p>
                     <p className="text-xs text-[var(--brand-text-muted)]">State: {ing.state}</p>
                   </div>
                   <button

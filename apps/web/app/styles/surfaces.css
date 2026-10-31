@@ -1,0 +1,46 @@
+/* ==========================================================================
+   面（surfaces）
+   --------------------------------------------------------------------------
+   面は4種類だけ。ぼかした影はどれにも使わない。
+
+     .ui-panel   ページに置く白い面。影なし。背景（薄いグレー）との色差で区切る。
+                 .ui-card は同じもの（Card.tsx が使う古い名前）。
+     .ui-sunken  白い面の中の、一段沈んだ灰色の面。
+                 .ui-card-subtle は同じもの（古い名前）。
+     .ui-float   その場に小さく浮く白い面（メニュー、ツールチップ、日付選択）。
+                 四方に細い縁＋下に硬い厚み（--ui-shadow-float）。
+     .ui-modal   画面を占領する白い面（モーダル、ダイアログ）。影なし。
+                 後ろに .ui-scrim（幕）を敷いて、ページから切り離す。
+
+   Tailwind の色・余白クラスと組み合わせて使えるよう @layer components に置く
+   （同じ要素に書いた Tailwind のクラスのほうが勝つ）。
+   ========================================================================== */
+@layer components {
+  .ui-panel,
+  .ui-card {
+    border-radius: var(--ui-radius-lg);
+    background: var(--brand-surface);
+  }
+
+  .ui-sunken,
+  .ui-card-subtle {
+    border-radius: var(--ui-radius-md);
+    background: var(--brand-bg-900);
+  }
+
+  .ui-float {
+    border-radius: var(--ui-radius-md);
+    background: var(--brand-surface);
+    box-shadow: var(--ui-shadow-float);
+  }
+
+  .ui-modal {
+    border-radius: var(--ui-radius-lg);
+    background: var(--brand-surface);
+  }
+
+  /* モーダルの後ろに敷く幕。position や配置は使う側で決める */
+  .ui-scrim {
+    background: var(--ui-scrim);
+  }
+}

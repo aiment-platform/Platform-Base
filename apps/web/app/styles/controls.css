@@ -1,0 +1,437 @@
+/* 操作部品：入力欄、ボタン（.ui-btn）、操作ボタン（.ui-ctl）、切替、メニュー行。 */
+
+.ui-input,
+.ui-select,
+.ui-textarea {
+  width: 100%;
+  border: 0;
+  border-radius: var(--ui-radius-sm);
+  background: var(--brand-bg-900);
+  color: var(--brand-text);
+  font-size: 1rem;
+  line-height: 1.5rem;
+  outline: none;
+}
+
+.ui-input,
+.ui-select {
+  height: 40px;
+  padding: 0 12px;
+}
+
+.ui-textarea {
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+.ui-input:focus-visible,
+.ui-select:focus-visible,
+.ui-textarea:focus-visible {
+  box-shadow: var(--ui-focus);
+}
+
+/* ==========================================================================
+   ボタン（UI ver0.31）
+   --------------------------------------------------------------------------
+   押せるものはすべて同じ作り：べた塗りの面＋下にぼかしのない濃い色の縁
+   （厚み）。押すと縁の分だけ沈む。ソフトな影や枠線は使わない。
+
+     .ui-btn   ふつうのボタン。色 = primary / secondary / ghost / soft /
+               danger、大きさ = sm / md / lg。React では
+               <Button variant size>（components/ui/Button.tsx）。
+     .ui-ctl   配信・ルーム画面の操作ボタン（マイク・映像・退出など）。
+               オン = primary、オフ = neutral。
+     .ui-segment / .ui-menu-item / .ui-tile も同じ作法にそろえてある。
+
+   @layer components に置いているので、同じ要素に書いた Tailwind の
+   クラス（w-full, mt-4 など）のほうが勝つ。
+   ========================================================================== */
+@layer components {
+  /* マットな物理ボタン。面はべた塗り、下にぼかしのない濃い色の縁（厚み）。
+     押すと縁の分だけ沈む。ソフトな影や枠線は使わない。配信中の操作ボタン
+     （.ui-ctl）と同じ作法で、サイトのボタンはすべてこれにそろえる。 */
+  .ui-btn {
+    --btn-face: var(--brand-primary);
+    --btn-edge: var(--brand-primary-dark);
+    --btn-ink: #ffffff;
+    --btn-lift: 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 0;
+    border-radius: var(--ui-radius-md);
+    background: var(--btn-face);
+    color: var(--btn-ink);
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 var(--btn-lift) 0 0 var(--btn-edge);
+    transform: translateY(0);
+    transition:
+      transform 80ms ease,
+      box-shadow 80ms ease,
+      filter 0.15s ease,
+      opacity 0.15s ease,
+      background-color 0.15s ease;
+  }
+
+  .ui-btn:hover:not(:disabled) {
+    filter: brightness(1.05);
+  }
+
+  .ui-btn:active:not(:disabled),
+  .ui-btn[data-pressed="true"] {
+    transform: translateY(var(--btn-lift));
+    box-shadow: 0 0 0 0 var(--btn-edge);
+  }
+
+  .ui-btn:focus-visible {
+    outline: none;
+    box-shadow:
+      0 var(--btn-lift) 0 0 var(--btn-edge),
+      0 0 0 3px color-mix(in srgb, var(--brand-primary) 45%, transparent);
+  }
+
+  .ui-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .ui-btn-lg {
+    --btn-lift: 6px;
+    height: 52px;
+    padding: 0 28px;
+    font-size: 1rem;
+  }
+
+  .ui-btn-md {
+    --btn-lift: 5px;
+    height: 42px;
+    padding: 0 20px;
+    font-size: 0.9375rem;
+  }
+
+  .ui-btn-sm {
+    --btn-lift: 4px;
+    height: 34px;
+    padding: 0 14px;
+    font-size: 0.875rem;
+  }
+
+  /* icon-only */
+  .ui-btn-square {
+    padding: 0;
+    aspect-ratio: 1;
+  }
+
+  .ui-btn-primary {
+    --btn-face: var(--brand-primary);
+    --btn-edge: var(--brand-primary-dark);
+    --btn-ink: #ffffff;
+  }
+
+  /* 副ボタン。枠線は使わず、グレーの塗りで主ボタンと区別する。
+     secondary は文字が紫、ghost は文字がグレー。 */
+  .ui-btn-secondary {
+    --btn-face: var(--sunken);
+    --btn-edge: var(--placeholder);
+    --btn-ink: var(--brand-primary);
+  }
+
+  .ui-btn-ghost {
+    --btn-face: var(--sunken);
+    --btn-edge: var(--placeholder);
+    --btn-ink: var(--brand-text-muted);
+  }
+
+  .ui-btn-soft {
+    --btn-face: color-mix(in srgb, var(--brand-primary) 14%, #ffffff);
+    --btn-edge: color-mix(in srgb, var(--brand-primary) 32%, #ffffff);
+    --btn-ink: var(--brand-primary);
+  }
+
+  .ui-btn-danger {
+    --btn-face: var(--brand-accent);
+    --btn-edge: var(--accent-dark);
+    --btn-ink: #ffffff;
+  }
+
+  /* --- ドロップダウンの行 ------------------------------------------------
+     カード（外枠）の中に並べる平らな行。メニューの中に厚みのある .ui-btn を
+     並べると重たく見えるので、行は面の色だけで状態を表す。 */
+  .ui-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: var(--ui-radius-md);
+    background: transparent;
+    color: var(--brand-text-muted);
+    font-size: 0.9375rem;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 140ms ease, color 140ms ease;
+  }
+
+  .ui-menu-item:hover {
+    background: var(--brand-bg-900);
+    color: var(--brand-text);
+  }
+
+  .ui-menu-item[aria-current="page"] {
+    background: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+    color: var(--brand-primary);
+  }
+
+  .ui-menu-item:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 45%, transparent);
+  }
+
+  /* --- セグメント切替（JP/EN など） --------------------------------------
+     灰色の土台に、選択中のつまみだけが厚みを持って乗る。押すと沈む
+     ところまで .ui-ctl と同じ作法に揃えてある。 */
+  .ui-segment {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 3px;
+    border-radius: var(--ui-radius-md);
+    background: var(--brand-bg-900);
+  }
+
+  .ui-segment__option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 30px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: var(--ui-radius-sm);
+    background: transparent;
+    color: var(--brand-text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transform: translateY(0);
+    transition:
+      transform 90ms ease,
+      box-shadow 90ms ease,
+      background-color 140ms ease,
+      color 140ms ease;
+  }
+
+  .ui-segment__option:hover:not([aria-pressed="true"]) {
+    color: var(--brand-text);
+  }
+
+  .ui-segment__option[aria-pressed="true"] {
+    background: var(--brand-primary);
+    color: #ffffff;
+    box-shadow: 0 3px 0 0 var(--brand-primary-dark);
+    transform: translateY(-1px);
+  }
+
+  .ui-segment__option[aria-pressed="true"]:active {
+    box-shadow: 0 0 0 0 var(--brand-primary-dark);
+    transform: translateY(2px);
+  }
+
+  .ui-segment__option:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 45%, transparent);
+  }
+
+  /* --- 分割CTA（本体＋▾）。.ui-ctl-group と同じく、押すと一塊で沈む ------- */
+  .ui-btn-group {
+    display: inline-flex;
+    align-items: stretch;
+    transform: translateY(0);
+    transition: transform 80ms ease;
+  }
+
+  .ui-btn-group > .ui-btn {
+    border-radius: 0;
+  }
+
+  .ui-btn-group > .ui-btn:first-child {
+    border-radius: var(--ui-radius-md) 0 0 var(--ui-radius-md);
+  }
+
+  .ui-btn-group > .ui-btn:last-child {
+    border-radius: 0 var(--ui-radius-md) var(--ui-radius-md) 0;
+    /* 本体と▾の境目に細い線だけ引く */
+    box-shadow:
+      inset 1px 0 0 rgba(255, 255, 255, 0.28),
+      0 var(--btn-lift) 0 0 var(--btn-edge);
+  }
+
+  .ui-btn-group > .ui-btn:active:not(:disabled) {
+    transform: none;
+  }
+
+  .ui-btn-group:has(> .ui-btn:active:not(:disabled)) {
+    transform: translateY(5px);
+  }
+
+  .ui-btn-group:has(> .ui-btn:active:not(:disabled)) > .ui-btn {
+    box-shadow: 0 0 0 0 var(--btn-edge);
+  }
+
+  /* --- hard-edge control chips ------------------------------------------ */
+  .ui-ctl {
+    --ctl-face: var(--brand-primary);
+    --ctl-edge: var(--brand-primary-dark);
+    --ctl-ink: #ffffff;
+    --ctl-lift: var(--ui-ctl-lift);
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 0;
+    border-radius: var(--ui-radius-md);
+    background: var(--ctl-face);
+    color: var(--ctl-ink);
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 var(--ctl-lift) 0 0 var(--ctl-edge);
+    transform: translateY(0);
+    transition: transform 80ms ease, box-shadow 80ms ease, background-color 0.15s ease;
+  }
+
+  .ui-ctl:hover:not(:disabled) {
+    filter: brightness(1.05);
+  }
+
+  .ui-ctl:active:not(:disabled),
+  .ui-ctl[data-pressed="true"] {
+    transform: translateY(var(--ctl-lift));
+    box-shadow: 0 0 0 0 var(--ctl-edge);
+  }
+
+  .ui-ctl:focus-visible {
+    outline: none;
+    box-shadow:
+      0 var(--ctl-lift) 0 0 var(--ctl-edge),
+      0 0 0 3px color-mix(in srgb, var(--brand-primary) 45%, transparent);
+  }
+
+  .ui-ctl:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .ui-ctl-primary {
+    --ctl-face: var(--brand-primary);
+    --ctl-edge: var(--brand-primary-dark);
+    --ctl-ink: #ffffff;
+  }
+
+  .ui-ctl-neutral {
+    --ctl-face: var(--neutral);
+    --ctl-edge: var(--neutral-dark);
+    --ctl-ink: #ffffff;
+  }
+
+  .ui-ctl-danger {
+    --ctl-face: var(--brand-accent);
+    --ctl-edge: var(--accent-dark);
+    --ctl-ink: #ffffff;
+  }
+
+  .ui-ctl-sm {
+    height: 40px;
+    padding: 0 12px;
+    font-size: 0.875rem;
+  }
+
+  .ui-ctl-md {
+    height: 48px;
+    padding: 0 16px;
+    font-size: 0.9375rem;
+  }
+
+  .ui-ctl-icon {
+    width: 48px;
+    padding: 0;
+  }
+
+  /* A split control (action + chevron) has to sink as one block. */
+  .ui-ctl-group {
+    display: inline-flex;
+    align-items: stretch;
+    transform: translateY(0);
+    transition: transform 80ms ease;
+  }
+
+  .ui-ctl-group > .ui-ctl {
+    border-radius: 0;
+  }
+
+  .ui-ctl-group > .ui-ctl:first-child {
+    border-radius: var(--ui-radius-md) 0 0 var(--ui-radius-md);
+  }
+
+  .ui-ctl-group > .ui-ctl:last-child {
+    border-radius: 0 var(--ui-radius-md) var(--ui-radius-md) 0;
+  }
+
+  .ui-ctl-group > .ui-ctl:only-child {
+    border-radius: var(--ui-radius-md);
+  }
+
+  .ui-ctl-group > .ui-ctl:active:not(:disabled) {
+    transform: none;
+  }
+
+  .ui-ctl-group:has(> .ui-ctl:active:not(:disabled)) {
+    transform: translateY(var(--ui-ctl-lift));
+  }
+
+  .ui-ctl-group:has(> .ui-ctl:active:not(:disabled)) > .ui-ctl {
+    box-shadow: 0 0 0 0 var(--ctl-edge);
+  }
+
+  /* Oversized tile (the profile square on the button sheet). */
+  .ui-tile {
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 30px;
+    background: var(--brand-primary);
+    color: #ffffff;
+    cursor: pointer;
+    box-shadow: 0 var(--ui-ctl-lift) 0 0 var(--brand-primary-dark);
+    transform: translateY(0);
+    transition: transform 80ms ease, box-shadow 80ms ease;
+  }
+
+  .ui-tile:active {
+    transform: translateY(var(--ui-ctl-lift));
+    box-shadow: 0 0 0 0 var(--brand-primary-dark);
+  }
+}
+
+.account-settings-page .text-sm {
+  font-size: 0.9375rem;
+  line-height: 1.5rem;
+}
+
+.account-settings-page .text-xs {
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+}
+
+.account-settings-page input,
+.account-settings-page select,
+.account-settings-page textarea {
+  min-height: 44px;
+  font-size: 1rem;
+  line-height: 1.5rem;
+}

@@ -2,26 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ChevronUpIcon,
-  MicrophoneIcon,
-  VideoCameraIcon,
-  VideoCameraSlashIcon,
-} from "@heroicons/react/24/solid";
 import { TopNav } from "../../components/home/TopNav";
 import { StudioProgress } from "../../components/ui/StudioProgress";
 import { DateTimePicker } from "../../components/ui/DateTimePicker";
-import { AJL_LEVELS, getAjlInfo } from "../../lib/ajl";
+import { AjlLevelPicker } from "../components/AjlLevelPicker";
 import type { SubscriptionPlan } from "../../lib/apiTypes";
 import { useI18n } from "../../lib/i18n";
 import { createStreamSession } from "../../lib/streamSessions";
 import { uploadImageToR2 } from "../../lib/uploadImage";
+import { PLACEHOLDER_THUMBNAIL } from "../../lib/thumbnail";
 import { useUserSession } from "../../lib/userSession";
 import { useRouteTransition } from "../../components/ui/RouteTransition";
 import { SPEAKER_FEE_ENABLED } from "@/lib/speakerFee";
-
-const PRESET_THUMBNAILS = [1, 2, 3, 4, 5].map((n) => `/image/thumbnail/thumbnail_${n}.png`);
-const DEFAULT_THUMBNAIL = PRESET_THUMBNAILS[4];
 
 type NoticeItem = {
   id: string;
@@ -48,7 +40,8 @@ export default function StudioPreLivePage() {
   const [showPublishMenu, setShowPublishMenu] = useState(false);
   const [scheduledAt, setScheduledAt] = useState(localNow30min);
   const [startWarnings, setStartWarnings] = useState<string[]>([]);
-  const [thumbnail, setThumbnail] = useState(DEFAULT_THUMBNAIL);
+  // 空のままなら、表示側で aiment のプレースホルダー画像になる（lib/thumbnail.ts）
+  const [thumbnail, setThumbnail] = useState("");
   const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -58,46 +51,11 @@ export default function StudioPreLivePage() {
   const [japaneseLevel, setJapaneseLevel] = useState(3);
   const [chatInput, setChatInput] = useState("");
   const [notices, setNotices] = useState<NoticeItem[]>([]);
-  const [micOn, setMicOn] = useState(true);
-  const [camOn, setCamOn] = useState(true);
-  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
-  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
-  const [selectedMicDeviceId, setSelectedMicDeviceId] = useState("");
-  const [selectedCamDeviceId, setSelectedCamDeviceId] = useState("");
-  const [showMicMenu, setShowMicMenu] = useState(false);
-  const [showCamMenu, setShowCamMenu] = useState(false);
 
   useEffect(() => {
     if (!hydrated) return;
     if (!isVtuber) router.replace("/");
   }, [hydrated, isVtuber, router]);
-
-  useEffect(() => {
-    if (typeof navigator === "undefined" || !navigator.mediaDevices?.enumerateDevices) return;
-
-    let mounted = true;
-    const refreshDevices = async () => {
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        if (!mounted) return;
-        const audios = devices.filter((device) => device.kind === "audioinput");
-        const videos = devices.filter((device) => device.kind === "videoinput");
-        setAudioDevices(audios);
-        setVideoDevices(videos);
-        setSelectedMicDeviceId((current) => current || audios[0]?.deviceId || "");
-        setSelectedCamDeviceId((current) => current || videos[0]?.deviceId || "");
-      } catch {
-        // Device labels can stay hidden until browser permission is granted.
-      }
-    };
-
-    void refreshDevices();
-    navigator.mediaDevices.addEventListener("devicechange", refreshDevices);
-    return () => {
-      mounted = false;
-      navigator.mediaDevices.removeEventListener("devicechange", refreshDevices);
-    };
-  }, []);
 
   const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -182,24 +140,9 @@ export default function StudioPreLivePage() {
         japaneseLevel,
       });
 
-      if (publishMode === "go_live_now") {
-        const params = new URLSearchParams({
-          autostart: "1",
-          mic: micOn ? "1" : "0",
-          cam: camOn ? "1" : "0",
-        });
-        if (selectedMicDeviceId) params.set("micDeviceId", selectedMicDeviceId);
-        if (selectedCamDeviceId) params.set("camDeviceId", selectedCamDeviceId);
-        navigate(`/studio/live/${encodeURIComponent(created.sessionId)}?${params.toString()}`);
-        return;
-      }
-      const params = new URLSearchParams({
-        mic: micOn ? "1" : "0",
-        cam: camOn ? "1" : "0",
-      });
-      if (selectedMicDeviceId) params.set("micDeviceId", selectedMicDeviceId);
-      if (selectedCamDeviceId) params.set("camDeviceId", selectedCamDeviceId);
-      navigate(`/studio/live/${encodeURIComponent(created.sessionId)}?${params.toString()}`);
+      // マイク/カメラはブラウザで使わない（映像も音声も OBS から）ので、渡すのは自動開始の印だけ
+      const query = publishMode === "go_live_now" ? "?autostart=1" : "";
+      navigate(`/studio/live/${encodeURIComponent(created.sessionId)}${query}`);
     } catch (caughtError) {
       const message = caughtError instanceof Error ? caughtError.message : "";
       if (message.includes("VTuber registration requires verified phone")) {
@@ -219,18 +162,25 @@ export default function StudioPreLivePage() {
   if (!hydrated || !isVtuber) return null;
 
   return (
-    <div className="h-screen overflow-hidden bg-[var(--brand-bg-900)] text-[var(--brand-text)]">
+    // md 以上は画面の高さに収めて各カラムの中だけスクロールする（PC の配信画面）。
+    // スマホでは2カラムに収まらないので、ページ全体を縦にスクロールさせる。
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--brand-text)] md:h-screen md:overflow-hidden">
       <TopNav mode="studio" />
 
-      <main className="mx-auto grid h-[calc(100vh-72px)] max-w-[1440px] grid-cols-[1fr_320px] gap-4 overflow-hidden px-4 py-3 lg:grid-cols-[58px_1fr_360px] lg:px-6">
+      <main className="mx-auto grid max-w-[1440px] grid-cols-1 gap-4 px-4 py-3 md:h-[calc(100vh-72px)] md:grid-cols-[1fr_320px] md:overflow-hidden lg:grid-cols-[58px_1fr_360px] lg:px-6">
         <aside className="hidden lg:block">
           <StudioProgress current="prelive" orientation="vertical" />
         </aside>
 
-        <section className="flex min-h-0 flex-col overflow-hidden">
+        <section className="flex min-h-0 flex-col md:overflow-hidden">
+          {/* 縦のステップ表示は lg 以上の左レールにしか出ないので、それ未満では横並びで上に出す */}
+          <div className="lg:hidden">
+            <StudioProgress current="prelive" />
+          </div>
+
           {/* Header + action */}
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <div>
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
               <h1 className="text-xl font-bold">Pre-Live Setup</h1>
               <p className="text-xs text-[var(--brand-text-muted)]">{tx("配信前の設定を行ってください。", "Set up your stream before going live.")}</p>
             </div>
@@ -259,7 +209,7 @@ export default function StudioPreLivePage() {
               </button>
               </div>
               {showPublishMenu && (
-                <div className="absolute right-0 top-[52px] z-20 w-[220px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/10 ring-1 ring-black/5">
+                <div className="ui-float absolute right-0 top-[52px] z-20 w-[min(220px,calc(100vw-32px))] rounded-xl bg-[var(--brand-surface)] p-2">
                   <button
                     type="button"
                     onClick={() => { setPublishMode("go_live_now"); setShowPublishMenu(false); }}
@@ -280,276 +230,145 @@ export default function StudioPreLivePage() {
           </div>
 
           {startWarnings.length > 0 && (
-            <div className="mb-2 rounded-xl bg-[var(--brand-accent)]/15 p-2.5 text-xs text-[var(--brand-accent)]">
+            <div className="mb-2 rounded-xl bg-[var(--brand-accent-soft)] p-2.5 text-xs text-[var(--brand-accent-ink)]">
               {startWarnings.map((w) => <p key={w}>{w}</p>)}
             </div>
           )}
 
-          <section className="min-h-0 flex-1 overflow-hidden rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/10">
-            <h2 className="mb-2 text-xs font-semibold tracking-wide text-[var(--brand-text-muted)]">{tx("配信設定", "Stream Settings")}</h2>
-            <div className="h-full overflow-y-auto pr-1">
-              <div className="rounded-xl bg-[var(--brand-bg-900)]/28 p-3">
-                <div className="grid auto-rows-max content-start gap-3 pb-3 lg:grid-cols-2">
+          {/* 箱は白い面1枚だけ。以前は 面 > 薄い箱 > 詳細設定の箱 と3段に入れ子になっていた */}
+          <section className="flex min-h-0 flex-1 flex-col rounded-2xl bg-[var(--brand-surface)] p-4 md:overflow-hidden md:p-3">
+            <h2 className="mb-3 text-xs font-semibold tracking-wide text-[var(--brand-text-muted)]">{tx("配信設定", "Stream Settings")}</h2>
+            <div className="min-h-0 flex-1 md:overflow-y-auto md:pr-1">
+              <div className="grid auto-rows-max content-start gap-4 pb-1 lg:grid-cols-2">
 
-                  {/* サムネイル */}
-                  <div className="lg:col-span-2">
-                    <p className="mb-2 text-xs font-semibold text-[var(--brand-text-muted)]">{tx("サムネイル", "Thumbnail")}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {PRESET_THUMBNAILS.map((src) => (
-                        <button
-                          key={src}
-                          type="button"
-                          onClick={() => setThumbnail(src)}
-                          className={`relative h-16 w-28 overflow-hidden rounded-lg border-2 transition ${
-                            thumbnail === src ? "border-[var(--brand-primary)]" : "border-transparent opacity-60 hover:opacity-100"
-                          }`}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={src} alt="" className="h-full w-full object-cover" />
-                        </button>
-                      ))}
+                {/* サムネイル */}
+                <div className="lg:col-span-2">
+                  <p className="mb-2 text-xs font-semibold text-[var(--brand-text-muted)]">{tx("サムネイル", "Thumbnail")}</p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="relative h-[90px] w-40 overflow-hidden rounded-lg"
+                      aria-label={tx("サムネイルをアップロード", "Upload thumbnail")}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={thumbnail || PLACEHOLDER_THUMBNAIL} alt="" className="h-full w-full object-cover" />
+                    </button>
+                    <div className="grid gap-1">
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className={`relative h-16 w-28 overflow-hidden rounded-lg border-2 transition ${
-                          !PRESET_THUMBNAILS.includes(thumbnail) ? "border-[var(--brand-primary)]" : "border-dashed border-[var(--brand-surface-soft)] hover:border-[var(--brand-primary)]"
-                        }`}
+                        disabled={uploadingThumbnail}
+                        className="ui-btn ui-btn-sm ui-btn-ghost"
                       >
-                        {!PRESET_THUMBNAILS.includes(thumbnail) ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={thumbnail} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <span className="flex h-full w-full flex-col items-center justify-center gap-1 text-[var(--brand-text-muted)]">
-                            <span className="text-xl">+</span>
-                            <span className="text-[10px]">{tx("アップロード", "Upload")}</span>
-                          </span>
-                        )}
+                        {uploadingThumbnail
+                          ? tx("アップロード中...", "Uploading...")
+                          : thumbnail
+                            ? tx("画像を変更", "Change image")
+                            : tx("画像をアップロード", "Upload image")}
                       </button>
-                    </div>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp,image/gif"
-                      className="hidden"
-                      onChange={(e) => void handleThumbnailUpload(e)}
-                    />
-                  </div>
-
-                  {/* タイトル */}
-                  <label className="grid gap-1 text-sm">
-                    <span className="text-[var(--brand-text-muted)]">{tx("タイトル", "Title")}</span>
-                    <input value={title} onChange={(e) => setTitle(e.target.value)} className="rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-[var(--brand-text)] outline-none" />
-                  </label>
-
-                  <div className="grid gap-2 text-sm">
-                    <span className="text-[var(--brand-text-muted)]">{tx("入力デバイス", "Input devices")}</span>
-                    <div className="flex flex-wrap gap-2">
-                      <div className="relative">
-                        <div className="ui-ctl-group">
+                      {thumbnail ? (
                         <button
                           type="button"
-                          onClick={() => setMicOn((value) => !value)}
-                          className={`ui-ctl ui-ctl-md ui-ctl-icon ${micOn ? "ui-ctl-primary" : "ui-ctl-neutral"}`}
-                          aria-label={tx("マイクのオンオフ", "Toggle microphone")}
+                          onClick={() => setThumbnail("")}
+                          className="text-left text-[11px] font-semibold text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
                         >
-                          <span className="relative flex h-5 w-5 items-center justify-center">
-                            <MicrophoneIcon className="h-5 w-5" aria-hidden />
-                            {!micOn ? (
-                              <>
-                                <span className="pointer-events-none absolute h-6 w-[5px] -rotate-45 rounded-full bg-[var(--ctl-face)]" aria-hidden />
-                                <span className="pointer-events-none absolute h-6 w-[2px] -rotate-45 rounded-full bg-current" aria-hidden />
-                              </>
-                            ) : null}
-                          </span>
+                          {tx("画像を外す", "Remove image")}
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowMicMenu((value) => !value);
-                            setShowCamMenu(false);
-                          }}
-                          className="ui-ctl ui-ctl-md ui-ctl-neutral w-8 px-0"
-                          aria-label={tx("マイク入力を選択", "Select microphone input")}
-                        >
-                          <ChevronUpIcon className="h-4 w-4" aria-hidden />
-                        </button>
-                        </div>
-                        {showMicMenu ? (
-                          <div className="absolute left-0 top-[62px] z-20 min-w-[240px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/10 ring-1 ring-black/5">
-                            {audioDevices.length === 0 ? (
-                              <p className="px-3 py-2 text-sm text-[var(--brand-text-muted)]">{tx("マイクが見つかりません", "No microphone found")}</p>
-                            ) : (
-                              audioDevices.map((device, index) => (
-                                <button
-                                  key={device.deviceId}
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedMicDeviceId(device.deviceId);
-                                    setShowMicMenu(false);
-                                  }}
-                                  className={`block w-full rounded-lg px-3 py-2 text-left text-sm ${
-                                    selectedMicDeviceId === device.deviceId
-                                      ? "bg-[var(--brand-primary)] font-bold text-white"
-                                      : "text-[var(--brand-text)] hover:bg-[var(--brand-bg-900)]"
-                                  }`}
-                                >
-                                  {device.label || `Microphone ${index + 1}`}
-                                </button>
-                              ))
-                            )}
-                          </div>
-                        ) : null}
-                      </div>
-
-                      <div className="relative">
-                        <div className="ui-ctl-group">
-                        <button
-                          type="button"
-                          onClick={() => setCamOn((value) => !value)}
-                          className={`ui-ctl ui-ctl-md ui-ctl-icon ${camOn ? "ui-ctl-primary" : "ui-ctl-neutral"}`}
-                          aria-label={tx("カメラのオンオフ", "Toggle camera")}
-                        >
-                          {camOn ? (
-                            <VideoCameraIcon className="h-5 w-5" aria-hidden />
-                          ) : (
-                            <VideoCameraSlashIcon className="h-5 w-5" aria-hidden />
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowCamMenu((value) => !value);
-                            setShowMicMenu(false);
-                          }}
-                          className="ui-ctl ui-ctl-md ui-ctl-neutral w-8 px-0"
-                          aria-label={tx("カメラ入力を選択", "Select camera input")}
-                        >
-                          <ChevronUpIcon className="h-4 w-4" aria-hidden />
-                        </button>
-                        </div>
-                        {showCamMenu ? (
-                          <div className="absolute left-0 top-[62px] z-20 min-w-[240px] rounded-xl bg-[var(--brand-surface)] p-2 shadow-xl shadow-black/10 ring-1 ring-black/5">
-                            {videoDevices.length === 0 ? (
-                              <p className="px-3 py-2 text-sm text-[var(--brand-text-muted)]">{tx("カメラが見つかりません", "No camera found")}</p>
-                            ) : (
-                              videoDevices.map((device, index) => (
-                                <button
-                                  key={device.deviceId}
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedCamDeviceId(device.deviceId);
-                                    setShowCamMenu(false);
-                                  }}
-                                  className={`block w-full rounded-lg px-3 py-2 text-left text-sm ${
-                                    selectedCamDeviceId === device.deviceId
-                                      ? "bg-[var(--brand-primary)] font-bold text-white"
-                                      : "text-[var(--brand-text)] hover:bg-[var(--brand-bg-900)]"
-                                  }`}
-                                >
-                                  {device.label || `Camera ${index + 1}`}
-                                </button>
-                              ))
-                            )}
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 開始日時（予約のときのみ） */}
-                  {publishMode === "scheduled" && (
-                    <div className="grid gap-1 text-sm lg:col-span-2">
-                      <span className="text-[var(--brand-text-muted)]">{tx("開始日時", "Scheduled start")}</span>
-                      <DateTimePicker
-                        value={scheduledAt}
-                        onChange={setScheduledAt}
-                        minDate={new Date()}
-                      />
-                    </div>
-                  )}
-
-                  <div className="rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 lg:col-span-2">
-                    <p className="mb-2 text-[11px] font-semibold text-[var(--brand-text-muted)]">{tx("配信詳細設定", "Session Details")}</p>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <label className="grid gap-1 text-xs">
-                        <span className="text-[var(--brand-text-muted)]">{tx("参加者枠数", "Participant spots")}</span>
-                        <div className="flex items-center gap-2 rounded-lg bg-[var(--brand-surface)] px-2 py-1.5">
-                          <input
-                            type="number"
-                            min={1}
-                            max={30}
-                            value={participantSlotsTotal}
-                            onChange={(e) => setParticipantSlotsTotal(Number(e.target.value))}
-                            className="w-full bg-transparent text-[var(--brand-text)] outline-none"
-                          />
-                          <span className="shrink-0 text-[10px] text-[var(--brand-text-muted)]">{tx("枠", "spots")}</span>
-                        </div>
-                      </label>
-                      <label className="grid gap-1 text-xs">
-                        <span className="text-[var(--brand-text-muted)]">{tx("配信予定時間", "Planned duration")}</span>
-                        <select
-                          value={plannedDurationMin}
-                          onChange={(e) => setPlannedDurationMin(Number(e.target.value))}
-                          className="rounded-lg bg-[var(--brand-surface)] px-2 py-1.5 text-[var(--brand-text)] outline-none"
-                        >
-                          {[30, 45, 60, 90, 120].map((min) => (
-                            <option key={min} value={min}>
-                              {min} {tx("分", "min")}
-                              {SPEAKER_FEE_ENABLED ? ` — ₱${min <= 60 ? 200 : 400}` : ""}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <div className="grid gap-1 text-xs sm:col-span-2">
-                        <span className="text-[var(--brand-text-muted)]">AJL - aiment Japanese Level</span>
-                        <div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-3">
-                          {AJL_LEVELS.map((level) => (
-                            <button
-                              key={level.level}
-                              type="button"
-                              onClick={() => setJapaneseLevel(level.level)}
-                              className={`ui-btn ui-btn-sm h-auto flex-col items-start gap-0.5 rounded-[var(--ui-radius-md)] px-3 py-2 text-left ${
-                                japaneseLevel === level.level ? "ui-btn-primary" : "ui-btn-ghost"
-                              }`}
-                            >
-                              <span className="block text-xs font-black">AJL {level.level}</span>
-                              <span className="mt-0.5 block text-[10px] font-semibold">JF {level.jfStandard} / {level.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                        <p className="rounded-lg bg-[var(--brand-surface)] px-2 py-1.5 text-[10px] leading-relaxed text-[var(--brand-text-muted)]">
-                          {getAjlInfo(japaneseLevel).description}
+                      ) : (
+                        <p className="text-[11px] text-[var(--brand-text-muted)]">
+                          {tx("未設定ならaimentの標準画像になります", "Leave empty to use the aiment default")}
                         </p>
-                      </div>
+                      )}
                     </div>
                   </div>
-
-
-                  <label className="grid gap-1 text-sm lg:col-span-2">
-                    <span className="text-[var(--brand-text-muted)]">{tx("概要", "Description")}</span>
-                    <textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      rows={4}
-                      className="min-h-[120px] resize-none rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-[var(--brand-text)] outline-none"
-                    />
-                  </label>
-
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={(e) => void handleThumbnailUpload(e)}
+                  />
                 </div>
+
+                {/* タイトル */}
+                <label className="grid gap-1 text-sm lg:col-span-2">
+                  <span className="text-[var(--brand-text-muted)]">{tx("タイトル", "Title")}</span>
+                  <input value={title} onChange={(e) => setTitle(e.target.value)} className="ui-input" />
+                </label>
+
+                {/* 開始日時（予約のときのみ） */}
+                {publishMode === "scheduled" && (
+                  <div className="grid gap-1 text-sm lg:col-span-2">
+                    <span className="text-[var(--brand-text-muted)]">{tx("開始日時", "Scheduled start")}</span>
+                    <DateTimePicker
+                      value={scheduledAt}
+                      onChange={setScheduledAt}
+                      minDate={new Date()}
+                    />
+                  </div>
+                )}
+
+                <div className="grid gap-4 lg:col-span-2">
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="grid gap-1 text-sm">
+                      <span className="text-[var(--brand-text-muted)]">{tx("参加者枠数", "Participant spots")}</span>
+                      <div className="flex h-10 items-center gap-2 rounded-[var(--ui-radius-sm)] bg-[var(--brand-bg-900)] px-3">
+                        <input
+                          type="number"
+                          min={1}
+                          max={30}
+                          value={participantSlotsTotal}
+                          onChange={(e) => setParticipantSlotsTotal(Number(e.target.value))}
+                          className="w-full bg-transparent text-[var(--brand-text)] outline-none"
+                        />
+                        <span className="shrink-0 text-[11px] text-[var(--brand-text-muted)]">{tx("枠", "spots")}</span>
+                      </div>
+                    </label>
+                    <label className="grid gap-1 text-sm">
+                      <span className="text-[var(--brand-text-muted)]">{tx("配信予定時間", "Planned duration")}</span>
+                      <select
+                        value={plannedDurationMin}
+                        onChange={(e) => setPlannedDurationMin(Number(e.target.value))}
+                        className="ui-select"
+                      >
+                        {[30, 45, 60, 90, 120].map((min) => (
+                          <option key={min} value={min}>
+                            {min} {tx("分", "min")}
+                            {SPEAKER_FEE_ENABLED ? ` — ₱${min <= 60 ? 200 : 400}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <AjlLevelPicker id="prelive-level-help" value={japaneseLevel} onChange={setJapaneseLevel} />
+                </div>
+
+                <label className="grid gap-1 text-sm lg:col-span-2">
+                  <span className="text-[var(--brand-text-muted)]">{tx("概要", "Description")}</span>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={4}
+                    className="ui-textarea min-h-[120px]"
+                  />
+                </label>
+
               </div>
             </div>
           </section>
         </section>
 
         {/* Chat preview */}
-        <aside className="flex min-h-0 flex-col overflow-hidden">
-          <section className="flex h-full min-h-[220px] flex-col overflow-hidden rounded-2xl bg-[var(--brand-surface)] shadow-lg shadow-black/10">
-            <div className="border-b border-black/20 px-3 py-2">
+        {/* スマホでは設定の下に置く。配信前は案内を残すだけなので、画面の半分を取らないよう高さを抑える */}
+        <aside className="flex min-h-0 flex-col md:overflow-hidden">
+          <section className="flex h-[300px] flex-col overflow-hidden rounded-2xl bg-[var(--brand-surface)] md:h-full md:min-h-[220px]">
+            <div className="border-b border-[var(--line)] px-3 py-2">
               <p className="text-sm font-semibold">{tx("ライブチャット", "Live Chat")}</p>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
               {notices.length === 0 ? (
-                <div className="flex h-full min-h-[240px] w-full flex-col items-center justify-center rounded-xl bg-[var(--brand-bg-900)] px-6 text-center">
+                <div className="flex h-full w-full flex-col items-center justify-center rounded-xl bg-[var(--brand-bg-900)] px-6 text-center md:min-h-[240px]">
                   <p className="text-sm font-semibold text-[var(--brand-text)]">{tx("事前連絡を送れます", "You can send pre-live notices")}</p>
                   <p className="mt-2 text-xs text-[var(--brand-text-muted)]">
                     {tx("視聴者からのコメントはまだ届きません。配信前の案内だけここに残せます。", "Viewer messages do not arrive yet. You can leave pre-live announcements here.")}
@@ -565,7 +384,7 @@ export default function StudioPreLivePage() {
                           <button
                             type="button"
                             onClick={() => retractNotice(notice.id)}
-                            className="rounded-full bg-[var(--brand-bg-900)] px-2 py-0.5 text-[10px] font-semibold text-[var(--brand-text-muted)] ring-1 ring-black/5 hover:text-[var(--brand-accent)]"
+                            className="rounded-full bg-[var(--brand-bg-900)] px-2 py-0.5 text-[11px] font-semibold text-[var(--brand-text-muted)] ring-1 ring-black/5 hover:text-[var(--brand-accent-ink)]"
                           >
                             {tx("取消", "Undo")}
                           </button>
@@ -583,7 +402,7 @@ export default function StudioPreLivePage() {
                 </div>
               )}
             </div>
-            <div className="border-t border-black/8 px-3 py-3">
+            <div className="border-t border-[var(--line)] px-3 py-3">
               <div className="flex gap-2">
                 <input
                   value={chatInput}
@@ -594,7 +413,7 @@ export default function StudioPreLivePage() {
                     sendNotice();
                   }}
                   placeholder={tx("事前連絡を入力", "Type a pre-live notice")}
-                  className="flex-1 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-sm text-[var(--brand-text)] outline-none placeholder:text-[var(--brand-text-muted)]"
+                  className="min-w-0 flex-1 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-sm text-[var(--brand-text)] outline-none placeholder:text-[var(--brand-text-muted)]"
                 />
                 <button onClick={sendNotice} className="ui-btn ui-btn-sm ui-btn-primary">
                   {tx("送信", "Send")}

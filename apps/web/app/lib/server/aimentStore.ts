@@ -8,6 +8,7 @@ import type {
   CreateStreamSessionInput,
   ParticipationTicket,
   ParticipationTicketScope,
+  ProfileItem,
   SessionComment,
   Reservation,
   ReservationStatus,
@@ -20,7 +21,9 @@ import type {
   SubscriptionPlan,
   UpdateStreamSessionInput,
 } from "../apiTypes";
+import { PROFILE_PRESETS } from "../profileItems";
 import { DEFAULT_AJL_LEVEL, normalizeAjlLevel } from "../ajl";
+import { resolveThumbnail } from "../thumbnail";
 import { canAccessPlan, getEffectivePlanForUser } from "./billingStore";
 import { SPEAKER_FEE_ENABLED } from "@/lib/speakerFee";
 
@@ -195,7 +198,7 @@ function normalizeStreamSession(entry: Partial<StreamSession>): StreamSession | 
     startsAt: entry.startsAt,
     description: entry.description,
     category: entry.category,
-    thumbnail: entry.thumbnail,
+    thumbnail: resolveThumbnail(entry.thumbnail),
     hostName: entry.hostName,
     participationType,
     requiredPlan: normalizePlanValue(entry.requiredPlan),
@@ -215,6 +218,41 @@ function normalizeStreamSession(entry: Partial<StreamSession>): StreamSession | 
     plannedDurationMin: typeof entry.plannedDurationMin === "number" ? entry.plannedDurationMin : undefined,
     japaneseLevel: normalizeAjlLevel(entry.japaneseLevel, DEFAULT_AJL_LEVEL),
   };
+}
+
+const PROFILE_ITEMS_MAX = 6;
+const PROFILE_LABEL_MAX = 16;
+const PROFILE_VALUE_MAX = 40;
+
+/**
+ * プロフィール欄を整える。見出しか内容が空の行は捨て、長さと行数に上限をかける。1行もなければ undefined。
+ * よく使う見出し（key）を選んだ行は、label に日本語の見出しを入れておく（key を知らない古い表示でも読めるように）
+ */
+function normalizeProfileItems(value: unknown): ProfileItem[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const items = value
+    .map((item): ProfileItem => {
+      // key がなくても、見出しの文字がよく使う見出しと同じなら、そちらとして扱う（訳せるように）
+      const rawLabel = typeof item?.label === "string" ? item.label.trim() : "";
+      const preset = PROFILE_PRESETS.find((entry) => entry.key === item?.key || entry.ja === rawLabel || entry.en === rawLabel);
+      return {
+        ...(preset ? { key: preset.key } : {}),
+        label: preset ? preset.ja : typeof item?.label === "string" ? item.label.trim().slice(0, PROFILE_LABEL_MAX) : "",
+        value: typeof item?.value === "string" ? item.value.trim().slice(0, PROFILE_VALUE_MAX) : "",
+      };
+    })
+    .filter((item) => item.label && item.value)
+    .slice(0, PROFILE_ITEMS_MAX);
+  return items.length ? items : undefined;
+}
+
+function parseProfileItems(raw: unknown): ProfileItem[] | undefined {
+  if (typeof raw !== "string" || !raw) return undefined;
+  try {
+    return normalizeProfileItems(JSON.parse(raw));
+  } catch {
+    return undefined;
+  }
 }
 
 function normalizeStoredUser(entry: Partial<StoredUser>): StoredUser | null {
@@ -257,6 +295,7 @@ function normalizeStoredUser(entry: Partial<StoredUser>): StoredUser | null {
     bio: typeof entry.bio === "string" ? entry.bio : undefined,
     avatarUrl: typeof entry.avatarUrl === "string" ? entry.avatarUrl : undefined,
     headerUrl: typeof entry.headerUrl === "string" ? entry.headerUrl : undefined,
+    profileItems: normalizeProfileItems(entry.profileItems),
     phoneNumber:
       typeof entry.phoneNumber === "string" ? entry.phoneNumber : legacyDefaults.phoneNumber,
     emailVerifiedAt:
@@ -380,6 +419,8 @@ async function initSchema() {
   await db`ALTER TABLE users ADD COLUMN IF NOT EXISTS sns_twitter TEXT`;
   await db`ALTER TABLE users ADD COLUMN IF NOT EXISTS banned_at TEXT`;
   await db`ALTER TABLE users ADD COLUMN IF NOT EXISTS sns_youtube TEXT`;
+  // チャンネルページのプロフィール欄（[{label, value}] を JSON の文字列で持つ）
+  await db`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_items TEXT`;
   await db`
     CREATE TABLE IF NOT EXISTS stream_sessions (
       session_id TEXT PRIMARY KEY,
@@ -499,6 +540,7 @@ function rowToStoredUser(row: any): StoredUser {
     bio: row.bio ?? undefined,
     avatarUrl: row.avatar_url ?? undefined,
     headerUrl: row.header_url ?? undefined,
+    profileItems: parseProfileItems(row.profile_items),
     phoneNumber: row.phone_number ?? undefined,
     emailVerifiedAt: row.email_verified_at ?? undefined,
     phoneVerifiedAt: row.phone_verified_at ?? undefined,
@@ -525,7 +567,7 @@ function rowToStreamSession(row: any): StreamSession {
     startsAt: row.starts_at as string,
     description: (row.description as string) ?? "",
     category: row.category as string,
-    thumbnail: (row.thumbnail as string) ?? "",
+    thumbnail: resolveThumbnail(row.thumbnail as string | null),
     hostName: row.host_name as string,
     participationType: row.participation_type as "First-come" | "Lottery",
     requiredPlan: normalizePlanValue(row.required_plan),
@@ -1067,7 +1109,15 @@ export async function googleAuthUser(input: {
 
 export async function updateAccountProfile(
   userId: string,
-  patch: { name?: string; channelName?: string; bio?: string; phoneNumber?: string; avatarUrl?: string; headerUrl?: string },
+  patch: {
+    name?: string;
+    channelName?: string;
+    bio?: string;
+    phoneNumber?: string;
+    avatarUrl?: string;
+    headerUrl?: string;
+    profileItems?: unknown;
+  },
 ) {
   if (USE_NEON) {
     await ensureSchema();
@@ -1080,6 +1130,8 @@ export async function updateAccountProfile(
     const nextBio = patch.bio != null ? patch.bio.trim() || null : current.bio ?? null;
     const nextAvatarUrl = patch.avatarUrl != null ? patch.avatarUrl.trim() || null : current.avatarUrl ?? null;
     const nextHeaderUrl = patch.headerUrl != null ? patch.headerUrl.trim() || null : current.headerUrl ?? null;
+    const nextProfileItems =
+      patch.profileItems !== undefined ? normalizeProfileItems(patch.profileItems) ?? null : current.profileItems ?? null;
 
     let nextPhoneNumber = current.phoneNumber ?? null;
     let nextPhoneVerifiedAt = current.phoneVerifiedAt ?? null;
@@ -1101,6 +1153,7 @@ export async function updateAccountProfile(
         bio = ${nextBio},
         avatar_url = ${nextAvatarUrl},
         header_url = ${nextHeaderUrl},
+        profile_items = ${nextProfileItems ? JSON.stringify(nextProfileItems) : null},
         phone_number = ${nextPhoneNumber},
         phone_verified_at = ${nextPhoneVerifiedAt}
       WHERE id = ${userId}
@@ -1119,6 +1172,7 @@ export async function updateAccountProfile(
     if (patch.bio != null) target.bio = patch.bio.trim() || undefined;
     if (patch.avatarUrl != null) target.avatarUrl = patch.avatarUrl.trim() || undefined;
     if (patch.headerUrl != null) target.headerUrl = patch.headerUrl.trim() || undefined;
+    if (patch.profileItems !== undefined) target.profileItems = normalizeProfileItems(patch.profileItems);
     if (patch.phoneNumber != null) {
       const normalized = patch.phoneNumber.trim() || undefined;
       if (normalized !== target.phoneNumber) {
@@ -1494,7 +1548,7 @@ export async function createStreamSession(
       ) VALUES (
         ${sessionId}, ${hostUser.id}, ${input.title.trim()}, 'prelive', ${now},
         ${normalizeStartsAt(input.startsAt)}, ${input.description.trim()}, ${(input.category ?? "").trim()},
-        ${input.thumbnail ?? "/image/thumbnail/thumbnail_5.png"},
+        ${input.thumbnail ?? ""},
         ${input.hostName?.trim() || hostUser.name},
         ${input.participationType ?? "First-come"}, ${input.requiredPlan ?? "free"},
         ${input.reservationRequired === true}, ${slotsTotal}, ${slotsTotal},
@@ -1523,7 +1577,7 @@ export async function createStreamSession(
       startsAt: normalizeStartsAt(input.startsAt),
       description: input.description.trim(),
       category: (input.category ?? "").trim(),
-      thumbnail: input.thumbnail ?? "/image/thumbnail/thumbnail_5.png",
+      thumbnail: resolveThumbnail(input.thumbnail),
       hostName: input.hostName?.trim() || hostUser.name,
       participationType: input.participationType ?? "First-come",
       requiredPlan: input.requiredPlan ?? "free",
@@ -2442,7 +2496,7 @@ export async function getPublicUserProfile(userId: string): Promise<PublicUserPr
         sessionId: r.session_id as string,
         title: r.title as string,
         hostName: r.host_name as string,
-        thumbnail: r.thumbnail as string,
+        thumbnail: resolveThumbnail(r.thumbnail as string | null),
         startsAt: r.starts_at as string,
         status: r.status as string,
         role: (r.type === "speaker" ? "speaker" : "listener") as "speaker" | "listener",
@@ -2462,7 +2516,7 @@ export async function getPublicUserProfile(userId: string): Promise<PublicUserPr
         sessionId: s.sessionId,
         title: s.title,
         hostName: s.hostName,
-        thumbnail: s.thumbnail,
+        thumbnail: resolveThumbnail(s.thumbnail),
         startsAt: s.startsAt,
         status: s.status,
         role: r.type as "speaker" | "listener",

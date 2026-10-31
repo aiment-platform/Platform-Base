@@ -9,13 +9,13 @@ export function SlotBar({ left, total, size = "md" }: { left: number; total: num
  const barColor =
  urgency === "urgent" ? "bg-[var(--brand-accent)]" : urgency === "warning" ? "bg-[var(--brand-accent)]" : "bg-[var(--brand-primary)]";
  const textColor =
- urgency === "urgent" ? "text-[var(--brand-accent)]" : urgency === "warning" ? "text-[var(--brand-accent)]" : "text-[var(--brand-primary)]";
+ urgency === "urgent" ? "text-[var(--brand-accent-ink)]" : urgency === "warning" ? "text-[var(--brand-accent-ink)]" : "text-[var(--brand-primary)]";
  const h = size === "sm" ? "h-1" : "h-1.5";
 
  return (
  <div>
  <div className="mb-1 flex items-center justify-between">
- <span className="text-[10px] font-medium text-[var(--brand-text-muted)]">{tx("参加枠の残り", "Spots left")}</span>
+ <span className="text-[11px] font-medium text-[var(--brand-text-muted)]">{tx("参加枠の残り", "Spots left")}</span>
  <span className={`text-xs font-bold ${textColor} ${urgency === "urgent" ? "animate-pulse" : ""}`}>
  {left} / {total}
  </span>

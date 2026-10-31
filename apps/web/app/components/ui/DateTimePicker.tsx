@@ -129,7 +129,7 @@ export function DateTimePicker({ value, onChange, minDate }: Props) {
 
       {/* Popover */}
       {open && (
-        <div className="absolute left-0 top-[calc(100%+6px)] z-50 w-[300px] rounded-2xl border border-white/8 bg-[var(--brand-surface)] p-3 shadow-2xl shadow-black/50">
+        <div className="ui-float absolute left-0 top-[calc(100%+6px)] z-50 w-[300px] rounded-2xl bg-[var(--brand-surface)] p-3">
           {/* Month navigation */}
           <div className="mb-3 flex items-center justify-between">
             <button type="button" onClick={prevMonth} className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--brand-text-muted)] hover:bg-[var(--brand-bg-900)] hover:text-[var(--brand-text)]">
@@ -146,7 +146,7 @@ export function DateTimePicker({ value, onChange, minDate }: Props) {
           {/* Weekday headers */}
           <div className="mb-1 grid grid-cols-7 text-center">
             {WEEKDAYS.map((d, i) => (
-              <span key={d} className={`py-0.5 text-[10px] font-semibold ${i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-[var(--brand-text-muted)]"}`}>
+              <span key={d} className={`py-0.5 text-[11px] font-semibold ${i === 0 ? "text-[var(--brand-accent-ink)]" : i === 6 ? "text-blue-600" : "text-[var(--brand-text-muted)]"}`}>
                 {d}
               </span>
             ))}
@@ -182,8 +182,8 @@ export function DateTimePicker({ value, onChange, minDate }: Props) {
           </div>
 
           {/* Time picker */}
-          <div className="mt-3 border-t border-white/8 pt-3">
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-[var(--brand-text-muted)]">時刻</p>
+          <div className="mt-3 pt-3">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-[var(--brand-text-muted)]">時刻</p>
             <div className="flex items-center gap-2">
               {/* Hour scroll — scrollbar hidden via overflow trick */}
               <div className="flex-1 overflow-hidden rounded-xl bg-[var(--brand-bg-900)]">
@@ -240,7 +240,7 @@ export function DateTimePicker({ value, onChange, minDate }: Props) {
           </div>
 
           {/* Preview + confirm */}
-          <div className="mt-3 flex items-center gap-2 border-t border-white/8 pt-3">
+          <div className="mt-3 flex items-center gap-2 pt-3">
             <span className="flex-1 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-center text-sm font-bold tabular-nums text-[var(--brand-text)]">
               {previewText}
             </span>

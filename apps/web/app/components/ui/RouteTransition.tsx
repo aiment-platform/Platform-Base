@@ -1,9 +1,10 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { BrandProgressBar } from "./BrandProgressBar";
 import { BrandTransition } from "./BrandTransition";
+import { getInflightFetchCount, subscribeInflightFetches } from "./inflightFetches";
 
 /**
  * ページ遷移の演出を、実際の画面遷移につなぐ係。
@@ -15,6 +16,15 @@ import { BrandTransition } from "./BrandTransition";
  * という2経路にし、抜けるのは pathname が変わったのを合図にしている。
  * クリックは監視するだけで preventDefault はしないので、遷移そのものには
  * 一切干渉しない。
+ *
+ * 抜ける合図は次の3つがそろったとき:
+ *   1. URL が変わった
+ *   2. 飛んでいる fetch が 0 になった（inflightFetches 参照）
+ *   3. ページから「待って」（useTransitionHold）が出ていない
+ * URL が変わった時点ではページがまだ API から中身を取っている最中のことが
+ * 多い。さらに配信画面・ルーム画面は LiveKit への接続（fetch ではなく
+ * WebSocket）や映像の到着も待つ必要があるので、そこはページ自身が 3 で
+ * 「まだ準備中」と申告する。
  *
  * 演出は2種類:
  *   wipe … 全画面を波で覆う。配信の場に入る／出るときだけ
@@ -37,10 +47,15 @@ const TIMING: Record<TransitionVariant, { enter: number; exit: number; minVisibl
   bar: { enter: 260, exit: 220, minVisible: 400 },
 };
 
-/** 遷移が返ってこないときの保険。ここまで来たら必ず抜ける。
-    覆う wipe は長めに待つが、覆わない bar は早めに引っ込める（リンクが
-    preventDefault だけして遷移しない、といった場合に居座らないように）。 */
-const MAX_VISIBLE_MS: Record<TransitionVariant, number> = { wipe: 4000, bar: 2000 };
+/** 遷移や読み込みが返ってこないときの保険。ここまで来たら必ず抜ける。
+    短すぎると、開発サーバの初回コンパイルや遅い回線で「演出だけ先に
+    消えて、少し後にページが切り替わる」ずれになる。覆わない bar は、
+    リンクが preventDefault だけして遷移しない場合に居座らないよう少し短め。 */
+const MAX_VISIBLE_MS: Record<TransitionVariant, number> = { wipe: 10000, bar: 6000 };
+
+/** fetch が 0 になってから抜けるまでの猶予。続けて次の fetch が
+    始まる（一覧を取ってから詳細を取る等）ときに、間で抜けないように。 */
+const SETTLE_MS = 150;
 
 /**
  * 全画面で覆うのは「配信の場に入る・出る」ときだけ。一覧→詳細やタブの
@@ -69,9 +84,25 @@ type State = { phase: Phase; variant: TransitionVariant; from: string; target: s
 type ContextValue = {
   /** 演出を出してから遷移する。router.push の代わりに使う。 */
   navigate: (href: string, variant?: TransitionVariant) => void;
+  /** 「まだ準備中なので抜けないで」を1件登録し、解除する関数を返す。 */
+  hold: () => () => void;
 };
 
 const RouteTransitionContext = createContext<ContextValue | null>(null);
+
+/**
+ * ページが「まだ準備中」の間、遷移の演出を抜けさせない。
+ * active が true の間だけ効く。演出が出ていないときに呼んでも何も起きない。
+ * 保険の上限（MAX_VISIBLE_MS）が来たら、待っていても演出は抜ける。
+ */
+export function useTransitionHold(active: boolean) {
+  const context = useContext(RouteTransitionContext);
+  const hold = context?.hold;
+  useEffect(() => {
+    if (!active || !hold) return;
+    return hold();
+  }, [active, hold]);
+}
 
 export function useRouteTransition() {
   const context = useContext(RouteTransitionContext);
@@ -119,6 +150,24 @@ export function RouteTransitionProvider({ children }: { children: React.ReactNod
   const [state, setState] = useState<State | null>(null);
   const startedAt = useRef(0);
   const startedFrom = useRef(pathname);
+  // 行き先のページがまだ API から中身を取っている最中か。
+  // 変わるのは true/false が切り替わるときだけなので、fetch のたびには再描画しない。
+  // ページから出ている「待って」の数（useTransitionHold）
+  const [holdCount, setHoldCount] = useState(0);
+  const hold = useCallback(() => {
+    setHoldCount((count) => count + 1);
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      setHoldCount((count) => Math.max(0, count - 1));
+    };
+  }, []);
+  const loading = useSyncExternalStore(
+    subscribeInflightFetches,
+    () => getInflightFetchCount() > 0,
+    () => false,
+  );
 
   const start = useCallback((variant: TransitionVariant, target: string) => {
     if (prefersReducedMotion()) return;
@@ -191,7 +240,7 @@ export function RouteTransitionProvider({ children }: { children: React.ReactNod
     return () => window.clearTimeout(timer);
   }, [state]);
 
-  // 行き先が描けたら抜ける。返ってこなければ保険で抜ける。
+  // 行き先が描けて、中身の読み込みも終わったら抜ける。返ってこなければ保険で抜ける。
   useEffect(() => {
     if (state === null || state.phase === "exit") return;
 
@@ -199,13 +248,13 @@ export function RouteTransitionProvider({ children }: { children: React.ReactNod
     // どこかに着いたら抜ける。行き先そのものでなくてもよい（未ログインで
     // /auth に飛ばされる等）。戻る／進むは start の時点でもう着いている。
     const arrived = pathname === state.target || pathname !== state.from;
-    const wait = arrived
-      ? Math.max(0, TIMING[state.variant].minVisible - elapsed)
+    const wait = arrived && !loading && holdCount === 0
+      ? Math.max(SETTLE_MS, TIMING[state.variant].minVisible - elapsed)
       : Math.max(0, MAX_VISIBLE_MS[state.variant] - elapsed);
 
     const timer = window.setTimeout(beginExit, wait);
     return () => window.clearTimeout(timer);
-  }, [pathname, state, beginExit]);
+  }, [pathname, state, loading, holdCount, beginExit]);
 
   // 抜けきったら片付ける
   useEffect(() => {
@@ -214,7 +263,7 @@ export function RouteTransitionProvider({ children }: { children: React.ReactNod
     return () => window.clearTimeout(timer);
   }, [state]);
 
-  const value = useMemo<ContextValue>(() => ({ navigate }), [navigate]);
+  const value = useMemo<ContextValue>(() => ({ navigate, hold }), [navigate, hold]);
 
   return (
     <RouteTransitionContext.Provider value={value}>

@@ -114,9 +114,9 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
+    <div className="px-4 py-6 sm:p-8">
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-xl font-bold">ユーザー管理</h1>
           <p className="mt-0.5 text-xs text-[var(--brand-text-muted)]">
             {loading ? "読み込み中..." : `${allUsers.length} 件`}
@@ -125,7 +125,7 @@ export default function AdminUsersPage() {
         <button
           type="button"
           onClick={() => void fetchUsers()}
-          className="rounded-xl bg-black/[0.06] px-4 py-2 text-sm hover:bg-black/[0.08]"
+          className="ui-btn ui-btn-md ui-btn-ghost shrink-0"
         >
           更新
         </button>
@@ -137,12 +137,12 @@ export default function AdminUsersPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="名前・メールで検索..."
-          className="flex-1 min-w-48 rounded-xl bg-black/[0.06] px-4 py-2.5 text-sm outline-none placeholder:text-[var(--brand-text-muted)] focus:ring-2 focus:ring-[var(--brand-primary)]"
+          className="min-w-0 flex-1 basis-full rounded-xl sm:min-w-48 sm:basis-auto border border-[var(--line)] bg-[var(--brand-surface)] px-4 py-2.5 text-base outline-none sm:text-sm placeholder:text-[var(--brand-text-muted)] focus:ring-2 focus:ring-[var(--brand-primary)]"
         />
         <select
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value as RoleFilter)}
-          className="rounded-xl bg-black/[0.06] px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
+          className="min-w-0 flex-1 rounded-xl border border-[var(--line)] bg-[var(--brand-surface)] px-3 py-2.5 text-base outline-none sm:flex-none sm:text-sm focus:ring-2 focus:ring-[var(--brand-primary)]"
         >
           <option value="all">すべてのロール</option>
           <option value="vtuber">VTuber</option>
@@ -151,7 +151,7 @@ export default function AdminUsersPage() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-          className="rounded-xl bg-black/[0.06] px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
+          className="min-w-0 flex-1 rounded-xl border border-[var(--line)] bg-[var(--brand-surface)] px-3 py-2.5 text-base outline-none sm:flex-none sm:text-sm focus:ring-2 focus:ring-[var(--brand-primary)]"
         >
           <option value="all">すべてのステータス</option>
           <option value="active">アクティブ</option>
@@ -160,13 +160,13 @@ export default function AdminUsersPage() {
       </div>
 
       {error && (
-        <div className="mb-4 rounded-xl bg-[var(--brand-accent)]/15 px-4 py-3 text-sm text-[var(--brand-accent)]">{error}</div>
+        <div className="mb-4 rounded-xl bg-[var(--brand-accent-soft)] px-4 py-3 text-sm text-[var(--brand-accent-ink)]">{error}</div>
       )}
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-black/[0.08]">
-        <table className="w-full text-sm">
-          <thead className="border-b border-black/[0.08] bg-black/[0.04] text-xs text-[var(--brand-text-muted)] uppercase tracking-wider">
+      {/* Table：スマホでは7列が収まらないので、行を1枚ずつのカードに組み替える（sm 以上は表のまま） */}
+      <div className="sm:overflow-hidden sm:rounded-2xl sm:border sm:border-[var(--line)]">
+        <table className="block w-full text-sm sm:table">
+          <thead className="hidden border-b border-[var(--line)] bg-[var(--brand-bg-900)] text-xs uppercase tracking-wider text-[var(--brand-text-muted)] sm:table-header-group">
             <tr>
               <th className="px-4 py-3 text-left">ユーザー</th>
               <th className="px-4 py-3 text-left">メール</th>
@@ -177,17 +177,17 @@ export default function AdminUsersPage() {
               <th className="px-4 py-3 text-right">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-black/[0.06]">
+          <tbody className="block space-y-2 sm:table-row-group sm:space-y-0 sm:divide-y sm:divide-[var(--line)]">
             {loading && (
-              <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-[var(--brand-text-muted)]">
+              <tr className="block sm:table-row">
+                <td colSpan={7} className="block px-4 py-12 text-center text-[var(--brand-text-muted)] sm:table-cell">
                   読み込み中...
                 </td>
               </tr>
             )}
             {!loading && pageUsers.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-[var(--brand-text-muted)]">
+              <tr className="block sm:table-row">
+                <td colSpan={7} className="block px-4 py-12 text-center text-[var(--brand-text-muted)] sm:table-cell">
                   {filtered.length === 0 && allUsers.length > 0
                     ? "条件に一致するユーザーがいません"
                     : "ユーザーがいません"}
@@ -208,7 +208,7 @@ export default function AdminUsersPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-[var(--brand-text-muted)]">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-[var(--brand-text-muted)]">
           <span>
             {clampedPage + 1} / {totalPages} ページ（{filtered.length} 件）
           </span>
@@ -284,10 +284,11 @@ function UserRow({
 
   return (
     <tr
-      className="cursor-pointer transition-colors hover:bg-black/[0.04]"
+      className="flex cursor-pointer flex-wrap items-center gap-x-2 gap-y-2 rounded-2xl bg-[var(--brand-surface)] px-4 py-3 transition-colors hover:bg-[var(--brand-bg-900)] sm:table-row sm:rounded-none sm:bg-transparent sm:p-0"
       onClick={onDetail}
     >
-      <td className="px-4 py-3">
+      {/* スマホのカード：1段目 名前と ⋯ / 2段目 メール / 3段目 バッジと登録日（order で並べ替え） */}
+      <td className="order-1 min-w-0 flex-1 sm:px-4 sm:py-3">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/15 text-sm font-bold text-[var(--brand-primary)]">
             {user.name.charAt(0).toUpperCase()}
@@ -300,51 +301,52 @@ function UserRow({
           </div>
         </div>
       </td>
-      <td className="px-4 py-3 font-mono text-xs text-[var(--brand-text-muted)]">{user.email}</td>
-      <td className="px-4 py-3">
+      <td className="order-3 min-w-0 basis-full break-all font-mono text-xs text-[var(--brand-text-muted)] sm:px-4 sm:py-3">{user.email}</td>
+      <td className="order-4 sm:px-4 sm:py-3">
         <RoleBadge role={user.role} />
       </td>
-      <td className="px-4 py-3">
-        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${user.plan === "aimer" ? "bg-amber-500/20 text-amber-600" : "bg-black/[0.06] text-[var(--brand-text-muted)]"}`}>
+      <td className="order-4 sm:px-4 sm:py-3">
+        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${user.plan === "aimer" ? "bg-[var(--brand-warning-soft)] text-[var(--brand-warning-ink)]" : "bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)]"}`}>
           {user.plan === "aimer" ? "Aimer" : "Free"}
         </span>
       </td>
-      <td className="px-4 py-3 text-xs text-[var(--brand-text-muted)]">{fmt(user.createdAt)}</td>
-      <td className="px-4 py-3">
+      <td className="order-5 ml-auto text-xs text-[var(--brand-text-muted)] sm:ml-0 sm:px-4 sm:py-3">{fmt(user.createdAt)}</td>
+      <td className="order-4 sm:px-4 sm:py-3">
         {isBanned ? (
-          <span className="rounded-full bg-[var(--brand-accent)]/20 px-2 py-0.5 text-[11px] font-bold text-[var(--brand-accent)]">
+          <span className="rounded-full bg-[var(--brand-accent-soft)] px-2 py-0.5 text-[11px] font-bold text-[var(--brand-accent-ink)]">
             BAN
           </span>
         ) : (
-          <span className="rounded-full bg-green-500/20 px-2 py-0.5 text-[11px] font-bold text-green-600">
+          <span className="rounded-full bg-[var(--brand-primary-soft)] px-2 py-0.5 text-[11px] font-bold text-[var(--brand-primary-ink)]">
             Active
           </span>
         )}
       </td>
-      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+      <td className="order-2 text-right sm:px-4 sm:py-3" onClick={(e) => e.stopPropagation()}>
         <div className="relative inline-block" ref={ref}>
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            className="ui-btn ui-btn-sm ui-btn-ghost text-xs"
+            aria-label="操作メニュー"
+            className="ui-btn ui-btn-sm ui-btn-ghost min-h-10 min-w-10 text-xs sm:min-h-0 sm:min-w-0"
           >
             ⋯
           </button>
           {open && (
-            <div className="absolute right-0 top-8 z-50 min-w-40 rounded-xl border border-black/[0.08] bg-[var(--brand-surface)] py-1 shadow-2xl">
+            <div className="ui-float absolute right-0 top-11 z-50 sm:top-8 min-w-40 rounded-xl bg-[var(--brand-surface)] py-1">
               <button
                 type="button"
                 onClick={() => { setOpen(false); onDetail(); }}
-                className="w-full px-4 py-2 text-left text-sm hover:bg-black/[0.04]"
+                className="w-full px-4 py-2 text-left text-sm hover:bg-[var(--brand-bg-900)]"
               >
                 詳細を見る
               </button>
-              <div className="my-1 border-t border-black/[0.08]" />
+              <div className="my-1 border-t border-[var(--line)]" />
               {user.role === "listener" ? (
                 <button
                   type="button"
                   onClick={() => { setOpen(false); onAction({ type: "role", user, newRole: "vtuber" }); }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-black/[0.04]"
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-[var(--brand-bg-900)]"
                 >
                   VTuberに変更
                 </button>
@@ -352,17 +354,17 @@ function UserRow({
                 <button
                   type="button"
                   onClick={() => { setOpen(false); onAction({ type: "role", user, newRole: "listener" }); }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-black/[0.04]"
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-[var(--brand-bg-900)]"
                 >
                   リスナーに変更
                 </button>
               )}
-              <div className="my-1 border-t border-black/[0.08]" />
+              <div className="my-1 border-t border-[var(--line)]" />
               {isBanned ? (
                 <button
                   type="button"
                   onClick={() => { setOpen(false); onAction({ type: "unban", user }); }}
-                  className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-black/[0.04]"
+                  className="w-full px-4 py-2 text-left text-sm text-[var(--brand-primary-ink)] hover:bg-[var(--brand-bg-900)]"
                 >
                   BAN解除
                 </button>
@@ -370,7 +372,7 @@ function UserRow({
                 <button
                   type="button"
                   onClick={() => { setOpen(false); onAction({ type: "ban", user }); }}
-                  className="w-full px-4 py-2 text-left text-sm text-[var(--brand-accent)] hover:bg-black/[0.04]"
+                  className="w-full px-4 py-2 text-left text-sm text-[var(--brand-accent-ink)] hover:bg-[var(--brand-bg-900)]"
                 >
                   BANする
                 </button>
@@ -390,11 +392,11 @@ function UserRow({
 function DetailModal({ user, onClose }: { user: SessionUser; onClose: () => void }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center ui-scrim p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl bg-[var(--brand-surface)] p-6 shadow-2xl"
+        className="ui-modal w-full max-w-md p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">
@@ -420,7 +422,7 @@ function DetailModal({ user, onClose }: { user: SessionUser; onClose: () => void
             <div className="mt-1 flex items-center gap-1.5">
               <RoleBadge role={user.role} />
               {user.bannedAt && (
-                <span className="rounded-full bg-[var(--brand-accent)]/20 px-2 py-0.5 text-[11px] font-bold text-[var(--brand-accent)]">
+                <span className="rounded-full bg-[var(--brand-accent-soft)] px-2 py-0.5 text-[11px] font-bold text-[var(--brand-accent-ink)]">
                   BAN
                 </span>
               )}
@@ -444,7 +446,7 @@ function DetailModal({ user, onClose }: { user: SessionUser; onClose: () => void
             <DetailRow label="BAN日時" value={fmt(user.bannedAt)} highlight="red" />
           )}
           {user.bio && (
-            <div className="rounded-xl bg-black/[0.04] p-3">
+            <div className="rounded-xl bg-[var(--brand-bg-900)] p-3">
               <p className="mb-1 text-xs text-[var(--brand-text-muted)]">自己紹介</p>
               <p className="text-sm text-[var(--brand-text)]">{user.bio}</p>
             </div>
@@ -467,10 +469,10 @@ function DetailRow({
   highlight?: "red";
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 rounded-lg px-3 py-2 odd:bg-black/[0.03]">
+    <div className="flex items-baseline justify-between gap-4 rounded-lg px-3 py-2 odd:bg-[var(--brand-bg-900)]">
       <span className="shrink-0 text-xs text-[var(--brand-text-muted)]">{label}</span>
       <span
-        className={`min-w-0 truncate ${mono ? "font-mono text-xs" : ""} ${highlight === "red" ? "text-[var(--brand-accent)]" : "text-[var(--brand-text)]"}`}
+        className={`min-w-0 truncate ${mono ? "font-mono text-xs" : ""} ${highlight === "red" ? "text-[var(--brand-accent-ink)]" : "text-[var(--brand-text)]"}`}
       >
         {value}
       </span>
@@ -512,13 +514,13 @@ function ConfirmDialog({
       : `${action.user.name} のロールを「${(action as { newRole: UserRole }).newRole === "vtuber" ? "VTuber" : "リスナー"}」に変更します。`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-sm rounded-2xl bg-[var(--brand-surface)] p-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center ui-scrim p-4">
+      <div className="ui-modal w-full max-w-sm p-6">
         <h3 className="mb-2 text-base font-bold">{title}</h3>
         <p className="mb-5 text-sm text-[var(--brand-text-muted)]">{description}</p>
 
         {error && (
-          <div className="mb-4 rounded-xl bg-[var(--brand-accent)]/15 px-4 py-3 text-sm text-[var(--brand-accent)]">{error}</div>
+          <div className="mb-4 rounded-xl bg-[var(--brand-accent-soft)] px-4 py-3 text-sm text-[var(--brand-accent-ink)]">{error}</div>
         )}
 
         <div className="flex justify-end gap-2">
@@ -534,7 +536,7 @@ function ConfirmDialog({
             type="button"
             onClick={onConfirm}
             disabled={loading}
-            className={`ui-btn ui-btn-md ${isBan ? "ui-btn-danger" : isRole ? "ui-btn-primary" : "ui-btn-success"}`}
+            className={`ui-btn ui-btn-md ${isBan ? "ui-btn-danger" : isRole ? "ui-btn-primary" : "ui-btn-primary"}`}
           >
             {loading ? "処理中..." : isBan ? "BANする" : isUnban ? "BAN解除" : "変更する"}
           </button>
@@ -554,7 +556,7 @@ function RoleBadge({ role }: { role: UserRole }) {
       className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
         role === "vtuber"
           ? "bg-[var(--brand-primary)]/15 text-[var(--brand-primary)]"
-          : "bg-blue-500/20 text-blue-600"
+          : "bg-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)]"
       }`}
     >
       {role === "vtuber" ? "VTuber" : "リスナー"}

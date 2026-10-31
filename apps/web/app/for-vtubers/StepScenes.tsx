@@ -50,7 +50,7 @@ export function SceneCreate() {
           <span className="aiment-session-card__frame" aria-hidden />
           <span
             className="aiment-session-card__level sc-in-28"
-            style={{ "--level-face": LEVEL.color, "--level-drop": LEVEL.dropColor } as React.CSSProperties}
+            style={{ "--level-face": LEVEL.color, "--level-drop": LEVEL.dropColor, "--level-ink": LEVEL.inkColor } as React.CSSProperties}
           >
             {LEVEL.level}
           </span>

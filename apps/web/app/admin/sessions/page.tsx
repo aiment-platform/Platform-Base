@@ -84,21 +84,21 @@ export default function AdminSessionsPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="px-4 py-6 sm:p-8">
       <h1 className="mb-1 text-2xl font-bold">セッション管理</h1>
       <p className="mb-6 text-sm text-[var(--brand-text-muted)]">
         全VTuberの配信枠を確認し、終了し忘れた配信の強制終了や、不要な枠の削除ができます。
       </p>
 
-      <div className="mb-6 flex gap-1 rounded-xl bg-black/[0.04] p-1 sm:w-fit">
+      <div className="mb-6 flex gap-1 rounded-xl bg-[var(--brand-bg-900)] p-1 sm:w-fit">
         {TABS.map(({ status, label }) => (
           <button
             key={status}
             type="button"
             onClick={() => setTab(status)}
-            className={`flex-1 rounded-lg px-4 py-1.5 text-sm transition-colors sm:flex-none ${
+            className={`flex-1 whitespace-nowrap rounded-lg px-4 py-2 text-sm transition-colors sm:flex-none sm:py-1.5 ${
               tab === status
-                ? "bg-[var(--brand-surface)] font-semibold text-[var(--brand-text)] shadow-sm"
+                ? "bg-[var(--brand-surface)] font-semibold text-[var(--brand-text)]"
                 : "text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
             }`}
           >
@@ -108,13 +108,13 @@ export default function AdminSessionsPage() {
       </div>
 
       {error && (
-        <div className="mb-4 rounded-xl bg-[var(--brand-accent)]/15 px-4 py-3 text-sm text-[var(--brand-accent)]">{error}</div>
+        <div className="mb-4 rounded-xl bg-[var(--brand-accent-soft)] px-4 py-3 text-sm text-[var(--brand-accent-ink)]">{error}</div>
       )}
 
       {loading ? (
         <p className="text-sm text-[var(--brand-text-muted)]">読み込み中...</p>
       ) : sessions.length === 0 ? (
-        <p className="rounded-xl bg-black/[0.04] px-4 py-8 text-center text-sm text-[var(--brand-text-muted)]">
+        <p className="ui-panel px-4 py-8 text-center text-sm text-[var(--brand-text-muted)]">
           該当する配信枠はありません。
         </p>
       ) : (
@@ -149,14 +149,14 @@ function SessionRow({
   return (
     <div
       className={`flex flex-col gap-3 rounded-xl px-4 py-3 sm:flex-row sm:items-center ${
-        stale ? "bg-[var(--brand-accent)]/10 ring-1 ring-[var(--brand-accent)]/40" : "bg-black/[0.04]"
+        stale ? "bg-[var(--brand-accent-soft)] ring-1 ring-[var(--brand-accent)]/40" : "bg-[var(--brand-surface)]"
       }`}
     >
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <p className="truncate text-sm font-semibold">{session.title}</p>
           {stale && (
-            <span className="shrink-0 rounded-full bg-[var(--brand-accent)]/20 px-2 py-0.5 text-[10px] font-bold text-[var(--brand-accent)]">
+            <span className="shrink-0 rounded-full bg-[var(--brand-accent-soft)] px-2 py-0.5 text-[11px] font-bold text-[var(--brand-accent-ink)]">
               終了し忘れの可能性
             </span>
           )}
@@ -165,7 +165,7 @@ function SessionRow({
           {session.hostChannelName || session.hostName} ・ 開始 {formatDate(session.startsAt)}
           {session.plannedDurationMin ? ` ・ 予定 ${session.plannedDurationMin}分` : ""}
         </p>
-        <p className="font-mono text-[10px] text-[var(--brand-text-muted)]">{session.sessionId}</p>
+        <p className="break-all font-mono text-[11px] text-[var(--brand-text-muted)]">{session.sessionId}</p>
       </div>
       <div className="shrink-0">
         {session.status === "live" ? (
@@ -177,7 +177,7 @@ function SessionRow({
             type="button"
             onClick={onDelete}
             disabled={busy}
-            className="rounded-xl bg-[var(--brand-accent)]/15 px-4 py-2 text-sm font-semibold text-[var(--brand-accent)] transition hover:bg-[var(--brand-accent)]/25 disabled:opacity-50"
+            className="ui-btn ui-btn-sm ui-btn-danger"
           >
             {busy ? "処理中..." : "削除"}
           </button>

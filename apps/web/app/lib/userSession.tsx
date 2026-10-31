@@ -27,8 +27,19 @@ export function UserSessionProvider({ children }: { children: React.ReactNode })
   const [isAdmin, setIsAdmin] = useState(false);
 
   const refreshSession = useCallback(async () => {
+    let retrying = false;
     try {
       const res = await fetch("/api/auth/session", { cache: "no-store" });
+      // 429 = 回数制限（proxy.ts）。ログインが切れたわけではないので、ログアウト扱いにせず、
+      // 制限が解ける時刻に聞き直す。それまでは hydrated を立てず「確認中（...）」のままにしておく
+      // （ここで null にすると、ログイン中なのにヘッダーに「ログイン」ボタンが出てしまう）
+      if (res.status === 429) {
+        retrying = true;
+        const resetAt = Number(res.headers.get("X-RateLimit-Reset"));
+        const wait = Number.isFinite(resetAt) && resetAt > 0 ? Math.min(30_000, Math.max(1_000, resetAt - Date.now())) : 5_000;
+        window.setTimeout(() => void refreshSession(), wait);
+        return;
+      }
       if (!res.ok) {
         // 4xx = genuine auth failure (no cookie / invalid) → log out
         // 5xx = server error (KV down, cold start, etc.) → keep existing state
@@ -43,7 +54,7 @@ export function UserSessionProvider({ children }: { children: React.ReactNode })
     } catch {
       // Network error → keep existing state, don't log out
     } finally {
-      setHydrated(true);
+      if (!retrying) setHydrated(true);
     }
   }, []);
 

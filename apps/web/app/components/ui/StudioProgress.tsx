@@ -38,7 +38,7 @@ export function StudioProgress({ current, orientation = "horizontal" }: StudioPr
               >
                 {index + 1}
               </div>
-              <span className={`mt-1 text-[10px] ${active ? "text-[var(--brand-text)]" : "text-[var(--brand-text-muted)]"}`}>{tx(stage.jp, stage.en)}</span>
+              <span className={`mt-1 text-[11px] ${active ? "text-[var(--brand-text)]" : "text-[var(--brand-text-muted)]"}`}>{tx(stage.jp, stage.en)}</span>
               {index < STAGES.length - 1 && <div className="my-1 h-6 w-px bg-[var(--brand-surface)]" />}
             </div>
           );
@@ -63,7 +63,7 @@ export function StudioProgress({ current, orientation = "horizontal" }: StudioPr
                   : "bg-[var(--brand-surface)] text-[var(--brand-text-muted)]"
             }`}
           >
-            <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-black/20 text-[10px]">{index + 1}</span>
+            <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-black/20 text-[11px]">{index + 1}</span>
             <span>{tx(stage.jp, stage.en)}</span>
           </div>
         );

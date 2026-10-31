@@ -26,7 +26,7 @@ export function getTypeInfo(type: ParticipationType | "First-come" | "Lottery", 
     case "Lottery":
       return { label: tx("抽選制", "Lottery"), bg: "bg-[var(--brand-primary)]/20 text-[var(--brand-primary)]", icon: "LT" };
     case "Members-only":
-      return { label: tx("メンバー限定", "Members only"), bg: "bg-[var(--brand-accent)]/20 text-[var(--brand-accent)]", icon: "MB" };
+      return { label: tx("メンバー限定", "Members only"), bg: "bg-[var(--brand-accent-soft)] text-[var(--brand-accent-ink)]", icon: "MB" };
     default:
       return { label: tx("配信", "Stream"), bg: "bg-[var(--brand-surface)] text-[var(--brand-text-muted)]", icon: "LV" };
   }

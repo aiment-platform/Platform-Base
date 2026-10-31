@@ -8,13 +8,14 @@ import { useI18n } from "../../lib/i18n";
 import { useUserSession } from "../../lib/userSession";
 import type { SignupInput, UserRole } from "../../lib/apiTypes";
 
-const ROLE_CARDS: { role: UserRole; label: string; description: string }[] = [
-  { role: "listener", label: "Listener", description: "視聴・予約・通知向け" },
-  { role: "vtuber", label: "VTuber", description: "配信作成・管理" },
+// 英語を選んでいる人にも読めるよう、日英の両方を持たせる
+const ROLE_CARDS: { role: UserRole; label: [string, string]; description: [string, string] }[] = [
+  { role: "listener", label: ["リスナー", "Listener"], description: ["視聴・予約・通知向け", "Watch, reserve, and get notified"] },
+  { role: "vtuber", label: ["VTuber", "VTuber"], description: ["配信作成・管理", "Create and manage streams"] },
   {
     role: "supporter",
-    label: "日本人メイト",
-    description: "VTuber×Aimerセッションの通訳・盛り上げ役",
+    label: ["日本人メイト", "Japanese Mate"],
+    description: ["VTuber×Aimerセッションの通訳・盛り上げ役", "Help VTuber × Aimer sessions as an interpreter and hype person"],
   },
 ];
 
@@ -45,7 +46,8 @@ function InputLabel({
 }) {
   return (
     <label className="block space-y-2">
-      <span className="text-[10px] uppercase tracking-[0.22em] text-[var(--brand-text-muted)]">{label}</span>
+      {/* 昔の暗いテーマの名残（英字の大文字＋字間）をやめ、ほかの入力欄の見出し（FieldLabel）とそろえる */}
+      <span className="block text-xs font-bold text-[var(--brand-text-muted)]">{label}</span>
       {children}
     </label>
   );
@@ -55,7 +57,8 @@ function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className={`h-11 w-full border border-[var(--brand-text-muted)]/70 bg-transparent px-3 text-sm text-[var(--brand-text)] outline-none transition focus:border-[var(--brand-secondary)] ${props.className ?? ""}`}
+      // 文字は 16px。これより小さいと、iPhone は入力欄に触れたときに画面を拡大してしまう
+      className={`h-11 w-full rounded-lg border-0 bg-[var(--brand-bg-900)] px-3 text-base text-[var(--brand-text)] outline-none transition focus:ring-2 focus:ring-[var(--brand-primary)]/40 ${props.className ?? ""}`}
     />
   );
 }
@@ -212,12 +215,13 @@ export default function SignupPage() {
 
 
   return (
-    <div className="min-h-screen bg-[var(--brand-bg-900)] text-[var(--brand-text)]">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
       <TopNav />
-      <main className="mx-auto max-w-2xl px-5 py-8 md:px-10 md:py-12">
-        <section className="rounded-[28px] border border-white/10 bg-[var(--brand-surface)] p-7">
+      {/* 下の余白は、スマホの下固定ナビに最後の行が隠れないように */}
+      <main className="mx-auto max-w-2xl px-4 pb-24 pt-6 md:px-10 md:pt-12 lg:pb-12">
+        <section className="ui-panel p-5 sm:p-7">
           <div className="mb-6">
-            <h1 className="text-2xl font-semibold tracking-[0.02em]">{tx("サインアップ", "Sign up")}</h1>
+            <h1 className="text-2xl font-black">{tx("サインアップ", "Sign up")}</h1>
             <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
               {step === 1
                 ? tx("STEP 1/3: 認証情報と同意", "STEP 1/3: Credentials and consent")
@@ -230,26 +234,27 @@ export default function SignupPage() {
           <form onSubmit={submit} className="space-y-4">
             {step === 1 ? (
               <>
-                <InputLabel label="User ID / Email">
-                  <TextInput type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
+                <InputLabel label={tx("メールアドレス", "Email")}>
+                  <TextInput type="email" autoComplete="email" inputMode="email" value={email} onChange={(event) => setEmail(event.target.value)} />
                 </InputLabel>
 
-                <InputLabel label="Password">
-                  <TextInput type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+                <InputLabel label={tx("パスワード", "Password")}>
+                  <TextInput type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} />
                 </InputLabel>
 
-                <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.015] p-4">
-                  <label className="flex items-start gap-2 text-sm">
-                    <input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} />
+                {/* 同意の行は、指で押しやすいよう行全体を高さ 40px 以上の押せる範囲にし、チェック欄も大きめにする */}
+                <div className="grid gap-1">
+                  <label className="flex min-h-10 items-center gap-3 text-sm">
+                    <input type="checkbox" className="h-5 w-5 shrink-0 accent-[var(--brand-primary)]" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} />
                     <span>
-                      <Link href="/terms" target="_blank" rel="noopener noreferrer" className="text-[var(--brand-secondary)] underline-offset-2 hover:underline">{tx("利用規約", "Terms")}</Link>
+                      <Link href="/terms" target="_blank" rel="noopener noreferrer" className="text-[var(--brand-primary-ink)] underline-offset-2 hover:underline">{tx("利用規約", "Terms")}</Link>
                       {tx("に同意します", " accepted")}
                     </span>
                   </label>
-                  <label className="flex items-start gap-2 text-sm">
-                    <input type="checkbox" checked={privacyAccepted} onChange={(event) => setPrivacyAccepted(event.target.checked)} />
+                  <label className="flex min-h-10 items-center gap-3 text-sm">
+                    <input type="checkbox" className="h-5 w-5 shrink-0 accent-[var(--brand-primary)]" checked={privacyAccepted} onChange={(event) => setPrivacyAccepted(event.target.checked)} />
                     <span>
-                      <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="text-[var(--brand-secondary)] underline-offset-2 hover:underline">{tx("プライバシーポリシー", "Privacy Policy")}</Link>
+                      <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="text-[var(--brand-primary-ink)] underline-offset-2 hover:underline">{tx("プライバシーポリシー", "Privacy Policy")}</Link>
                       {tx("に同意します", " accepted")}
                     </span>
                   </label>
@@ -262,32 +267,34 @@ export default function SignupPage() {
                     key={r}
                     type="button"
                     onClick={() => setRole(r)}
-                    className={`rounded-2xl border px-4 py-3.5 text-left transition ${
+                    aria-pressed={role === r}
+                    // 選んでいないカードも、薄紫の縁で「押せる面」と分かるようにする（前は白地に白でほぼ見えなかった）
+                    className={`rounded-2xl border-2 px-4 py-3.5 text-left transition ${
                       role === r
-                        ? "border-[var(--brand-secondary)] bg-[color-mix(in_srgb,var(--brand-secondary)_10%,transparent)]"
-                        : "border-white/10 bg-white/[0.015]"
+                        ? "border-[var(--brand-primary)] bg-[var(--brand-primary-soft)]"
+                        : "border-[var(--line)] bg-[var(--brand-surface)] hover:border-[var(--brand-primary)]/50"
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-[var(--brand-text)]">{label}</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-[var(--brand-text)]">{tx(label[0], label[1])}</p>
                       {r === "supporter" && (
-                        <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-bold text-purple-400">
-                          日本語話者向け
+                        <span className="rounded-full bg-[var(--brand-primary-soft)] px-2 py-0.5 text-[11px] font-bold text-[var(--brand-primary-ink)]">
+                          {tx("日本語話者向け", "For Japanese speakers")}
                         </span>
                       )}
                     </div>
-                    <p className="mt-1 text-xs text-[var(--brand-text-muted)]">{description}</p>
+                    <p className="mt-1 text-xs text-[var(--brand-text-muted)]">{tx(description[0], description[1])}</p>
                     {r === "supporter" && (
                       <p className="mt-1.5 text-[11px] text-[var(--brand-text-muted)]">
-                        ガイドライン同意・電話番号認証が必要 /{" "}
+                        {tx("ガイドライン同意・電話番号認証が必要", "Requires accepting the guidelines and phone verification")} /{" "}
                         <a
                           href="/supporter-guidelines"
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="text-purple-400 underline-offset-2 hover:underline"
+                          className="text-[var(--brand-primary-ink)] underline-offset-2 hover:underline"
                         >
-                          規約を確認する →
+                          {tx("規約を確認する →", "Read the guidelines →")}
                         </a>
                       </p>
                     )}
@@ -296,14 +303,14 @@ export default function SignupPage() {
               </div>
             ) : (
               <>
-                <InputLabel label="Display Name">
-                  <TextInput value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
+                <InputLabel label={tx("表示名", "Display name")}>
+                  <TextInput autoComplete="nickname" value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
                 </InputLabel>
                 <p className="text-xs text-[var(--brand-text-muted)]">{tx("この表示名は配信枠やチャットに表示されます。", "This display name appears in stream sessions and chat.")}</p>
 
                 {role === "supporter" && (
-                  <div className="space-y-4 rounded-2xl border border-purple-500/20 bg-purple-500/5 p-4">
-                    <p className="text-xs font-semibold text-purple-300">メイト追加情報</p>
+                  <div className="space-y-4 rounded-2xl border border-transparent bg-[var(--brand-primary-soft)] p-4">
+                    <p className="text-xs font-semibold text-[var(--brand-primary-ink)]">メイト追加情報</p>
 
                     <InputLabel label="応援しているVTuber（任意）">
                       <TextInput
@@ -319,7 +326,7 @@ export default function SignupPage() {
                         value={supporterMotivation}
                         onChange={(e) => setSupporterMotivation(e.target.value)}
                         rows={3}
-                        className="w-full resize-none border border-[var(--brand-text-muted)]/70 bg-transparent px-3 py-2.5 text-sm text-[var(--brand-text)] outline-none transition focus:border-[var(--brand-secondary)]"
+                        className="w-full resize-none rounded-lg border-0 bg-[var(--brand-bg-900)] px-3 py-2.5 text-base text-[var(--brand-text)] outline-none transition focus:ring-2 focus:ring-[var(--brand-primary)]/40"
                       />
                     </InputLabel>
 
@@ -335,16 +342,16 @@ export default function SignupPage() {
                           href="/supporter-guidelines"
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[var(--brand-secondary)] underline-offset-2 hover:underline"
+                          className="text-[var(--brand-primary-ink)] underline-offset-2 hover:underline"
                         >
                           メイトガイドライン
                         </Link>
                         を読み、すべての内容に同意します
-                        <span className="ml-1 text-red-400">*</span>
+                        <span className="ml-1 text-[var(--brand-accent-ink)]">*</span>
                       </span>
                     </label>
 
-                    <div className="rounded-xl bg-white/5 px-3 py-2.5 text-xs text-[var(--brand-text-muted)]">
+                    <div className="rounded-xl bg-[var(--brand-surface)] px-3 py-2.5 text-xs text-[var(--brand-text-muted)]">
                       アカウント作成後、設定ページから電話番号の認証を完了してください。
                       電話番号認証が完了するまでスピーカー予約はできません。
                     </div>
@@ -353,66 +360,67 @@ export default function SignupPage() {
               </>
             )}
 
-            {error ? <p className="rounded-xl border border-[var(--brand-accent)]/50 bg-[var(--brand-accent)]/8 px-4 py-3 text-sm text-[var(--brand-accent)]">{error}</p> : null}
+            {error ? <p className="rounded-xl border border-[var(--brand-accent)]/50 bg-[var(--brand-accent-soft)] px-4 py-3 text-sm text-[var(--brand-accent-ink)]">{error}</p> : null}
 
             {step === 1 ? (
               <div className="grid gap-3">
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="h-11 rounded-xl bg-[var(--brand-secondary)] px-5 text-sm font-bold tracking-[0.08em] text-black transition hover:brightness-110 disabled:opacity-60"
+                  className="ui-btn ui-btn-md ui-btn-primary"
                 >
-                  {submitting ? "WORKING..." : tx("次へ", "Next")}
+                  {submitting ? tx("確認中…", "Checking…") : tx("次へ", "Next")}
                 </button>
                 <button
                   type="button"
                   disabled={submitting}
                   onClick={handleGoogleSignup}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-black/10 bg-white px-5 text-sm font-semibold tracking-[0.02em] text-[#202124] transition hover:bg-[#f8f9fa] disabled:opacity-50"
+                  className="ui-btn ui-btn-md ui-btn-ghost gap-2"
                 >
                   <GoogleLogo />
                   {tx("Googleでサインアップ", "Sign up with Google")}
                 </button>
               </div>
             ) : step === 2 ? (
-              <div className="grid gap-3 sm:grid-cols-2">
+              // 「戻る」は小さく左、「次へ」を広く右に。スマホでも縦に積まず1行に並べる（進むボタンが先に目に入るように）
+              <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-3">
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="h-11 rounded-xl bg-[var(--brand-bg-900)] px-5 text-sm font-bold tracking-[0.08em] text-[var(--brand-text)] transition hover:brightness-110"
+                  className="ui-btn ui-btn-md ui-btn-ghost px-5"
                 >
-                  BACK
+                  {tx("戻る", "Back")}
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="h-11 rounded-xl bg-[var(--brand-secondary)] px-5 text-sm font-bold tracking-[0.08em] text-black transition hover:brightness-110 disabled:opacity-60"
+                  className="ui-btn ui-btn-md ui-btn-primary"
                 >
-                  {submitting ? "WORKING..." : tx("次へ", "Next")}
+                  {submitting ? tx("確認中…", "Checking…") : tx("次へ", "Next")}
                 </button>
               </div>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-3">
                 <button
                   type="button"
                   onClick={() => setStep(2)}
-                  className="h-11 rounded-xl bg-[var(--brand-bg-900)] px-5 text-sm font-bold tracking-[0.08em] text-[var(--brand-text)] transition hover:brightness-110"
+                  className="ui-btn ui-btn-md ui-btn-ghost px-5"
                 >
-                  BACK
+                  {tx("戻る", "Back")}
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="h-11 rounded-xl bg-[var(--brand-secondary)] px-5 text-sm font-bold tracking-[0.08em] text-black transition hover:brightness-110 disabled:opacity-60"
+                  className="ui-btn ui-btn-md ui-btn-primary"
                 >
-                  {submitting ? "WORKING..." : tx("アカウント作成", "Create account")}
+                  {submitting ? tx("作成中…", "Creating…") : tx("アカウント作成", "Create account")}
                 </button>
               </div>
             )}
 
             <p className="pt-1 text-sm text-[var(--brand-text-muted)]">
               {tx("すでにアカウントをお持ちですか？", "Already have an account?")}{" "}
-              <Link href="/auth" className="font-semibold text-[var(--brand-secondary)] underline-offset-2 hover:underline">
+              <Link href="/auth" className="font-semibold text-[var(--brand-primary-ink)] underline-offset-2 hover:underline">
                 {tx("ログインへ", "Go to login")}
               </Link>
             </p>

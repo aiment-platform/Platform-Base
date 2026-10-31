@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { TopNav } from "../../components/home/TopNav";
-import { getAjlInfo } from "../../lib/ajl";
 import { useI18n } from "../../lib/i18n";
-import { categoryLabel, participationLabel } from "../../lib/labels";
 import type { StreamSession } from "../../lib/streamSessions";
+import type { ProfileItem } from "../../lib/apiTypes";
+import { getAjlInfo } from "../../lib/ajl";
+import { profileItemLabel } from "../../lib/profileItems";
 import { ChannelHero } from "../components/ChannelHero";
 import { ChannelTicketPanel } from "../components/ChannelTicketPanel";
+import { StreamSessionCard } from "../../components/home/StreamSessionCard";
+import { TimeZoneNote } from "../../components/ui/TimeZoneNote";
+import { SiteFooter } from "../../components/landing/SiteFooter";
 
 type ChannelInfo = {
   userId: string;
@@ -18,6 +21,7 @@ type ChannelInfo = {
   bio: string;
   avatarUrl: string;
   headerUrl: string;
+  profileItems?: ProfileItem[];
   role: "listener" | "vtuber";
 };
 
@@ -25,63 +29,6 @@ type ChannelResponse = {
   channel: ChannelInfo;
   sessions: StreamSession[];
 };
-
-function formatDate(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("ja-JP", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
-
-function SessionCard({
-  session,
-  actionLabel,
-  href,
-  labels,
-}: {
-  session: StreamSession;
-  actionLabel: string;
-  href: string;
-  labels: {
-    category: string;
-    participation: string;
-  };
-}) {
-  const ajl = getAjlInfo(session.japaneseLevel);
-  const spotsLeft = session.speakerSlotsLeft ?? session.slotsLeft;
-  const spotsTotal = session.speakerSlotsTotal ?? session.slotsTotal;
-  return (
-    <article className="overflow-hidden rounded-xl bg-[var(--brand-surface)] shadow-lg shadow-black/20">
-      <div className="aspect-video overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={session.thumbnail} alt={session.title} className="h-full w-full object-cover" />
-      </div>
-      <div className="space-y-2 p-3">
-        <h3 className="line-clamp-2 text-sm font-bold text-[var(--brand-text)]">{session.title}</h3>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <p className="rounded-lg bg-[var(--brand-bg-900)] px-2 py-1 text-[10px] font-bold text-[var(--brand-text)]">{formatDate(session.startsAt)}</p>
-          <p className="rounded-lg bg-[var(--brand-secondary)]/40 px-2 py-1 text-[10px] font-black text-[var(--brand-text)]">AJL {ajl.level}</p>
-          <p className="rounded-lg bg-[var(--brand-bg-900)] px-2 py-1 text-[10px] font-bold text-[var(--brand-text-muted)]">{spotsLeft}/{spotsTotal}</p>
-        </div>
-        <div className="flex items-center justify-between">
-          <p className="text-[11px] text-[var(--brand-text-muted)]">
-            JF {ajl.jfStandard} / {labels.participation}
-          </p>
-          <Link
-            href={href}
-            className="rounded-lg bg-[var(--brand-primary)] px-3 py-1.5 text-xs font-semibold text-white"
-          >
-            {actionLabel}
-          </Link>
-        </div>
-      </div>
-    </article>
-  );
-}
 
 export function ChannelPageClient() {
   const { tx } = useI18n();
@@ -122,10 +69,16 @@ export function ChannelPageClient() {
   const liveSessions = useMemo(() => sessions.filter((session) => session.status === "live"), [sessions]);
   const upcomingSessions = useMemo(() => sessions.filter((session) => session.status === "prelive"), [sessions]);
   const archivedSessions = useMemo(() => sessions.filter((session) => session.status === "ended"), [sessions]);
+  // 「AJL 1〜3 が得意」の札。これからの枠（なければ全部の枠）の AJL の幅から出す
+  const levelRange = useMemo(() => {
+    const pool = [...liveSessions, ...upcomingSessions].length ? [...liveSessions, ...upcomingSessions] : sessions;
+    const levels = pool.map((session) => session.japaneseLevel).filter((level): level is number => typeof level === "number");
+    return levels.length ? { min: Math.min(...levels), max: Math.max(...levels) } : null;
+  }, [liveSessions, upcomingSessions, sessions]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--brand-bg-900)] text-[var(--brand-text)]">
+      <div className="min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
         <TopNav />
         <main className="mx-auto max-w-[1200px] px-6 py-10">
           <p className="text-sm text-[var(--brand-text-muted)]">{tx("チャンネルを読み込み中...", "Loading channel...")}</p>
@@ -136,11 +89,11 @@ export function ChannelPageClient() {
 
   if (error || !channel) {
     return (
-      <div className="min-h-screen bg-[var(--brand-bg-900)] text-[var(--brand-text)]">
+      <div className="min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
         <TopNav />
         <main className="mx-auto flex max-w-[1200px] flex-col items-start gap-3 px-6 py-10">
-          <p className="text-sm text-[var(--brand-accent)]">{error ?? tx("チャンネルが見つかりません。", "Channel not found.")}</p>
-          <button onClick={() => router.push("/")} className="rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white">
+          <p className="text-sm text-[var(--brand-accent-ink)]">{error ?? tx("チャンネルが見つかりません。", "Channel not found.")}</p>
+          <button onClick={() => router.push("/")} className="ui-btn ui-btn-md ui-btn-primary">
             {tx("ホームに戻る", "Back to Home")}
           </button>
         </main>
@@ -149,8 +102,9 @@ export function ChannelPageClient() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--brand-bg-900)] text-[var(--brand-text)]">
+    <div className="flex min-h-screen flex-col bg-[var(--bg)] text-[var(--brand-text)]">
       <TopNav />
+      <div className="flex-1">
       <ChannelHero
         channelName={channel.channelName}
         userId={channel.userId}
@@ -160,87 +114,166 @@ export function ChannelPageClient() {
         liveCount={liveSessions.length}
         upcomingCount={upcomingSessions.length}
         archiveCount={archivedSessions.length}
+        levelRange={levelRange}
         basePath={`/channels/${encodeURIComponent(channel.userId)}`}
         active="overview"
         labels={{
           upcoming: tx("予定", "Upcoming"),
-          archive: tx("アーカイブ", "Archive"),
+          archive: tx("配信した回数", "Streams"),
           noBio: tx("紹介文は未設定です。", "No bio yet."),
+          levelTag: (range) => tx(`AJL ${range} が得意`, `Best for AJL ${range}`),
         }}
       />
-      <main className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6">
-        <ChannelTicketPanel
-          targetUserId={channel.userId}
-          channelName={channel.channelName}
-          targetRole={channel.role}
-        />
+      {/* 左にプロフィールと 1on1、右に配信枠。スマホでは配信枠を先に（来た人がまず探すのは枠なので） */}
+      <main className="mx-auto grid max-w-[1400px] gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start">
+        <aside className="order-last grid gap-5 lg:order-none lg:sticky lg:top-24">
+          <ProfileCard
+            userId={channel.userId}
+            items={channel.profileItems ?? []}
+            levelRange={levelRange}
+            sessionCount={sessions.length}
+          />
+          <ChannelTicketPanel
+            targetUserId={channel.userId}
+            channelName={channel.channelName}
+            targetRole={channel.role}
+          />
+        </aside>
 
-        <section className="mt-8">
-          <h2 className="mb-3 text-lg font-bold text-[var(--brand-accent)]">{tx("配信中", "Live Now")}</h2>
-          {liveSessions.length === 0 ? (
-            <p className="text-sm text-[var(--brand-text-muted)]">{tx("現在配信中の枠はありません。", "No live streams at the moment.")}</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid min-w-0 gap-10">
+          {liveSessions.length > 0 ? (
+            <SessionSection title={tx("配信中", "Live now")} live>
               {liveSessions.map((session) => (
-                <SessionCard
+                <ChannelSessionCard
                   key={session.sessionId}
                   session={session}
-                  actionLabel={tx("視聴", "Watch")}
-                  href={`/room/${encodeURIComponent(session.sessionId)}?role=listener`}
-                  labels={{
-                    category: categoryLabel(session.category, tx),
-                    participation: participationLabel(session.participationType, tx),
-                  }}
+                  channel={channel}
+                  onOpen={() => router.push(`/join/${encodeURIComponent(session.sessionId)}`)}
                 />
               ))}
-            </div>
-          )}
-        </section>
+            </SessionSection>
+          ) : null}
 
-        <section className="mt-10">
-          <h2 className="mb-3 text-lg font-bold">{tx("近日予定", "Upcoming Streams")}</h2>
-          {upcomingSessions.length === 0 ? (
-            <p className="text-sm text-[var(--brand-text-muted)]">{tx("近日予定の枠はありません。", "No upcoming streams.")}</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {upcomingSessions.map((session) => (
-                <SessionCard
+          <SessionSection title={tx("これからの配信", "Upcoming")} aside={<TimeZoneNote />}>
+            {upcomingSessions.length === 0 ? (
+              <p className="col-span-full rounded-2xl bg-[var(--brand-bg-900)] px-4 py-6 text-center text-sm font-bold text-[var(--brand-text-muted)]">
+                {tx("予定している配信はまだありません。", "No upcoming streams yet.")}
+              </p>
+            ) : (
+              upcomingSessions.map((session) => (
+                <ChannelSessionCard
                   key={session.sessionId}
                   session={session}
-                  actionLabel={tx("参加準備", "Join")}
-                  href={`/join/${encodeURIComponent(session.sessionId)}`}
-                  labels={{
-                    category: categoryLabel(session.category, tx),
-                    participation: participationLabel(session.participationType, tx),
-                  }}
+                  channel={channel}
+                  onOpen={() => router.push(`/join/${encodeURIComponent(session.sessionId)}`)}
                 />
-              ))}
-            </div>
-          )}
-        </section>
+              ))
+            )}
+          </SessionSection>
 
-        <section className="mt-10 pb-8">
-          <h2 className="mb-3 text-lg font-bold">{tx("アーカイブ", "Archive")}</h2>
-          {archivedSessions.length === 0 ? (
-            <p className="text-sm text-[var(--brand-text-muted)]">{tx("アーカイブはまだありません。", "No archives yet.")}</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* 過去の配信は、ないときは見出しごと出さない（空の見出しが場所を取るだけなので） */}
+          {archivedSessions.length > 0 ? (
+            <SessionSection title={tx("過去の配信", "Past streams")}>
               {archivedSessions.map((session) => (
-                <SessionCard
+                <ChannelSessionCard
                   key={session.sessionId}
                   session={session}
-                  actionLabel={tx("詳細", "Details")}
-                  href={`/join/${encodeURIComponent(session.sessionId)}`}
-                  labels={{
-                    category: categoryLabel(session.category, tx),
-                    participation: participationLabel(session.participationType, tx),
-                  }}
+                  channel={channel}
+                  onOpen={() => router.push(`/join/${encodeURIComponent(session.sessionId)}`)}
                 />
               ))}
-            </div>
-          )}
-        </section>
+            </SessionSection>
+          ) : null}
+        </div>
       </main>
+      </div>
+      <SiteFooter />
     </div>
+  );
+}
+
+function SessionSection({ title, aside, live, children }: { title: string; aside?: React.ReactNode; live?: boolean; children: React.ReactNode }) {
+  return (
+    <section>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-xl font-black">
+          {live ? <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[var(--brand-accent)]" aria-hidden /> : null}
+          {title}
+        </h2>
+        {aside}
+      </div>
+      {/* 列の数は決め打ちせず、ホームと同じ「1枚 240px 以上で入るだけ並べる」。
+          列数を固定すると、プロフィールの列が下に回る幅（1024px 未満）で1枚が大きく引き伸ばされるため */}
+      <div className="aiment-session-card-grid">{children}</div>
+    </section>
+  );
+}
+
+function ChannelSessionCard({ session, channel, onOpen }: { session: StreamSession; channel: ChannelInfo; onOpen: () => void }) {
+  return (
+    <StreamSessionCard
+      title={session.title}
+      channelName={channel.channelName || channel.name}
+      thumbnail={session.thumbnail}
+      startsAt={session.startsAt}
+      slotsLeft={session.speakerSlotsLeft ?? session.slotsLeft}
+      slotsTotal={session.speakerSlotsTotal ?? session.slotsTotal}
+      japaneseLevel={session.japaneseLevel}
+      hostAvatarUrl={channel.avatarUrl}
+      onOpen={onOpen}
+    />
+  );
+}
+
+/**
+ * プロフィールのカード。上に紫の見出しの帯（PROFILE と @id）、その下に「見出し / 内容」の行。
+ * 配信者が書いた行のあとに、配信枠から自動で出す行（得意レベル・配信の数）を足す
+ */
+function ProfileCard({
+  userId,
+  items,
+  levelRange,
+  sessionCount,
+}: {
+  userId: string;
+  items: ProfileItem[];
+  levelRange: { min: number; max: number } | null;
+  sessionCount: number;
+}) {
+  const { tx, locale } = useI18n();
+  // よく使う見出しは、表示の言語に合わせて訳す（自由に書いた見出しはそのまま）
+  const rows: ProfileItem[] = items.map((item) => ({ ...item, label: profileItemLabel(item, locale) }));
+  if (levelRange) {
+    const min = getAjlInfo(levelRange.min);
+    const max = getAjlInfo(levelRange.max);
+    rows.push({
+      label: tx("得意レベル", "Best for"),
+      value: min.level === max.level ? `AJL ${min.level}（${min.label}）` : `AJL ${min.level}–${max.level}`,
+    });
+  }
+  rows.push({ label: tx("配信枠", "Sessions"), value: tx(`${sessionCount} 枠`, `${sessionCount}`) });
+
+  return (
+    <section className="overflow-hidden rounded-[20px] border-[1.5px] border-[var(--surface-edge,var(--line))] bg-[var(--brand-surface)]" style={{ boxShadow: "0 4px 0 0 var(--surface-edge, var(--line))" }}>
+      <div className="flex items-center justify-between gap-3 bg-[var(--brand-primary)] px-5 py-3 text-white">
+        <h2 className="text-xs font-black tracking-[0.25em]">PROFILE</h2>
+        <span className="truncate text-xs font-bold text-white/75">@{userId}</span>
+      </div>
+      <dl className="divide-y divide-[var(--line)] px-5">
+        {rows.map((row, index) => (
+          <div key={`${row.label}-${index}`} className="flex items-baseline justify-between gap-4 py-3">
+            <dt className="shrink-0 text-sm font-black text-[var(--brand-text-muted)]">{row.label}</dt>
+            <dd className="min-w-0 break-words text-right text-sm font-black text-[var(--brand-text)]">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+      {items.length === 0 ? (
+        <p className="mx-5 mb-5 mt-1 rounded-xl bg-[var(--brand-bg-900)] px-4 py-3 text-xs font-bold leading-relaxed text-[var(--brand-text-muted)]">
+          {tx("誕生日や好きなものなどは、まだ書かれていません。", "No profile details yet.")}
+        </p>
+      ) : (
+        <div className="h-2" />
+      )}
+    </section>
   );
 }

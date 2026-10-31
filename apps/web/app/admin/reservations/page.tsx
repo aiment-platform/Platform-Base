@@ -45,7 +45,7 @@ export default function AdminReservationsPage() {
   const cancelled = reservations.filter((r) => r.status === "cancelled");
 
   return (
-    <div className="p-8">
+    <div className="px-4 py-6 sm:p-8">
       <h1 className="mb-1 text-2xl font-bold">予約者一覧</h1>
       <p className="mb-6 text-sm text-[var(--brand-text-muted)]">セッション ID で予約者を検索</p>
 
@@ -55,7 +55,7 @@ export default function AdminReservationsPage() {
           onChange={(e) => setSessionId(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") void search(); }}
           placeholder="Session ID"
-          className="flex-1 rounded-xl bg-black/[0.06] px-4 py-2.5 text-sm outline-none placeholder:text-[var(--brand-text-muted)] focus:ring-2 focus:ring-[var(--brand-primary)]"
+          className="min-w-0 flex-1 rounded-xl border border-[var(--line)] bg-[var(--brand-surface)] px-4 py-2.5 text-base outline-none sm:text-sm placeholder:text-[var(--brand-text-muted)] focus:ring-2 focus:ring-[var(--brand-primary)]"
         />
         <button
           type="button"
@@ -68,7 +68,7 @@ export default function AdminReservationsPage() {
       </div>
 
       {error && (
-        <div className="mb-4 rounded-xl bg-[var(--brand-accent)]/15 px-4 py-3 text-sm text-[var(--brand-accent)]">{error}</div>
+        <div className="mb-4 rounded-xl bg-[var(--brand-accent-soft)] px-4 py-3 text-sm text-[var(--brand-accent-ink)]">{error}</div>
       )}
 
       {searched && (
@@ -93,7 +93,7 @@ export default function AdminReservationsPage() {
             </Section>
           )}
           {reservations.length === 0 && (
-            <p className="rounded-xl bg-black/[0.04] px-4 py-8 text-center text-sm text-[var(--brand-text-muted)]">
+            <p className="ui-panel px-4 py-8 text-center text-sm text-[var(--brand-text-muted)]">
               予約者はまだいません。
             </p>
           )}
@@ -115,18 +115,18 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Row({ r }: { r: Reservation }) {
   const isPaid = !SPEAKER_FEE_ENABLED || Boolean(r.paymentIntentId);
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-black/[0.04] px-4 py-2.5">
+    <div className="flex items-center gap-3 rounded-xl bg-[var(--brand-surface)] px-4 py-2.5">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/15 text-sm font-bold text-[var(--brand-primary)]">
         {r.userName.charAt(0).toUpperCase()}
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold">{r.userName}</p>
-        <p className="font-mono text-[10px] text-[var(--brand-text-muted)]">{r.userId}</p>
+        <p className="truncate font-mono text-[11px] text-[var(--brand-text-muted)]">{r.userId}</p>
       </div>
       <div className="shrink-0 text-right">
         <p className="text-xs text-[var(--brand-text-muted)]">{formatDate(r.createdAt)}</p>
         {r.type === "speaker" && (
-          <span className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${isPaid ? "bg-green-500/20 text-green-600" : "bg-black/[0.06] text-[var(--brand-text-muted)]"}`}>
+          <span className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ${isPaid ? "bg-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)]" : "bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)]"}`}>
             {SPEAKER_FEE_ENABLED ? (isPaid ? "支払済" : "未払い") : "無料"}
           </span>
         )}

@@ -34,7 +34,7 @@ export function statusLabel(status: BookingStatus, tx: (jp: string, en: string) 
 export function statusStyle(status: BookingStatus): string {
   if (status === "available") return "bg-[var(--brand-primary)] text-[var(--brand-bg-900)]";
   if (status === "booked") return "bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)]";
-  return "bg-[var(--brand-accent)]/20 text-[var(--brand-accent)]";
+  return "bg-[var(--brand-accent-soft)] text-[var(--brand-accent-ink)]";
 }
 
 export function statusDot(status: BookingStatus): string {

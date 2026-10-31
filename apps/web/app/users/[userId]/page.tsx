@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeftIcon } from "@heroicons/react/24/solid";
+import { GlobeAsiaAustraliaIcon } from "@heroicons/react/24/outline";
 import { useI18n } from "../../lib/i18n";
 import type { PublicUserProfile } from "../../lib/server/aimentStore";
 
@@ -60,10 +61,10 @@ export default function UserProfilePage() {
   }, [userId]);
 
   return (
-    <div className="min-h-screen bg-[var(--brand-bg-900)] text-[var(--brand-text)]">
-      <header className="sticky top-0 z-10 border-b border-white/8 bg-[var(--brand-bg-900)]/90 backdrop-blur-sm">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
+      <header className="sticky top-0 z-10 border-b border-[var(--line)] bg-[var(--brand-surface)]/95 backdrop-blur-sm">
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
-          <button onClick={() => window.history.back()} className="flex items-center gap-1.5 text-sm text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]">
+          <button onClick={() => window.history.back()} className="-ml-2 flex h-10 items-center gap-1.5 px-2 text-sm text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]">
             <ArrowLeftIcon className="h-4 w-4" aria-hidden />
             {tx("戻る", "Back")}
           </button>
@@ -81,18 +82,18 @@ export default function UserProfilePage() {
           <div className="space-y-6">
             {/* Header */}
             <div className="flex items-start gap-4">
-              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full bg-[var(--brand-surface)]">
+              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full bg-[var(--brand-primary-soft)]">
                 {profile.avatarUrl ? (
                   <Image src={profile.avatarUrl} alt={profile.name} width={80} height={80} className="h-full w-full object-cover" />
                 ) : (
-                  <div className="grid h-full w-full place-items-center text-2xl font-extrabold text-[var(--brand-text-muted)]">
+                  <div className="grid h-full w-full place-items-center text-2xl font-extrabold text-[var(--brand-primary-ink)]">
                     {profile.name.trim().charAt(0).toUpperCase()}
                   </div>
                 )}
               </div>
 
               <div className="min-w-0 flex-1 pt-1">
-                <h1 className="text-xl font-extrabold">{profile.name}</h1>
+                <h1 className="break-words text-xl font-extrabold">{profile.name}</h1>
                 <p className="mt-0.5 text-xs text-[var(--brand-text-muted)]">
                   {tx("aiment歴", "Member since")} {formatDate(profile.createdAt)}
                 </p>
@@ -100,7 +101,8 @@ export default function UserProfilePage() {
                 <div className="mt-2 flex flex-wrap gap-2">
                   {profile.country && (
                     <span className="rounded-full bg-[var(--brand-surface)] px-2.5 py-1 text-xs text-[var(--brand-text-muted)]">
-                      🌏 {profile.country}
+                      <GlobeAsiaAustraliaIcon className="mr-1 inline h-3.5 w-3.5 align-[-2px]" aria-hidden />
+                      {profile.country}
                     </span>
                   )}
                   {profile.languageLevel && (
@@ -158,17 +160,17 @@ export default function UserProfilePage() {
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold">{s.title}</p>
-                        <p className="text-xs text-[var(--brand-text-muted)]">{s.hostName} · {formatSessionDate(s.startsAt)}</p>
+                        <p className="truncate text-xs text-[var(--brand-text-muted)]">{s.hostName} · {formatSessionDate(s.startsAt)}</p>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1">
-                        <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold ${
+                        <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${
                           s.role === "speaker"
-                            ? "bg-[var(--brand-secondary)]/40 text-[var(--brand-text)]"
-                            : "bg-white/10 text-[var(--brand-text-muted)]"
+                            ? "bg-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)]"
+                            : "bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)]"
                         }`}>
                           {tx(ROLE_LABEL[s.role]?.jp ?? s.role, ROLE_LABEL[s.role]?.en ?? s.role)}
                         </span>
-                        <span className="text-[9px] text-[var(--brand-text-muted)]">
+                        <span className="text-[11px] text-[var(--brand-text-muted)]">
                           {tx(STATUS_LABEL[s.status]?.jp ?? s.status, STATUS_LABEL[s.status]?.en ?? s.status)}
                         </span>
                       </div>

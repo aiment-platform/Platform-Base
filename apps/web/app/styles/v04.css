@@ -1,0 +1,220 @@
+/* ==========================================================================
+   UI ver0.4（既定）… ムードボード「A1 Soft Arcade ＋ 書体 まるっと標準」を本物の画面に当てたもの
+   --------------------------------------------------------------------------
+   <html data-ui="0.4"> のときだけ効く。layout.tsx で常に付けているので、今はこれが既定の見た目。
+   ver0.31 の上に差分を重ねる作りのまま。0.31 に戻すときは、layout.tsx の data-ui を外せばよい。
+
+   考え方：装飾は足さず、「押せるものだけに厚み」「目立たせたい所だけにライム」に絞る。
+     1. 書体   … 丸ゴシック。英語 Nunito → 日本語 M PLUS Rounded 1c の順に並べる
+     2. 色     … 背景・沈んだ面・区切り線・文字を、灰色から紫寄りに。2色目のライムはナビの現在地だけ
+     3. 厚み   … 押せるもの（ボタン、触れたときのカード）だけ。置いてあるだけのパネルは平らに
+     4. 見出し … 大きくしない。件数は控えめな札
+     5. カード … フォルダ形はそのまま。厚みは触れたときだけ。時刻は白い札
+     6. 省く   … ホームの UPCOMING の帯（下の一覧と同じ内容のくり返し）
+
+   @layer に入れていないので、Tailwind のクラスや .ui-btn などより優先される。
+   ========================================================================== */
+
+/* --- 1・2. 書体と色（変数を差し替えるだけで、サイト全体に効く） ---------------- */
+html[data-ui="0.4"] {
+  --font-latin: var(--font-rounded-latin), var(--font-rounded-jp), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-jp: var(--font-rounded-latin), var(--font-rounded-jp), "Hiragino Maru Gothic ProN", "Hiragino Sans", "Meiryo", sans-serif;
+
+  --bg: #f8f7ff;           /* 背景。ごく薄い紫（紫系のサムネイルが埋もれないよう、白に近づけている） */
+  --sunken: #efecfe;       /* 沈んだ面（検索欄・切替の土台など） */
+  --line: #e4dffc;         /* 区切り線 */
+  --track: #e4dffc;        /* 進捗バーの溝 */
+  --placeholder: #dcd5fd;  /* 画像がないときの面・副ボタンの厚み */
+  --float-edge: #dcd5fd;   /* 浮く面の縁 */
+  --text: #4a4166;         /* 本文。丸い書体に合わせて、黒に近すぎない紫寄りの灰（背景で 8.8:1。前は #2a2340） */
+  --text-sub: #7a7394;     /* 補足（白地で 4.6:1） */
+
+  /* ver0.4 で増えた色 */
+  --surface-edge: #dcd5fd; /* 白い面の下に覗く厚み */
+  --card-edge: #cfc6fb;    /* 配信枠カードの厚み（背景との差を少し強く） */
+  --lime: #d9ff4a;         /* 2色目。「いま」「押してほしい」所に少しだけ。鮮やかなサムネの中でもくすまない明るさ */
+  --lime-dark: #a8d417;    /* ライムの厚み */
+  --lime-ink: var(--text); /* ライムの上の文字 */
+}
+
+/* --- 3. 厚み ------------------------------------------------------------- */
+/* 置いてあるだけのパネルは平らに（細い縁だけ）。厚みがあると押せそうに見えてしまう */
+html[data-ui="0.4"] :is(.ui-panel, .ui-card) {
+  border: 1.5px solid var(--surface-edge);
+  border-radius: 20px;
+}
+
+html[data-ui="0.4"] .ui-btn {
+  font-weight: 800;
+}
+
+/* 副ボタンは灰色の塗りをやめ、白い面＋薄紫の縁と厚みに */
+html[data-ui="0.4"] :is(.ui-btn-ghost, .ui-btn-secondary) {
+  --btn-face: #ffffff;
+  --btn-edge: var(--surface-edge);
+  box-shadow:
+    inset 0 0 0 1.5px var(--btn-edge),
+    0 var(--btn-lift) 0 0 var(--btn-edge);
+}
+
+html[data-ui="0.4"] :is(.ui-btn-ghost, .ui-btn-secondary):active:not(:disabled) {
+  box-shadow:
+    inset 0 0 0 1.5px var(--btn-edge),
+    0 0 0 0 var(--btn-edge);
+}
+
+/* 上のナビ：下は細い線だけ。今いるページはライムの札 */
+html[data-ui="0.4"] .ui-topnav {
+  border-bottom-color: var(--surface-edge);
+}
+
+html[data-ui="0.4"] .ui-topnav__item {
+  font-weight: 800;
+}
+
+html[data-ui="0.4"] .ui-topnav__item[data-active] {
+  background: var(--lime);
+  color: var(--lime-ink);
+  box-shadow: 0 3px 0 0 var(--lime-dark);
+}
+
+/* --- 4. 見出しと件数 --------------------------------------------------------
+   一覧の見出しは「ここから何の一覧か」が分かれば十分。大きくすると一覧を押し下げる */
+html[data-ui="0.4"] .ui-section-title {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+html[data-ui="0.4"] .ui-count {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--sunken);
+  color: var(--text-sub);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* --- 5. 配信枠カード（フォルダ形のまま） ------------------------------------------ */
+
+/* 普段は厚みなし。サムネイルが入ると、その下の厚みが「紙が1枚重なった線」に見えるため。
+   触れたときだけ少し持ち上げて厚みを出し、押せることを伝える。
+   フォルダは型抜き（mask）で描いているので box-shadow では形に沿わない。
+   drop-shadow はぼかし 0 にすると、形どおりの硬い厚みになる */
+html[data-ui="0.4"] .aiment-session-card__media-shell {
+  filter: drop-shadow(0 0 0 var(--card-edge));
+  transition:
+    transform 150ms ease,
+    filter 150ms ease;
+}
+
+html[data-ui="0.4"] .aiment-session-card:hover .aiment-session-card__media-shell,
+html[data-ui="0.4"] .aiment-session-card:focus-within .aiment-session-card__media-shell {
+  transform: translateY(-4px);
+  filter: drop-shadow(0 6px 0 var(--card-edge));
+}
+
+/* カードの形：90°の角は半径 18、斜めの肩は半径 37（0.31 は全部 24）。
+   丸みの弧の長さは「半径 × 曲がる角度」なので、同じ半径だと 90° 曲がる左上が、約44°しか曲がらない肩の
+   約2倍の長さで丸まり、左上だけが妙に丸く見えた。肩の半径を約2倍にして、弧の長さ（見た目の丸さ）をそろえている。
+   サムネイルの角（--card-radius）も 18 に合わせる（18 / 594 = 0.030303） */
+html[data-ui="0.4"] .aiment-session-card {
+  --card-radius: calc(var(--card-inner-w) * 0.030303);
+}
+
+html[data-ui="0.4"] .aiment-session-card__frame,
+html[data-ui="0.4"] .aiment-session-card__frame::before {
+  mask-image: url("/svg/session_container_v04.svg");
+  -webkit-mask-image: url("/svg/session_container_v04.svg");
+}
+
+html[data-ui="0.4"] .aiment-session-card__detail,
+html[data-ui="0.4"] .aiment-session-card__detail::before {
+  mask-image: url("/svg/session_detail_v04.svg");
+  -webkit-mask-image: url("/svg/session_detail_v04.svg");
+}
+
+/* AJL：タブの左端を、レベルの色の正方形にする（大きさはタブの高さと同じ）。
+   左上だけカードの角に合わせて丸め、ほかの角は直角にして「タブを色で切り分けた」形にする。
+   普段は色だけで、数字は触れたとき（キーボードで選んだときも）に出す。
+   数字は透明にしているだけなので、読み上げには普段から含まれる */
+html[data-ui="0.4"] .aiment-session-card__level {
+  left: 0;
+  top: 0;
+  width: var(--card-bar-height);
+  height: var(--card-bar-height);
+  border-radius: var(--card-radius) 0 0 0;
+  box-shadow: none;
+  color: transparent;
+  font-size: 5.6cqw;
+  font-weight: 900;
+  transform: none;
+  transition: color 150ms ease;
+}
+
+html[data-ui="0.4"] .aiment-session-card:hover .aiment-session-card__level,
+html[data-ui="0.4"] .aiment-session-card:focus-within .aiment-session-card__level {
+  color: var(--level-ink, var(--text));
+}
+
+/* スマホなど「触れる（ホバー）」がない端末では、数字をいつも出す */
+@media (hover: none) {
+  html[data-ui="0.4"] .aiment-session-card__level {
+    color: var(--level-ink, var(--text));
+  }
+}
+
+/* LP の説明シーンのカードは触れられない飾りなので、数字をいつも出す。
+   札が出てくる動き（step-scenes.css）は縦の中央寄せ（-50%）が前提なので、正方形では 0 に戻す */
+html[data-ui="0.4"] .sc-scene .aiment-session-card__level {
+  --sc-ty: 0;
+  color: var(--level-ink, var(--text));
+}
+
+/* 残り枠のバーと、触れたときのレベル名は、正方形の右から始める */
+html[data-ui="0.4"] .aiment-session-card__progress,
+html[data-ui="0.4"] .aiment-session-card__hover-meta {
+  left: calc(var(--card-bar-height) + 4cqw);
+}
+
+/* 時刻：動画サイトでおなじみの、黒の半透明に白い文字の小さな札。
+   サムネイルの上に載る情報なので、どんな絵の上でも読めて、絵の邪魔をしない形にする（厚みや縁は付けない） */
+html[data-ui="0.4"] .aiment-session-card__time {
+  right: 8px;
+  bottom: 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #ffffff;
+  padding: 3px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+html[data-ui="0.4"] .aiment-session-card__body {
+  padding-top: 16px;
+}
+
+html[data-ui="0.4"] .aiment-session-card__title {
+  font-weight: 800;
+}
+
+html[data-ui="0.4"] .aiment-session-card__channel {
+  font-weight: 700;
+}
+
+html[data-ui="0.4"] .aiment-session-card__avatar {
+  background: var(--brand-primary-soft);
+  color: var(--brand-primary-ink);
+  font-weight: 900;
+}
+
+/* --- 6. 省くもの ------------------------------------------------------------ */
+
+/* UPCOMING の帯は、すぐ下の「これからの配信」と同じ枠を小さく並べ直しているだけ。
+   同じ情報が2回出ると目が迷うので、0.4 では出さない */
+html[data-ui="0.4"] .ui-upcoming-ticker {
+  display: none;
+}

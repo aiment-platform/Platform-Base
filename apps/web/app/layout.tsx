@@ -1,8 +1,24 @@
 import type { Metadata } from "next";
+import { M_PLUS_Rounded_1c, Nunito } from "next/font/google";
 import "./globals.css";
 import { RouteTransitionProvider } from "./components/ui/RouteTransition";
 import { I18nProvider } from "./lib/i18n";
 import { UserSessionProvider } from "./lib/userSession";
+
+// UI ver0.4 の丸い書体。CSS 変数として置き、v04.css の --font-latin / --font-jp から使う。
+const roundedJp = M_PLUS_Rounded_1c({
+  weight: ["500", "700", "800", "900"],
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-rounded-jp",
+});
+const roundedLatin = Nunito({
+  weight: ["600", "700", "800", "900"],
+  subsets: ["latin"],
+  display: "swap",
+  adjustFontFallback: false,
+  variable: "--font-rounded-latin",
+});
 
 const SITE_URL = "https://aiment.jp";
 const DEFAULT_DESCRIPTION =
@@ -42,7 +58,14 @@ export default function RootLayout({
 }>) {
   return (
     // UI ver0.3: dark mode is retired, the app is light only.
-    <html lang="ja" data-theme="light" style={{ colorScheme: "light" }}>
+    // data-ui="0.4" で app/styles/v04.css が効く（UI ver0.4 が既定）
+    <html
+      lang="ja"
+      data-theme="light"
+      data-ui="0.4"
+      style={{ colorScheme: "light" }}
+      className={`${roundedJp.variable} ${roundedLatin.variable}`}
+    >
       <body className="antialiased">
         <UserSessionProvider>
           <I18nProvider>

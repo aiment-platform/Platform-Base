@@ -1,0 +1,116 @@
+/* ==========================================================================
+   デザインの決まりごと（UI ver0.31）
+   --------------------------------------------------------------------------
+   色・文字・角丸・深さの値はすべてここにある。見た目をサイト全体で
+   変えたいときは、まずこのファイルを直す。画面（.tsx）側では値を直書き
+   せず、ここの変数か、それを使った共通クラス（.ui-btn / .ui-panel など）
+   を使う。ルールの見本は /dev/design-guideline。
+
+   読む順番:
+     1. 文字        … フォントと太さ、最小サイズ
+     2. 素の色      … パレットそのもの（--bg, --primary など）
+     3. 役割の色    … 画面で使う名前（--brand-*）。素の色に名前を付けたもの
+                      色ごとに「面（塗り）／-dark（厚み）／-ink（文字）／-soft（薄い塗り）」
+                      の4つを持つ。白地に文字を書くときは必ず -ink を使う
+     4. 角丸        … 3段階＋丸
+     5. 深さ        … ボタンの厚み、浮く面の縁、モーダルの幕
+     6. Tailwind    … rounded-lg などのクラスを上の値に結び付ける
+   ========================================================================== */
+
+:root {
+  /* --- 1. 文字 ------------------------------------------------------------ */
+  --font-latin: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-jp: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "YuGothic", "Meiryo", sans-serif;
+  --font-ui: var(--font-jp);
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  /* 注釈などのいちばん小さい文字。これより小さくしない */
+  --ui-text-min: 11px;
+
+  /* --- 2. 素の色 ---------------------------------------------------------- */
+  --bg: #f7f7f7;            /* ページ全体の背景。ごく薄い無彩色のグレー。白いパネルがこの上で一段手前に見える */
+  --surface: #ffffff;       /* パネル・カード・シートの面 */
+  --sunken: #efefef;        /* 白い面の上の一段沈んだ部分（入力欄・切替の土台・副ボタン）。背景より一段濃い */
+  --line: #e7e7e7;          /* 区切り線（ヘッダー下など）。枠線としては使わない */
+  --surface-ring: #ffffff;  /* 配信枠カードの白フチの色（今はフチ幅0で未使用） */
+  --primary: #7665f6;       /* ブランドの紫。主ボタンの面 */
+  --primary-light: #9180f7; /* 配信枠カードのタブ */
+  --primary-dark: #5e49ee;  /* 紫ボタンの厚み（縁）、進捗の塗り。白地の上の紫の文字もこれ（読みやすさ 5.7:1） */
+  --primary-soft: #eeebfe;  /* 紫の薄い塗り（選択中の札、紫の文字の下敷き） */
+  --accent: #eb4e60;        /* 退出・削除などの危険な操作、LIVE */
+  --accent-dark: #cf2c2e;   /* 赤ボタンの厚み */
+  --accent-ink: #c8283a;    /* 白地の上の赤の文字（エラー文、5.5:1） */
+  --accent-soft: #fdeaec;   /* 赤の薄い塗り */
+  --warning: #f2a93b;       /* 注意の黄色。塗り専用（白地の文字には使わない） */
+  --warning-ink: #9a5b00;   /* 注意の文字 */
+  --warning-soft: #fdf3e1;  /* 注意の薄い塗り */
+  --neutral: #bdbdbd;       /* オフ状態の操作ボタンの面 */
+  --neutral-dark: #a4a4a4;  /* オフ状態の操作ボタンの厚み */
+  --track: #e7e7e7;         /* 進捗バーの溝 */
+  --placeholder: #d9d9d9;   /* 画像がないときの面、グレーのボタンの厚み */
+  --text: #494746;          /* 本文 */
+  --text-sub: #999999;      /* 補足の文字 */
+  --shadow-rgb: 73, 71, 70; /* モーダルの幕の色（rgba で使う） */
+
+  /* --- 3. 役割の色（画面ではこちらを使う） -------------------------------- */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --brand-bg-900: var(--sunken);   /* 沈んだ部分。ページ背景には --bg を直接使う */
+  --brand-bg-800: color-mix(in srgb, var(--bg) 55%, var(--surface) 45%);
+  --brand-surface: var(--surface);
+  --brand-surface-soft: color-mix(in srgb, var(--bg) 55%, var(--placeholder) 45%);
+  --brand-primary: var(--primary);
+  --brand-primary-light: var(--primary-light);
+  --brand-primary-dark: var(--primary-dark);
+  --brand-primary-ink: var(--primary-dark);
+  --brand-primary-soft: var(--primary-soft);
+  --brand-accent-ink: var(--accent-ink);
+  --brand-accent-soft: var(--accent-soft);
+  --brand-warning: var(--warning);
+  --brand-warning-ink: var(--warning-ink);
+  --brand-warning-soft: var(--warning-soft);
+  --brand-accent: var(--accent);
+  --brand-text: var(--text);
+  --brand-text-muted: var(--text-sub);
+  --brand-logo-filter: none;
+
+  /* --- 4. 角丸（3段階＋丸） ----------------------------------------------- */
+  --ui-radius-sm: 10px;    /* 小：入力欄、チップ、小さな部品 */
+  --ui-radius-md: 14px;    /* 中：ボタン、メニュー、切替 */
+  --ui-radius-lg: 18px;    /* 大：パネル、モーダル、大きな面 */
+  --ui-radius-pill: 999px; /* 丸：アバター、バッジ、点 */
+
+  /* --- 5. 深さ ------------------------------------------------------------
+     ぼかした影は使わない。深さは次の3つだけで表す。
+       押せるもの（.ui-btn / .ui-ctl / 切替のつまみ / タイル）
+         … べた塗りの面の下に、ぼかしのない濃い色の縁（厚み）。押すと沈む
+       その場に小さく浮くもの（メニュー、ツールチップ、日付選択）
+         … 四方に 1px の灰色の縁＋下に 4px の硬い厚み（--ui-shadow-float）。
+           縁があるので「重なった板」に見え、出っ張ったボタンと区別できる
+       画面を占領するもの（モーダル、ダイアログ）
+         … 後ろを --ui-scrim の幕で覆い、面そのものは影なし（.ui-modal）
+     ページに置かれたパネル・カードは影なしで、背景との色差だけで区切る。 */
+  --ui-ctl-lift: 6px;
+  --float-edge: #e2e2e2;
+  --ui-shadow-float: 0 0 0 1px var(--float-edge), 0 4px 0 0 var(--float-edge);
+  --ui-scrim: rgba(var(--shadow-rgb), 0.35);
+  --ui-focus: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 45%, transparent);
+}
+
+/* --- 6. Tailwind への割り当て ----------------------------------------------
+   rounded-md / lg / xl / 2xl / 3xl を、上の3段階の角丸に結び付ける。
+   画面側で rounded-lg と書けば「小」、rounded-xl なら「中」、rounded-2xl
+   なら「大」になる。rounded-sm / rounded（4px前後）は細かな札用にそのまま。 */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-ui);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --radius-md: var(--ui-radius-sm);
+  --radius-lg: var(--ui-radius-sm);
+  --radius-xl: var(--ui-radius-md);
+  --radius-2xl: var(--ui-radius-lg);
+  --radius-3xl: var(--ui-radius-lg);
+}

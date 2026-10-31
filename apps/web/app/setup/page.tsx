@@ -73,8 +73,8 @@ export default function SetupPage() {
   if (!hydrated || !isAuthenticated) return null;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[var(--brand-bg-900)] p-4">
-      <div className="w-full max-w-md rounded-2xl bg-[var(--brand-surface)] p-8 shadow-xl">
+    <main className="flex min-h-screen items-center justify-center bg-[var(--bg)] p-4">
+      <div className="w-full max-w-md rounded-2xl bg-[var(--brand-surface)] p-8">
         <h1 className="mb-2 text-2xl font-bold text-[var(--brand-text)]">
           {tx("アカウントの設定", "Set up your account")}
         </h1>
@@ -154,12 +154,12 @@ export default function SetupPage() {
             </div>
           ) : null}
 
-          {error ? <p className="text-sm text-[var(--brand-accent)]">{error}</p> : null}
+          {error ? <p className="text-sm text-[var(--brand-accent-ink)]">{error}</p> : null}
 
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-lg bg-[var(--brand-primary)] py-3 text-sm font-semibold text-white disabled:opacity-60"
+            className="ui-btn ui-btn-md ui-btn-primary w-full"
           >
             {submitting ? tx("保存中...", "Saving...") : tx("設定を完了する", "Complete setup")}
           </button>

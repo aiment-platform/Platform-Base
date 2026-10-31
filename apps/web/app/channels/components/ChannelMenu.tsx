@@ -11,28 +11,28 @@ type ChannelMenuProps = {
 export function ChannelMenu({ basePath, active }: ChannelMenuProps) {
   const { tx } = useI18n();
 
+  const items = [
+    { key: "overview", href: basePath, label: tx("概要", "Overview") },
+    { key: "schedule", href: `${basePath}/schedule`, label: tx("スケジュール", "Schedule") },
+  ] as const;
+
+  // 下線のタブ。選択中だけ紫の線と濃い文字
   return (
-    <nav className="mt-5 inline-flex items-center gap-1 rounded-xl bg-[var(--brand-bg-900)] p-1">
-      <Link
-        href={basePath}
-        className={`rounded-lg px-4 py-2 text-sm font-semibold ${
-          active === "overview"
-            ? "bg-[var(--brand-primary)] text-white"
-            : "text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
-        }`}
-      >
-        {tx("概要", "Overview")}
-      </Link>
-      <Link
-        href={`${basePath}/schedule`}
-        className={`rounded-lg px-4 py-2 text-sm font-semibold ${
-          active === "schedule"
-            ? "bg-[var(--brand-primary)] text-white"
-            : "text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
-        }`}
-      >
-        {tx("スケジュール", "Schedule")}
-      </Link>
+    <nav className="mt-4 flex gap-6">
+      {items.map((item) => (
+        <Link
+          key={item.key}
+          href={item.href}
+          aria-current={active === item.key ? "page" : undefined}
+          className={`border-b-[3px] pb-3 pt-2 text-sm font-bold transition-colors ${
+            active === item.key
+              ? "border-[var(--brand-primary)] text-[var(--brand-text)]"
+              : "border-transparent text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+          }`}
+        >
+          {item.label}
+        </Link>
+      ))}
     </nav>
   );
 }

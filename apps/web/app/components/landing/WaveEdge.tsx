@@ -56,7 +56,7 @@ const EDGE_FRONT_PATH = fillAbove(EDGE_FRONT);
 const EDGE_BACK_PATH = fillAbove(EDGE_BACK);
 
 /**
- * flip = true で上下反転。クリーム→紫の向きになるので、ページ末尾側に使う。
+ * flip = true で上下反転。背景色→紫の向きになるので、ページ末尾側に使う。
  *
  * 幅100% + 高さautoにして viewBox の比率をそのまま保つ。画面幅が変わっても
  * 波が切り取られたり、縦に潰れて別の形になったりしない。

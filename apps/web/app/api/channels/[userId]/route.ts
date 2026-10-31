@@ -21,6 +21,7 @@ export async function GET(_request: Request, context: { params: Promise<{ userId
         bio: user.bio ?? "",
         avatarUrl: user.avatarUrl ?? "",
         headerUrl: user.headerUrl ?? "",
+        profileItems: user.profileItems ?? [],
         role: user.role,
       },
       sessions,
