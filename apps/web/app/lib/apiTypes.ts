@@ -11,6 +11,13 @@ export type ReportStatus = "open" | "reviewed" | "closed";
 export type MonitoringSource = "webrtc" | "billing" | "api" | "system";
 export type MonitoringLevel = "info" | "warn" | "error";
 
+/**
+ * チャンネルページのプロフィール欄の1行（「誕生日 / 3月14日」のような、見出しと内容の組）。
+ * key があれば、よく使う見出し（lib/profileItems.ts）。表示のときに言語に合わせて訳す。
+ * key がなければ、配信者が自由に書いた見出しで、label をそのまま出す
+ */
+export type ProfileItem = { key?: string; label: string; value: string };
+
 export type SessionUser = {
   id: string;
   name: string;
@@ -23,6 +30,8 @@ export type SessionUser = {
   bio?: string;
   avatarUrl?: string;
   headerUrl?: string;
+  /** チャンネルページのプロフィール欄。配信者が自由に書く（最大 PROFILE_ITEMS_MAX 行） */
+  profileItems?: ProfileItem[];
   phoneNumber?: string;
   emailVerifiedAt?: string;
   phoneVerifiedAt?: string;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Footer } from "./components/home/Footer";
+import { SiteFooter } from "./components/landing/SiteFooter";
 import { TopNav } from "./components/home/TopNav";
 import { NowLiveSection } from "./components/home/sections/NowLiveSection";
 import { StartingSoonSection } from "./components/home/sections/StartingSoonSection";
@@ -157,12 +157,12 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--brand-bg-900)] pb-20 md:pb-0">
+    <div className="ui-page flex min-h-screen flex-col bg-[var(--bg)]">
       <TopNav searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
       <UpcomingTicker sessions={filteredStartingSoon} onParticipate={goPreJoin} />
 
-      <div className="mx-auto max-w-[1400px] px-8">
+      <div className="mx-auto w-full max-w-[1400px] flex-1 px-8 pb-16">
         {initialLoading ? (
           showSlowLoading ? (
             <SlowLoadingScreen
@@ -174,15 +174,16 @@ export default function HomePage() {
           )
         ) : (
           <>
-            <StartingSoonSection
-              sessions={filteredStartingSoon}
-              countdown={mergedCountdown}
+            {/* 配信中を先に。0件なら1行の案内だけにして、予定の一覧を押し下げない */}
+            <NowLiveSection
+              sessions={filteredLive}
               onOpenSession={goPreJoin}
               onOpenChannel={goChannel}
             />
 
-            <NowLiveSection
-              sessions={filteredLive}
+            <StartingSoonSection
+              sessions={filteredStartingSoon}
+              countdown={mergedCountdown}
               onOpenSession={goPreJoin}
               onOpenChannel={goChannel}
             />
@@ -190,7 +191,7 @@ export default function HomePage() {
         )}
       </div>
 
-      <Footer />
+      <SiteFooter />
     </div>
   );
 }

@@ -1,0 +1,420 @@
+/* ==========================================================================
+   /lp（日本語学習者向けLP）固有の部分。共通部品は .landing-* を使う。
+   ========================================================================== */
+
+/* 見出しの「beyond chat.」。o の代わりに吹き出しを置く。 */
+.lp-beyond {
+  font-size: clamp(56px, calc(20px + 6vw), 108px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+}
+
+.lp-beyond__o {
+  display: inline-block;
+  width: 0.92em;
+  height: 0.92em;
+  margin: 0 -0.02em;
+  vertical-align: -0.1em;
+  color: var(--brand-primary-light);
+}
+
+/* ヒーローの絵。キャラクターを背景色（--bg）の円に入れ、まわりに吹き出しを置く。
+   寸法は cqw なので、カラムの幅に合わせて丸ごと縮む。 */
+.lp-hero-art {
+  position: relative;
+  container-type: inline-size;
+  width: 100%;
+  max-width: 520px;
+  margin-inline: auto;
+  aspect-ratio: 1;
+}
+
+.lp-hero-art__disc {
+  position: absolute;
+  left: 8cqw;
+  top: 8cqw;
+  display: block;
+  width: 84cqw;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--bg);
+}
+
+.lp-hero-art__disc > img {
+  position: absolute;
+  left: 50%;
+  bottom: -6%;
+  width: 80%;
+  height: auto;
+  transform: translateX(-50%);
+}
+
+.lp-hero-art__row {
+  position: absolute;
+  right: 12cqw;
+  bottom: 10cqw;
+  display: flex;
+}
+
+.lp-hero-art__row > img {
+  width: 9cqw;
+  height: 9cqw;
+  margin-left: -2cqw;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0.6cqw #ffffff;
+}
+
+.lp-bubble {
+  position: absolute;
+  padding: 1.6cqw 3.2cqw;
+  border-radius: var(--ui-radius-pill);
+  background: #ffffff;
+  color: var(--brand-primary-dark);
+  font-size: clamp(11px, 3.2cqw, 16px);
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.lp-bubble--tint {
+  background: color-mix(in srgb, var(--brand-primary-light) 45%, #ffffff);
+}
+
+.lp-bubble--ink {
+  background: var(--brand-primary-dark);
+  color: #ffffff;
+}
+
+.lp-bubble--tl { left: 0; top: 12cqw; }
+.lp-bubble--ml { left: 0; top: 38cqw; }
+.lp-bubble--r { right: 0; top: 56cqw; }
+.lp-bubble--bl { left: 14cqw; bottom: 6cqw; font-size: clamp(13px, 3.8cqw, 19px); }
+
+/* Listener / Speaker の2枚 */
+.lp-role__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--brand-primary);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.lp-role__head > svg {
+  width: 20px;
+  height: 20px;
+}
+
+.lp-role__art {
+  display: block;
+  width: 100%;
+  margin-block: 16px 8px;
+}
+
+/* 日本語レベルの一覧。バッジは配信カードのものと同じ作り。 */
+.lp-levels {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.lp-levels > li {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 14px;
+  align-items: start;
+  padding: 14px 16px;
+  border: 1px solid var(--ld-line);
+  border-radius: var(--ui-radius-lg);
+  background: var(--brand-surface);
+}
+
+.lp-levels__badge {
+  display: grid;
+  grid-row: 1 / 3;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--level-face);
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 2px 0 2px var(--level-drop);
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.lp-levels__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.lp-levels__band {
+  padding: 1px 7px;
+  border-radius: var(--ui-radius-pill);
+  background: color-mix(in srgb, var(--brand-text) 6%, #ffffff);
+  color: var(--ld-ink-soft);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.lp-levels__desc {
+  color: var(--ld-ink-soft);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+@media (min-width: 640px) {
+  .lp-levels {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 1024px) {
+  .lp-levels {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+/* --- 「?」でレベルの一覧を出す（LevelHelp.tsx） ------------------------------ */
+.landing-help {
+  display: inline-grid;
+  width: 1.35em;
+  height: 1.35em;
+  margin: 0 0.15em 0 0.3em;
+  place-items: center;
+  vertical-align: 0.05em;
+  border: 1.5px solid color-mix(in srgb, var(--brand-primary) 55%, transparent);
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--brand-primary);
+  font-size: 0.78em;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.landing-help:hover,
+.landing-help:focus-visible {
+  border-color: var(--brand-primary);
+  background: var(--brand-primary);
+  color: #ffffff;
+  outline: none;
+}
+
+.landing-help__panel {
+  /* Tailwind の preflight が margin を 0 にするので、ポップオーバー標準の
+     「画面中央に置く」指定（fixed + inset 0 + margin auto）を明示する。 */
+  position: fixed;
+  inset: 0;
+  width: min(92vw, 460px);
+  height: fit-content;
+  max-height: 85vh;
+  margin: auto;
+  overflow: auto;
+  padding: 22px 22px 18px;
+  border: 0;
+  border-radius: var(--ui-radius-lg);
+  background: var(--brand-surface);
+  color: var(--brand-text);
+}
+
+.landing-help__panel::backdrop {
+  background: var(--ui-scrim);
+}
+
+/* 開くときだけふわっと出す（@starting-style 未対応ならそのまま出る） */
+.landing-help__panel:popover-open {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+@starting-style {
+  .landing-help__panel:popover-open {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.landing-help__title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--ld-ink-soft, var(--brand-text-muted));
+}
+
+.landing-help__lead {
+  margin: 8px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.7;
+}
+
+.landing-help__list {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-help__list > li {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  align-items: start;
+  padding: 10px 12px;
+  border: 1px solid var(--ld-line, var(--line));
+  border-radius: var(--ui-radius-md);
+}
+
+.landing-help__badge {
+  display: grid;
+  grid-row: 1 / 3;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--level-face);
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 2px 0 2px var(--level-drop);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.landing-help__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.landing-help__band {
+  padding: 1px 7px;
+  border-radius: var(--ui-radius-pill);
+  background: color-mix(in srgb, var(--brand-text) 6%, #ffffff);
+  color: var(--ld-ink-soft, var(--brand-text-muted));
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.landing-help__desc {
+  color: var(--ld-ink-soft, var(--brand-text-muted));
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.landing-help__close {
+  margin-top: 16px;
+  width: 100%;
+}
+
+/* --- 挿絵：レベルを 1〜6 から選ぶ動き -------------------------------------- */
+/* 7つのバッジ（1〜6の「めくり」＋選んだ番号）を同じマスに重ねる。横には動かず、
+   その場で 1→2→…→6 が 0.15 秒ずつポンと切り替わり、少し間を置いて選んだ番号が
+   弾んで現れる。動きがないときは選んだ番号だけを見せる。 */
+.sc-form__label {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.sc-picker {
+  display: grid;
+  width: 6.5cqw;
+  height: 6.5cqw;
+}
+
+.sc-picker > .sc-level {
+  grid-area: 1 / 1;
+}
+
+/* めくり：i 番目は 0.36 秒 + 0.15 秒 × i から、約 0.14 秒だけ見える */
+.sc-picker > .sc-tick {
+  opacity: 0;
+  animation: sc-tick var(--sc-cycle) ease-out infinite;
+  animation-delay: calc(0.36s + var(--i) * 0.15s);
+}
+
+@keyframes sc-tick {
+  0% { opacity: 0; transform: scale(0.75); }
+  0.6% { opacity: 1; transform: scale(1.08); }
+  1.6% { transform: scale(1); }
+  2.3% { opacity: 1; }
+  2.9%, 100% { opacity: 0; transform: scale(1); }
+}
+
+/* 選んだ番号：めくりが終わった 23% で弾んで現れ、そのまま残る */
+.sc-pickin {
+  animation-name: sc-pickin;
+}
+
+@keyframes sc-pickin {
+  0%, 23% { opacity: 0; transform: scale(0.6); }
+  26% { opacity: 1; transform: scale(1.14); }
+  29% { transform: scale(0.96); }
+  32%, 94% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+/* 01 枠を作る：レベルを選び終えてから、残りが順に乗る */
+@keyframes sc-in-28 {
+  0%, 28% { opacity: 0; transform: translateY(var(--sc-ty, 0)) scale(0.85); }
+  33%, 94% { opacity: 1; transform: translateY(var(--sc-ty, 0)) scale(1); }
+  100% { opacity: 0; transform: translateY(var(--sc-ty, 0)) scale(1); }
+}
+@keyframes sc-in-48 {
+  0%, 48% { opacity: 0; transform: translateY(var(--sc-ty, 0)) scale(0.85); }
+  53%, 94% { opacity: 1; transform: translateY(var(--sc-ty, 0)) scale(1); }
+  100% { opacity: 0; transform: translateY(var(--sc-ty, 0)) scale(1); }
+}
+.sc-in-28 { animation-name: sc-in-28; }
+.sc-in-48 { animation-name: sc-in-48; }
+
+@keyframes sc-slide-60 {
+  0%, 60% { transform: translateX(105%); }
+  68%, 94% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(0); opacity: 0; }
+}
+.sc-slide-60 { animation-name: sc-slide-60; }
+
+@keyframes sc-press-70 {
+  0%, 69% { transform: translateY(0); }
+  71%, 75% {
+    transform: translateY(var(--btn-lift));
+    box-shadow: 0 0 0 0 var(--btn-edge);
+  }
+  77%, 100% { transform: translateY(0); }
+}
+.sc-press-70 { animation-name: sc-press-70; }
+
+@keyframes sc-pop-74 {
+  0%, 73% { transform: scale(1); }
+  76% { transform: scale(1.035); }
+  81%, 100% { transform: scale(1); }
+}
+.sc-pop-74 { animation-name: sc-pop-74; }

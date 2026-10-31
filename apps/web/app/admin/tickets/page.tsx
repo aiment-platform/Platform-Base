@@ -99,14 +99,14 @@ export default function AdminTicketsPage() {
   const activeCount = tickets?.filter((t) => t.status === "active").length ?? 0;
 
   return (
-    <main className="p-8">
+    <main className="px-4 py-6 sm:p-8">
       <div className="max-w-2xl">
         <h1 className="text-2xl font-bold">チケット管理</h1>
         <p className="mt-1 text-sm text-[var(--brand-text-muted)]">
           参加チケット（スピーカー参加費の支払いをスキップ）を付与します。1枚=1回使い切り。
         </p>
 
-        <div className="mt-6 space-y-4 rounded-2xl bg-black/[0.04] p-6">
+        <div className="ui-panel mt-6 space-y-4 p-4 sm:p-6">
           <label className="block">
             <span className="text-sm text-[var(--brand-text-muted)]">対象ユーザー</span>
             <select
@@ -116,7 +116,7 @@ export default function AdminTicketsPage() {
                 if (e.target.value) void loadTickets(e.target.value);
                 else setTickets(null);
               }}
-              className="mt-1 w-full rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
+              className="mt-1 w-full rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-base outline-none sm:text-sm focus:ring-2 focus:ring-[var(--brand-primary)]"
             >
               <option value="">— ユーザーを選択 —</option>
               {users.map((u) => (
@@ -133,14 +133,14 @@ export default function AdminTicketsPage() {
               <button
                 type="button"
                 onClick={() => setScope("all")}
-                className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold ${scope === "all" ? "bg-[var(--brand-primary)] text-white" : "bg-black/[0.06] text-[var(--brand-text-muted)]"}`}
+                className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold ${scope === "all" ? "bg-[var(--brand-primary)] text-white" : "bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)]"}`}
               >
                 全配信で使える
               </button>
               <button
                 type="button"
                 onClick={() => setScope("session")}
-                className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold ${scope === "session" ? "bg-[var(--brand-primary)] text-white" : "bg-black/[0.06] text-[var(--brand-text-muted)]"}`}
+                className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold ${scope === "session" ? "bg-[var(--brand-primary)] text-white" : "bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)]"}`}
               >
                 特定の配信のみ
               </button>
@@ -153,7 +153,7 @@ export default function AdminTicketsPage() {
               <select
                 value={sessionId}
                 onChange={(e) => setSessionId(e.target.value)}
-                className="mt-1 w-full rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
+                className="mt-1 w-full rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-base outline-none sm:text-sm focus:ring-2 focus:ring-[var(--brand-primary)]"
               >
                 <option value="">— 配信を選択 —</option>
                 {sessions.map((s) => (
@@ -169,19 +169,19 @@ export default function AdminTicketsPage() {
           )}
 
           <label className="block">
-            <span className="text-sm text-[var(--brand-text-muted)]">枚数</span>
+            <span className="block text-sm text-[var(--brand-text-muted)]">枚数</span>
             <input
               type="number"
               min={1}
               max={100}
               value={quantity}
               onChange={(e) => setQuantity(Math.max(1, Math.min(100, Number(e.target.value))))}
-              className="mt-1 w-32 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
+              className="mt-1 w-32 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-base outline-none sm:text-sm focus:ring-2 focus:ring-[var(--brand-primary)]"
             />
           </label>
 
-          {message && <div className="rounded-lg bg-green-500/15 p-3 text-sm text-green-600">{message}</div>}
-          {error && <div className="rounded-lg bg-[var(--brand-accent)]/15 p-3 text-sm text-[var(--brand-accent)]">{error}</div>}
+          {message && <div className="rounded-lg bg-[var(--brand-primary-soft)] p-3 text-sm text-[var(--brand-primary-ink)]">{message}</div>}
+          {error && <div className="rounded-lg bg-[var(--brand-accent-soft)] p-3 text-sm text-[var(--brand-accent-ink)]">{error}</div>}
 
           <button
             onClick={() => void grant()}
@@ -193,7 +193,7 @@ export default function AdminTicketsPage() {
         </div>
 
         {tickets && (
-          <div className="mt-6 rounded-2xl bg-black/[0.04] p-6">
+          <div className="ui-panel mt-6 p-4 sm:p-6">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-bold">このユーザーのチケット</h2>
               <span className="text-xs text-[var(--brand-text-muted)]">有効 {activeCount} / 全 {tickets.length}</span>
@@ -203,11 +203,11 @@ export default function AdminTicketsPage() {
             ) : (
               <div className="space-y-1.5">
                 {tickets.map((t) => (
-                  <div key={t.ticketId} className="flex items-center justify-between rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-xs">
-                    <span className="text-[var(--brand-text)]">
+                  <div key={t.ticketId} className="flex items-center justify-between gap-3 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-xs">
+                    <span className="min-w-0 break-all text-[var(--brand-text)]">
                       {t.scope === "all" ? "全配信" : `特定: ${t.sessionId}`}
                     </span>
-                    <span className={t.status === "active" ? "text-green-600" : "text-[var(--brand-text-muted)]"}>
+                    <span className={`shrink-0 ${t.status === "active" ? "text-[var(--brand-primary-ink)]" : "text-[var(--brand-text-muted)]"}`}>
                       {t.status === "active" ? "有効" : "使用済み"}
                     </span>
                   </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, useEffect, useState } from "react";
+import { CalendarDaysIcon, CheckIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { loadStripe } from "@stripe/stripe-js";
@@ -93,11 +94,11 @@ function PaymentForm({
   return (
     <form onSubmit={(e) => void handleSubmit(e)} className="space-y-5">
       <PaymentElement />
-      {error ? <p className="text-sm text-[var(--brand-accent)]">{error}</p> : null}
+      {error ? <p className="text-sm text-[var(--brand-accent-ink)]">{error}</p> : null}
       <button
         type="submit"
         disabled={!stripe || loading}
-        className="w-full rounded-lg bg-[var(--brand-primary)] py-3 text-sm font-semibold text-white disabled:opacity-60"
+        className="ui-btn ui-btn-md ui-btn-primary w-full"
       >
         {loading
           ? "処理中..."
@@ -107,7 +108,7 @@ function PaymentForm({
         type="button"
         onClick={onBack}
         disabled={loading}
-        className="w-full rounded-lg bg-[var(--brand-surface)] py-2.5 text-sm text-[var(--brand-text-muted)] disabled:opacity-60"
+        className="ui-btn ui-btn-md ui-btn-ghost w-full"
       >
         戻る
       </button>
@@ -235,7 +236,7 @@ export default function SpeakerCheckoutPage() {
 
   if (step === "loading") {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[var(--brand-bg-900)]">
+      <main className="flex min-h-screen items-center justify-center bg-[var(--bg)]">
         <p className="text-sm text-[var(--brand-text-muted)]">準備中...</p>
       </main>
     );
@@ -243,10 +244,10 @@ export default function SpeakerCheckoutPage() {
 
   if (step === "error") {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[var(--brand-bg-900)] p-4">
-        <div className="w-full max-w-md rounded-2xl bg-[var(--brand-surface)] p-8 text-center">
-          <p className="mb-4 text-sm text-[var(--brand-accent)]">{errorMessage}</p>
-          <button onClick={backToJoin} className="rounded-lg bg-[var(--brand-surface)] px-4 py-2 text-sm text-[var(--brand-text-muted)]">
+      <main className="flex min-h-screen items-center justify-center bg-[var(--bg)] p-4">
+        <div className="ui-panel w-full max-w-md p-6 text-center sm:p-8">
+          <p className="mb-4 text-sm text-[var(--brand-accent-ink)]">{errorMessage}</p>
+          <button onClick={backToJoin} className="ui-btn ui-btn-sm ui-btn-ghost">
             戻る
           </button>
         </div>
@@ -257,10 +258,10 @@ export default function SpeakerCheckoutPage() {
   if (step === "window_closed") {
     const opensDate = opensAt ? new Date(opensAt).toLocaleString("ja-JP") : null;
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[var(--brand-bg-900)] p-4">
-        <div className="w-full max-w-md rounded-2xl bg-[var(--brand-surface)] p-8 text-center shadow-xl">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand-primary)]/20">
-            <span className="text-2xl">🗓</span>
+      <main className="flex min-h-screen items-center justify-center bg-[var(--bg)] p-4">
+        <div className="ui-panel w-full max-w-md p-6 text-center sm:p-8">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)]">
+            <CalendarDaysIcon className="h-7 w-7" aria-hidden />
           </div>
           <h1 className="mb-2 text-xl font-bold text-[var(--brand-text)]">予約済み</h1>
           <p className="mb-2 text-sm text-[var(--brand-text-muted)]">スピーカー枠の予約が完了しています。</p>
@@ -269,7 +270,7 @@ export default function SpeakerCheckoutPage() {
               支払いは <span className="font-semibold text-[var(--brand-text)]">{opensDate}</span> から可能になります
             </p>
           )}
-          <button onClick={backToJoin} className="w-full rounded-lg bg-[var(--brand-surface)] py-3 text-sm font-semibold text-[var(--brand-text-muted)]">
+          <button onClick={backToJoin} className="ui-btn ui-btn-md ui-btn-ghost w-full">
             入室準備ページへ戻る
           </button>
         </div>
@@ -279,10 +280,10 @@ export default function SpeakerCheckoutPage() {
 
   if (step === "already_paid") {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[var(--brand-bg-900)] p-4">
-        <div className="w-full max-w-md rounded-2xl bg-[var(--brand-surface)] p-8 text-center shadow-xl">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand-primary)]/20">
-            <span className="text-2xl">✓</span>
+      <main className="flex min-h-screen items-center justify-center bg-[var(--bg)] p-4">
+        <div className="ui-panel w-full max-w-md p-6 text-center sm:p-8">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)]">
+            <CheckIcon className="h-7 w-7" aria-hidden />
           </div>
           <h1 className="mb-2 text-xl font-bold text-[var(--brand-text)]">
             {SPEAKER_FEE_ENABLED ? "支払い済みです" : "参加が確定しています"}
@@ -292,7 +293,7 @@ export default function SpeakerCheckoutPage() {
               ? "このスピーカー枠の支払いはすでに完了しています。"
               : "参加費は現在無料です。配信が始まったら入室できます。"}
           </p>
-          <button onClick={backToJoin} className="w-full rounded-lg bg-[var(--brand-primary)] py-3 text-sm font-semibold text-white">
+          <button onClick={backToJoin} className="ui-btn ui-btn-md ui-btn-primary w-full">
             入室準備へ戻る
           </button>
         </div>
@@ -302,15 +303,15 @@ export default function SpeakerCheckoutPage() {
 
   if (step === "success") {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[var(--brand-bg-900)] p-4">
-        <div className="w-full max-w-md rounded-2xl bg-[var(--brand-surface)] p-8 text-center shadow-xl">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand-primary)]/20">
-            <span className="text-2xl">✓</span>
+      <main className="flex min-h-screen items-center justify-center bg-[var(--bg)] p-4">
+        <div className="ui-panel w-full max-w-md p-6 text-center sm:p-8">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)]">
+            <CheckIcon className="h-7 w-7" aria-hidden />
           </div>
           <h1 className="mb-2 text-xl font-bold text-[var(--brand-text)]">支払い完了</h1>
           <p className="mb-1 text-sm text-[var(--brand-text-muted)]">スピーカー参加が確定しました。</p>
           <p className="mb-6 text-xs text-[var(--brand-text-muted)]">{sessionTitle}</p>
-          <button onClick={backToJoin} className="w-full rounded-lg bg-[var(--brand-primary)] py-3 text-sm font-semibold text-white">
+          <button onClick={backToJoin} className="ui-btn ui-btn-md ui-btn-primary w-full">
             入室準備へ進む
           </button>
         </div>
@@ -319,8 +320,8 @@ export default function SpeakerCheckoutPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[var(--brand-bg-900)] p-4">
-      <div className="w-full max-w-md rounded-2xl bg-[var(--brand-surface)] p-8 shadow-xl">
+    <main className="flex min-h-screen items-center justify-center bg-[var(--bg)] p-4">
+      <div className="ui-panel w-full max-w-md p-6 sm:p-8">
         <div className="mb-2">
           <button onClick={backToJoin}>
             <Image src="/logo/aiment_logotype.svg" alt="aiment" width={100} height={32} className="h-7 w-auto" />
@@ -338,7 +339,7 @@ export default function SpeakerCheckoutPage() {
         </div>
 
         {clientSecret ? (
-          <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: "night" } }}>
+          <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: "stripe", variables: { colorPrimary: "#6248F7", borderRadius: "12px" } } }}>
             <PaymentForm
               sessionId={sessionId}
               onSuccess={() => setStep("success")}

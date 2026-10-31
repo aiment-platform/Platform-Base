@@ -116,20 +116,21 @@ function ToggleItem({
   onChange: (next: boolean) => void;
 }) {
   return (
-    <div className="rounded-lg bg-[var(--brand-surface)] p-4">
+    <div className="rounded-lg bg-[var(--brand-bg-900)] p-4">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-[15px] font-semibold text-[var(--brand-text)]">{label}</p>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-[var(--brand-text)]">{label}</p>
           <p className="mt-1 text-sm leading-6 text-[var(--brand-text-muted)]">{description}</p>
         </div>
         <button
           type="button"
           onClick={() => onChange(!on)}
-          className={`relative h-6 w-11 rounded-full transition ${on ? "bg-[var(--brand-secondary)]" : "bg-[var(--brand-bg-800)]"}`}
+          // 見た目は小さいスイッチのまま、指で押せる範囲だけ四方に広げる（before が透明な当たり判定）
+          className={`relative h-6 w-11 shrink-0 rounded-full transition before:absolute before:-inset-2.5 before:content-[''] ${on ? "bg-[var(--brand-primary)]" : "bg-[var(--placeholder)]"}`}
           aria-pressed={on}
           aria-label={label}
         >
-          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-[var(--brand-text)] transition ${on ? "left-[22px]" : "left-0.5"}`} />
+          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${on ? "left-[22px]" : "left-0.5"}`} />
         </button>
       </div>
     </div>
@@ -148,10 +149,10 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className={`rounded-xl bg-[var(--brand-surface-soft)] p-5 md:p-6 ${className ?? ""}`}>
+    <section className={`ui-panel p-5 md:p-6 ${className ?? ""}`}>
       <header className="mb-4">
-        <h2 className="text-xl font-semibold tracking-[0.03em] text-[var(--brand-text)]">{title}</h2>
-        {subtitle ? <p className="mt-1 text-[15px] leading-6 text-[var(--brand-text-muted)]">{subtitle}</p> : null}
+        <h2 className="text-lg font-bold text-[var(--brand-text)]">{title}</h2>
+        {subtitle ? <p className="mt-1 text-sm leading-6 text-[var(--brand-text-muted)]">{subtitle}</p> : null}
       </header>
       <div className="space-y-3">{children}</div>
     </section>
@@ -309,7 +310,7 @@ export default function AccountPage() {
 
   if (!isAuthenticated || !draft || !uiSettings) {
     return (
-      <div className="min-h-screen bg-[var(--brand-bg-900)] text-[var(--brand-text)]">
+      <div className="min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
         <TopNav />
       </div>
     );
@@ -438,36 +439,31 @@ export default function AccountPage() {
   };
 
   return (
-    <div className="account-settings-page min-h-screen bg-[var(--brand-bg-900)]">
+    <div className="account-settings-page min-h-screen bg-[var(--bg)]">
       <TopNav />
 
-      <div className="border-b border-white/10 bg-[var(--brand-surface)]/70 px-4 py-3 text-sm leading-6 text-[var(--brand-text-muted)] lg:hidden">
-        {tx(
-          "アカウント設定はPCでの操作を推奨しています。スマートフォンでは横にスクロールできるメニューから項目を選べます。",
-          "Account settings work best on desktop. On mobile, swipe the menu sideways to choose a section.",
-        )}
-      </div>
-
       <main className="min-h-[calc(100vh-72px)] lg:grid lg:grid-cols-[240px_1fr]">
-        <aside className="overflow-x-auto bg-[var(--brand-surface)] p-3 lg:min-h-[calc(100vh-72px)] lg:overflow-visible lg:rounded-none">
+        {/* スマホでは横スクロールのメニューだと右端の項目が見切れて気づかれないので、
+            4項目を2×2に並べて全部いっぺんに見せる（「PC推奨」の注意書きも不要になる） */}
+        <aside className="border-b border-[var(--line)] bg-[var(--brand-surface)] p-3 lg:min-h-[calc(100vh-72px)] lg:rounded-none lg:border-b-0 lg:border-r">
           <div className="lg:sticky lg:top-[84px]">
-            <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-[0.15em] text-[var(--brand-text-muted)]">
-              ACCOUNT MENU
-            </p>
-            <div className="flex gap-2 lg:block lg:space-y-1">
+            <p className="mb-2 hidden px-2 text-xs font-bold text-[var(--brand-text-muted)] lg:block">{tx("アカウント", "Account")}</p>
+            <div className="grid grid-cols-2 gap-1.5 lg:block lg:space-y-1">
               {ACCOUNT_TABS.map(({ key, labelJp, labelEn, Icon }) => (
                 <button
                   key={key}
                   type="button"
                   onClick={() => setActiveTab(key)}
-                  className={`flex h-11 shrink-0 items-center gap-2 rounded-lg px-3 text-left text-[15px] font-semibold transition lg:w-full ${
+                  aria-pressed={activeTab === key}
+                  className={`flex min-h-11 min-w-0 items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm font-semibold leading-tight transition lg:h-10 lg:min-h-0 lg:w-full lg:py-0 ${
                     activeTab === key
-                      ? "bg-[var(--brand-primary)] text-white"
-                      : "bg-[var(--brand-surface)] text-[var(--brand-text)]"
+                      ? "bg-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)]"
+                      : "text-[var(--brand-text)] hover:bg-[var(--brand-bg-900)]"
                   }`}
                 >
                   <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                  {tx(labelJp, labelEn)}
+                  {/* 英語の「Notifications & Data」は半幅に収まらないので、切らずに2行で見せる */}
+                  <span className="min-w-0">{tx(labelJp, labelEn)}</span>
                 </button>
               ))}
             </div>
@@ -477,9 +473,8 @@ export default function AccountPage() {
         <section className="min-w-0 px-4 py-6 pb-28 lg:px-8 lg:pb-16">
           <div className="w-full">
             <header className="mb-6">
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--brand-text-muted)]">Account Settings</p>
-              <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-                <h1 className="text-3xl font-semibold tracking-[0.03em] text-[var(--brand-text)]">{tx("アカウント設定", "Account Settings")}</h1>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h1 className="text-2xl font-bold text-[var(--brand-text)]">{tx("アカウント設定", "Account Settings")}</h1>
                 <button
                   type="button"
                   onClick={() => {
@@ -487,16 +482,17 @@ export default function AccountPage() {
                       router.push("/");
                     });
                   }}
-                  className="h-10 rounded-lg bg-[var(--brand-surface)] px-4 text-sm font-semibold text-[var(--brand-text)]"
+                  className="ui-btn ui-btn-sm ui-btn-ghost"
                 >
                   {tx("ログアウト", "Log out")}
                 </button>
               </div>
-              <p className="mt-2 text-[15px] leading-6 text-[var(--brand-text-muted)]">
+              <p className="mt-1 text-sm leading-6 text-[var(--brand-text-muted)]">
                 {tx("プロフィール、認証、通知、課金、サポートへの連絡を管理できます。", "Manage your profile, verification, notifications, billing, and support requests.")}
               </p>
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-[var(--brand-text-muted)]">
-                <span className={`rounded-full px-3 py-1 ${saving || uploadingImage ? "bg-[var(--brand-secondary)]/40 text-[var(--brand-text)]" : "bg-[var(--brand-surface)]"}`}>
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--brand-text-muted)]">
+                <span className={`h-1.5 w-1.5 rounded-full ${saving || uploadingImage || hasChanges ? "bg-[var(--brand-warning)]" : "bg-[var(--brand-primary)]"}`} aria-hidden />
+                <span>
                   {uploadingImage
                     ? tx("画像アップロード中...", "Uploading image...")
                     : saving
@@ -506,15 +502,16 @@ export default function AccountPage() {
                       : tx("保存済み", "Saved")}
                 </span>
               </div>
-              {message ? <p className="mt-3 text-sm text-[var(--brand-secondary)]">{message}</p> : null}
-              {error ? <p className="mt-3 text-sm text-[var(--brand-accent)]">{error}</p> : null}
+              {message ? <p className="mt-3 text-sm text-[var(--brand-primary-ink)]">{message}</p> : null}
+              {error ? <p className="mt-3 text-sm text-[var(--brand-accent-ink)]">{error}</p> : null}
             </header>
 
-            <div className="grid gap-4 lg:grid-cols-2">
+            {/* items-start: 中身の少ないカード（同意履歴など）が隣の高さまで引き伸ばされないように */}
+            <div className="grid items-start gap-4 lg:grid-cols-2">
           {activeTab === "profile" ? (
             <SectionCard title={tx("プロフィール", "Profile")} subtitle={tx("表示情報と基本アカウント情報", "Display details and basic account information")} className="lg:col-span-2">
               <div className="space-y-4">
-                <div className="rounded-lg bg-[var(--brand-surface)] p-4">
+                <div className="rounded-lg bg-[var(--brand-bg-900)] p-4">
                   <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
                     <div className="overflow-hidden rounded-lg bg-[var(--brand-bg-800)]">
                       <div className="relative">
@@ -545,7 +542,7 @@ export default function AccountPage() {
 
                     <div className="space-y-3">
                       <div className="rounded-lg bg-[var(--brand-surface-soft)] p-4">
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--brand-text-muted)]">Header Image</p>
+                        <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--brand-text-muted)]">Header Image</p>
                         <div className="mt-3 flex flex-wrap gap-2">
                           <label className="ui-btn ui-btn-sm ui-btn-ghost cursor-pointer">
                             {tx("画像をアップロード", "Upload image")}
@@ -569,7 +566,7 @@ export default function AccountPage() {
                         </div>
                       </div>
                       <div className="rounded-lg bg-[var(--brand-surface-soft)] p-4">
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--brand-text-muted)]">Profile Image</p>
+                        <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--brand-text-muted)]">Profile Image</p>
                         <div className="mt-3 flex flex-wrap gap-2">
                           <label className="ui-btn ui-btn-sm ui-btn-ghost cursor-pointer">
                             {tx("画像をアップロード", "Upload image")}
@@ -597,8 +594,8 @@ export default function AccountPage() {
                 </div>
 
                 <div className="grid gap-4 xl:grid-cols-2">
-                  <div className="rounded-lg bg-[var(--brand-surface)] p-4">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--brand-text-muted)]">Display Name</p>
+                  <div className="rounded-lg bg-[var(--brand-bg-900)] p-4">
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--brand-text-muted)]">Display Name</p>
                     <input
                       type="text"
                       value={draft.name}
@@ -606,12 +603,12 @@ export default function AccountPage() {
                         setDraft((prev) => (prev ? { ...prev, name: event.target.value } : prev));
                         markChanged();
                       }}
-                      className="mt-2 h-10 w-full rounded-lg bg-[var(--brand-bg-800)] px-3 text-sm text-[var(--brand-text)] outline-none ring-1 ring-transparent focus:ring-[var(--brand-secondary)]"
+                      className="mt-2 h-10 w-full rounded-lg bg-[var(--brand-bg-800)] px-3 text-sm text-[var(--brand-text)] outline-none ring-1 ring-transparent focus:ring-[var(--brand-primary)]"
                     />
                   </div>
 
-                  <div className="rounded-lg bg-[var(--brand-surface)] p-4">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--brand-text-muted)]">User ID</p>
+                  <div className="rounded-lg bg-[var(--brand-bg-900)] p-4">
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--brand-text-muted)]">User ID</p>
                     <input
                       type="text"
                       value={draft.id}
@@ -622,8 +619,8 @@ export default function AccountPage() {
                 </div>
 
                 {draft.role === "vtuber" ? (
-                  <div className="rounded-lg bg-[var(--brand-surface)] p-4">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--brand-text-muted)]">Channel Name</p>
+                  <div className="rounded-lg bg-[var(--brand-bg-900)] p-4">
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--brand-text-muted)]">Channel Name</p>
                     <input
                       type="text"
                       value={draft.channelName ?? ""}
@@ -631,13 +628,13 @@ export default function AccountPage() {
                         setDraft((prev) => (prev ? { ...prev, channelName: event.target.value } : prev));
                         markChanged();
                       }}
-                      className="mt-2 h-10 w-full rounded-lg bg-[var(--brand-bg-800)] px-3 text-sm text-[var(--brand-text)] outline-none ring-1 ring-transparent focus:ring-[var(--brand-secondary)]"
+                      className="mt-2 h-10 w-full rounded-lg bg-[var(--brand-bg-800)] px-3 text-sm text-[var(--brand-text)] outline-none ring-1 ring-transparent focus:ring-[var(--brand-primary)]"
                     />
                   </div>
                 ) : null}
 
-                <div className="rounded-lg bg-[var(--brand-surface)] p-4">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--brand-text-muted)]">{tx("紹介文", "Bio")}</p>
+                <div className="rounded-lg bg-[var(--brand-bg-900)] p-4">
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--brand-text-muted)]">{tx("紹介文", "Bio")}</p>
                   <textarea
                     value={draft.bio ?? ""}
                     onChange={(event) => {
@@ -645,7 +642,7 @@ export default function AccountPage() {
                       markChanged();
                     }}
                     rows={6}
-                    className="mt-2 w-full rounded-lg bg-[var(--brand-bg-800)] px-3 py-3 text-sm text-[var(--brand-text)] outline-none ring-1 ring-transparent focus:ring-[var(--brand-secondary)]"
+                    className="mt-2 w-full rounded-lg bg-[var(--brand-bg-800)] px-3 py-3 text-sm text-[var(--brand-text)] outline-none ring-1 ring-transparent focus:ring-[var(--brand-primary)]"
                   />
                 </div>
               </div>
@@ -654,21 +651,21 @@ export default function AccountPage() {
 
           {activeTab === "security" ? (
             <SectionCard title={tx("セキュリティ", "Security")} subtitle={tx("ログイン方法と本人確認", "Login methods and identity verification")}>
-            <div className="rounded-lg bg-[var(--brand-surface)] p-4">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--brand-text-muted)]">{tx("ログイン方法", "Login Method")}</p>
+            <div className="rounded-lg bg-[var(--brand-bg-900)] p-4">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--brand-text-muted)]">{tx("ログイン方法", "Login Method")}</p>
               <p className="mt-1 text-sm text-[var(--brand-text)]">{draft.authProvider}</p>
             </div>
             {/* メールアドレス */}
-            <div className="rounded-lg bg-[var(--brand-surface)] p-4">
+            <div className="rounded-lg bg-[var(--brand-bg-900)] p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-[var(--brand-text)]">{tx("メールアドレス", "Email Address")}</p>
-                  <div className="mt-1 flex items-center gap-1.5">
+                  <div className="mt-1 flex min-w-0 items-center gap-0.5">
                     <p className="truncate text-sm text-[var(--brand-text)]">
                       {draft.email ? maskEmail(draft.email, emailVisible) : tx("未登録", "Not registered")}
                     </p>
                     {draft.email ? (
-                      <button type="button" onClick={() => setEmailVisible((v) => !v)} className="shrink-0 text-[var(--brand-text-muted)]">
+                      <button type="button" onClick={() => setEmailVisible((v) => !v)} aria-label={emailVisible ? tx("隠す", "Hide") : tx("表示する", "Show")} className="-my-2 grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[var(--brand-text-muted)] hover:bg-[var(--brand-surface)]">
                         {emailVisible ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
                       </button>
                     ) : null}
@@ -681,7 +678,7 @@ export default function AccountPage() {
                   <button
                     type="button"
                     onClick={() => setShowEmailModal(true)}
-                    className="shrink-0 rounded-lg bg-[var(--brand-secondary)] px-3 py-2 text-xs font-semibold text-[var(--brand-text)]"
+                    className="ui-btn ui-btn-sm ui-btn-primary shrink-0"
                   >
                     {tx("認証する", "Verify")}
                   </button>
@@ -690,16 +687,16 @@ export default function AccountPage() {
             </div>
 
             {/* 電話番号 */}
-            <div className="rounded-lg bg-[var(--brand-surface)] p-4">
+            <div className="rounded-lg bg-[var(--brand-bg-900)] p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-[var(--brand-text)]">{tx("電話番号", "Phone Number")}</p>
-                  <div className="mt-1 flex items-center gap-1.5">
+                  <div className="mt-1 flex min-w-0 items-center gap-0.5">
                     <p className="truncate text-sm text-[var(--brand-text)]">
                       {draft.phoneNumber ? maskPhone(draft.phoneNumber, phoneVisible) : tx("未登録", "Not registered")}
                     </p>
                     {draft.phoneNumber ? (
-                      <button type="button" onClick={() => setPhoneVisible((v) => !v)} className="shrink-0 text-[var(--brand-text-muted)]">
+                      <button type="button" onClick={() => setPhoneVisible((v) => !v)} aria-label={phoneVisible ? tx("隠す", "Hide") : tx("表示する", "Show")} className="-my-2 grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[var(--brand-text-muted)] hover:bg-[var(--brand-surface)]">
                         {phoneVisible ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
                       </button>
                     ) : null}
@@ -711,7 +708,7 @@ export default function AccountPage() {
                 <button
                   type="button"
                   onClick={() => setShowPhoneModal(true)}
-                  className="shrink-0 rounded-lg bg-[var(--brand-secondary)] px-3 py-2 text-xs font-semibold text-[var(--brand-text)]"
+                  className="ui-btn ui-btn-sm ui-btn-primary shrink-0"
                 >
                   {draft.phoneVerifiedAt ? tx("番号を変更", "Change number") : tx("認証する", "Verify")}
                 </button>
@@ -746,8 +743,8 @@ export default function AccountPage() {
               on={uiSettings.personalization}
               onChange={(next) => updateUiSetting("personalization", next)}
             />
-            <button className="h-11 w-full rounded-lg bg-[var(--brand-surface)] text-sm font-medium text-[var(--brand-text)]">{tx("データをダウンロード", "Download Data")}</button>
-            <button className="h-11 w-full rounded-lg bg-[var(--brand-surface)] text-sm font-medium text-[var(--brand-text)]">{tx("アカウントデータの削除申請", "Request Account Data Deletion")}</button>
+            <button className="ui-btn ui-btn-md ui-btn-ghost w-full">{tx("データをダウンロード", "Download Data")}</button>
+            <button className="ui-btn ui-btn-md ui-btn-ghost w-full">{tx("アカウントデータの削除申請", "Request Account Data Deletion")}</button>
             </SectionCard>
           ) : null}
 
@@ -776,8 +773,8 @@ export default function AccountPage() {
 
           {activeTab === "billing" ? (
             <SectionCard title="Billing" subtitle={tx("Aimer サブスクと購入済み 1on1 チケット", "Aimer subscription and purchased 1-on-1 tickets")}>
-            <div className="rounded-lg bg-[var(--brand-surface)] p-4">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--brand-text-muted)]">Subscription</p>
+            <div className="rounded-lg bg-[var(--brand-bg-900)] p-4">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--brand-text-muted)]">Subscription</p>
               <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-sm text-[var(--brand-text-muted)]">{tx("現在のプラン", "Current Plan")}</p>
@@ -793,7 +790,7 @@ export default function AccountPage() {
                     type="button"
                     onClick={() => void startCheckout()}
                     disabled={billingLoading}
-                    className="h-11 rounded-lg bg-[var(--brand-secondary)] px-4 text-sm font-semibold text-[var(--brand-text)] disabled:opacity-60"
+                    className="ui-btn ui-btn-md ui-btn-primary w-full sm:w-auto"
                   >
                     {tx("Aimerプランに登録 PHP 1,098/月", "Subscribe to Aimer PHP 1,098/month")}
                   </button>
@@ -802,7 +799,7 @@ export default function AccountPage() {
                     type="button"
                     onClick={() => void cancelCurrentSubscription(currentSubscription.subscriptionId)}
                     disabled={billingLoading}
-                    className="h-11 rounded-lg bg-[var(--brand-surface-soft)] px-4 text-sm font-medium text-[var(--brand-text)] disabled:opacity-60"
+                    className="ui-btn ui-btn-md ui-btn-ghost"
                   >
                     {tx("解約する", "Cancel")}
                   </button>
@@ -810,14 +807,14 @@ export default function AccountPage() {
               </div>
             </div>
 
-            <div className="rounded-lg bg-[var(--brand-surface)] p-4">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--brand-text-muted)]">1on1 Tickets</p>
-              <div className="mt-4 space-y-2">
+            <div className="rounded-lg bg-[var(--brand-bg-900)] p-4">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--brand-text-muted)]">1on1 Tickets</p>
+              <div className="mt-3 space-y-2">
                 {activeTicketPurchases.length === 0 ? (
-                  <p className="rounded-lg bg-[var(--brand-surface-soft)] p-3 text-sm text-[var(--brand-text-muted)]">{tx("有効なチケットはありません。", "No active tickets.")}</p>
+                  <p className="text-sm text-[var(--brand-text-muted)]">{tx("有効なチケットはありません。", "No active tickets.")}</p>
                 ) : (
                   activeTicketPurchases.map((purchase) => (
-                    <div key={purchase.purchaseId} className="rounded-lg bg-[var(--brand-surface-soft)] p-3 text-sm">
+                    <div key={purchase.purchaseId} className="rounded-lg bg-[var(--brand-surface)] p-3 text-sm">
                       <p className="font-semibold text-[var(--brand-text)]">
                         {purchase.ticketType === "1on1_10min" ? tx("10分チケット", "10-minute ticket") : tx("30分チケット", "30-minute ticket")}
                       </p>
@@ -834,21 +831,21 @@ export default function AccountPage() {
 
           {activeTab === "ops" ? (
             <SectionCard title={tx("サービス状況", "Service Status")} subtitle={tx("接続や決済に関する現在の状態", "Current status for connections and payments")}>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg bg-[var(--brand-surface)] p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-[var(--brand-text-muted)]">{tx("接続失敗率", "Connection Failure")}</p>
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
+              <div className="rounded-lg bg-[var(--brand-bg-900)] p-4">
+                <p className="text-xs font-semibold text-[var(--brand-text-muted)]">{tx("接続失敗率", "Connection Failure")}</p>
                 <p className="mt-1 text-lg font-semibold text-[var(--brand-text)]">{monitoringSummary?.connectionFailureRate ?? 0}%</p>
               </div>
-              <div className="rounded-lg bg-[var(--brand-surface)] p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-[var(--brand-text-muted)]">{tx("決済エラー", "Payment Issues")}</p>
+              <div className="rounded-lg bg-[var(--brand-bg-900)] p-4">
+                <p className="text-xs font-semibold text-[var(--brand-text-muted)]">{tx("決済エラー", "Payment Issues")}</p>
                 <p className="mt-1 text-lg font-semibold text-[var(--brand-text)]">{monitoringSummary?.paymentFailures ?? 0}</p>
               </div>
-              <div className="rounded-lg bg-[var(--brand-surface)] p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-[var(--brand-text-muted)]">{tx("システムエラー", "System Issues")}</p>
+              <div className="rounded-lg bg-[var(--brand-bg-900)] p-4">
+                <p className="text-xs font-semibold text-[var(--brand-text-muted)]">{tx("システムエラー", "System Issues")}</p>
                 <p className="mt-1 text-lg font-semibold text-[var(--brand-text)]">{monitoringSummary?.serverErrors ?? 0}</p>
               </div>
-              <div className="rounded-lg bg-[var(--brand-surface)] p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-[var(--brand-text-muted)]">{tx("接続試行", "Connection Attempts")}</p>
+              <div className="rounded-lg bg-[var(--brand-bg-900)] p-4">
+                <p className="text-xs font-semibold text-[var(--brand-text-muted)]">{tx("接続試行", "Connection Attempts")}</p>
                 <p className="mt-1 text-lg font-semibold text-[var(--brand-text)]">{monitoringSummary?.connectionAttempts ?? 0}</p>
               </div>
             </div>
@@ -858,10 +855,10 @@ export default function AccountPage() {
           {activeTab === "security" ? (
             <SectionCard title="Consent History" subtitle={tx("利用規約とプライバシー同意の保存履歴", "Saved history of terms and privacy consent")}>
             {consents.length === 0 ? (
-              <p className="rounded-lg bg-[var(--brand-surface)] p-4 text-sm text-[var(--brand-text-muted)]">{tx("同意履歴はまだありません。", "No consent history yet.")}</p>
+              <p className="rounded-lg bg-[var(--brand-bg-900)] p-4 text-sm text-[var(--brand-text-muted)]">{tx("同意履歴はまだありません。", "No consent history yet.")}</p>
             ) : (
               consents.slice(0, 5).map((consent) => (
-                <div key={consent.consentId} className="rounded-lg bg-[var(--brand-surface)] p-4 text-sm">
+                <div key={consent.consentId} className="rounded-lg bg-[var(--brand-bg-900)] p-4 text-sm">
                   <p className="font-semibold text-[var(--brand-text)]">{consent.version}</p>
                   <p className="mt-1 text-xs text-[var(--brand-text-muted)]">{consent.source} / {new Date(consent.termsAcceptedAt).toLocaleString()}</p>
                 </div>
@@ -872,45 +869,63 @@ export default function AccountPage() {
 
           {activeTab === "ops" ? (
             <SectionCard title={tx("お問い合わせ・通報", "Support & Reports")} subtitle={tx("困ったことや不適切な内容をサポートへ送れます。", "Send issues or inappropriate content to support.")}>
+            {/* プレースホルダーだけだと選んだ後に何の欄か分からなくなるので、各欄に見出しを付ける */}
             <div className="grid gap-3">
-              <select
-                value={reportTargetType}
-                onChange={(event) => setReportTargetType(event.target.value as ReportTargetType)}
-                className="h-10 rounded-lg bg-[var(--brand-surface)] px-3 text-sm outline-none"
-              >
-                <option value="session">{tx("配信枠", "Session")}</option>
-                <option value="user">{tx("ユーザー", "User")}</option>
-                <option value="message">{tx("メッセージ", "Message")}</option>
-                <option value="billing">{tx("決済", "Billing")}</option>
-              </select>
-              <input
-                value={reportTargetId}
-                onChange={(event) => setReportTargetId(event.target.value)}
-                placeholder={tx("対象ID", "Target ID")}
-                className="h-10 rounded-lg bg-[var(--brand-surface)] px-3 text-sm outline-none"
-              />
-              <select
-                value={reportCategory}
-                onChange={(event) => setReportCategory(event.target.value as ReportCategory)}
-                className="h-10 rounded-lg bg-[var(--brand-surface)] px-3 text-sm outline-none"
-              >
-                <option value="abuse">{tx("迷惑行為", "Abuse")}</option>
-                <option value="harassment">{tx("ハラスメント", "Harassment")}</option>
-                <option value="impersonation">{tx("なりすまし", "Impersonation")}</option>
-                <option value="billing">{tx("決済", "Billing")}</option>
-                <option value="other">{tx("その他", "Other")}</option>
-              </select>
-              <textarea
-                value={reportDetails}
-                onChange={(event) => setReportDetails(event.target.value)}
-                rows={4}
-                placeholder={tx("状況を記入", "Describe the situation")}
-                className="rounded-lg bg-[var(--brand-surface)] px-3 py-3 text-sm outline-none"
-              />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <span className="text-xs font-semibold text-[var(--brand-text-muted)]">{tx("対象の種類", "Target type")}</span>
+                  <select
+                    value={reportTargetType}
+                    onChange={(event) => setReportTargetType(event.target.value as ReportTargetType)}
+                    className="ui-select mt-1"
+                  >
+                    <option value="session">{tx("配信枠", "Session")}</option>
+                    <option value="user">{tx("ユーザー", "User")}</option>
+                    <option value="message">{tx("メッセージ", "Message")}</option>
+                    <option value="billing">{tx("決済", "Billing")}</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-xs font-semibold text-[var(--brand-text-muted)]">{tx("内容", "Category")}</span>
+                  <select
+                    value={reportCategory}
+                    onChange={(event) => setReportCategory(event.target.value as ReportCategory)}
+                    className="ui-select mt-1"
+                  >
+                    <option value="abuse">{tx("迷惑行為", "Abuse")}</option>
+                    <option value="harassment">{tx("ハラスメント", "Harassment")}</option>
+                    <option value="impersonation">{tx("なりすまし", "Impersonation")}</option>
+                    <option value="billing">{tx("決済", "Billing")}</option>
+                    <option value="other">{tx("その他", "Other")}</option>
+                  </select>
+                </label>
+              </div>
+              <label className="block">
+                <span className="text-xs font-semibold text-[var(--brand-text-muted)]">{tx("対象ID", "Target ID")}</span>
+                <input
+                  value={reportTargetId}
+                  onChange={(event) => setReportTargetId(event.target.value)}
+                  placeholder={tx("配信枠ID・ユーザーIDなど", "Session ID, user ID, etc.")}
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  className="ui-input mt-1"
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs font-semibold text-[var(--brand-text-muted)]">{tx("状況", "Details")}</span>
+                <textarea
+                  value={reportDetails}
+                  onChange={(event) => setReportDetails(event.target.value)}
+                  rows={4}
+                  placeholder={tx("状況を記入", "Describe the situation")}
+                  className="ui-textarea mt-1"
+                />
+              </label>
               <button
                 type="button"
                 onClick={() => void submitReport()}
-                className="h-11 rounded-lg bg-[var(--brand-primary)] px-4 text-sm font-semibold text-white"
+                className="ui-btn ui-btn-md ui-btn-primary w-full sm:w-auto sm:justify-self-end"
               >
                 {tx("通報を送信", "Send Report")}
               </button>
@@ -918,7 +933,7 @@ export default function AccountPage() {
             {reports.length > 0 ? (
               <div className="space-y-2">
                 {reports.slice(0, 3).map((report) => (
-                  <div key={report.reportId} className="rounded-lg bg-[var(--brand-surface)] p-4 text-sm">
+                  <div key={report.reportId} className="rounded-lg bg-[var(--brand-bg-900)] p-4 text-sm">
                     <p className="font-semibold text-[var(--brand-text)]">{report.category} / {report.targetType}</p>
                     <p className="mt-1 text-xs text-[var(--brand-text-muted)]">{report.targetId} / {new Date(report.createdAt).toLocaleString()}</p>
                   </div>
@@ -930,13 +945,13 @@ export default function AccountPage() {
             </div>
 
             {activeTab === "profile" ? (
-              <section className="mt-4 rounded-xl bg-[var(--brand-surface-soft)] p-5 md:p-6">
-                <h2 className="text-xl font-semibold text-[var(--brand-accent)]">{tx("アカウント削除", "Delete Account")}</h2>
-                <p className="mt-1 text-[15px] leading-6 text-[var(--brand-text-muted)]">{tx("アカウント削除は取り消せません。実行前に内容を確認してください。", "Deleting your account cannot be undone. Please review before proceeding.")}</p>
+              <section className="ui-panel mt-4 p-5 md:p-6">
+                <h2 className="text-xl font-semibold text-[var(--brand-accent-ink)]">{tx("アカウント削除", "Delete Account")}</h2>
+                <p className="mt-1 text-sm leading-6 text-[var(--brand-text-muted)]">{tx("アカウント削除は取り消せません。実行前に内容を確認してください。", "Deleting your account cannot be undone. Please review before proceeding.")}</p>
                 <div className="mt-4 flex flex-wrap gap-3">
                   {deleteConfirm ? (
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-[var(--brand-accent)]">{tx("本当に削除しますか？", "Are you sure you want to delete this account?")}</span>
+                      <span className="text-sm text-[var(--brand-accent-ink)]">{tx("本当に削除しますか？", "Are you sure you want to delete this account?")}</span>
                       <button
                         type="button"
                         disabled={deleting}

@@ -111,7 +111,8 @@ export async function sendSpeakerPaymentNotification(opts: {
   const client = getSendGridClient();
   const { participantName, participantEmail, sessionTitle, sessionId, startsAt } = opts;
   const joinUrl = `https://aiment.jp/join/${encodeURIComponent(sessionId)}`;
-  const startStr = startsAt.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", hour12: false });
+  // メールは受け取る人の地域が分からないので、日本時間とフィリピン時間を並べる
+  const startStr = `${startsAt.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", hour12: false })} JST / ${startsAt.toLocaleString("ja-JP", { timeZone: "Asia/Manila", hour12: false })} PHT`;
 
   if (!client) {
     console.info(`[mailer] Speaker payment received: ${participantName} <${participantEmail}> for "${sessionTitle}"`);
@@ -123,17 +124,17 @@ export async function sendSpeakerPaymentNotification(opts: {
     to: participantEmail,
     from: { email: FROM_EMAIL, name: "Aiment" },
     subject: `【Aiment】スピーカー参加が確定しました「${sessionTitle}」`,
-    text: `${participantName} 様\n\nスピーカー参加費のお支払いが完了し、参加が確定しました。\n\n配信枠: ${sessionTitle}\n開始日時（JST）: ${startStr}\n参加リンク: ${joinUrl}\n\n配信開始時刻になりましたら、上記リンクからご参加ください。\n\n— Aiment Team`,
+    text: `${participantName} 様\n\nスピーカー参加費のお支払いが完了し、参加が確定しました。\n\n配信枠: ${sessionTitle}\n開始日時: ${startStr}\n参加リンク: ${joinUrl}\n\n配信開始時刻になりましたら、上記リンクからご参加ください。\n\n— Aiment Team`,
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#0f0f14;color:#e8e8f0;border-radius:16px;">
         <h2 style="color:#a78bfa;margin-bottom:4px;">Aiment</h2>
         <p style="color:#9090a0;margin:0 0 24px;font-size:13px;">スピーカー参加確定</p>
-        <h3 style="margin:0 0 8px;font-size:18px;">参加が確定しました 🎉</h3>
+        <h3 style="margin:0 0 8px;font-size:18px;">参加が確定しました</h3>
         <p style="color:#9090a0;margin:0 0 20px;">${participantName} 様、お支払いありがとうございます。スピーカーとしての参加が確定しました。</p>
         <div style="background:#1a1a2e;border-radius:12px;padding:20px;margin-bottom:20px;">
           <p style="margin:0 0 8px;font-size:13px;color:#9090a0;">配信枠</p>
           <p style="margin:0 0 16px;font-weight:bold;font-size:16px;">${sessionTitle}</p>
-          <p style="margin:0 0 4px;font-size:13px;color:#9090a0;">開始日時（JST）</p>
+          <p style="margin:0 0 4px;font-size:13px;color:#9090a0;">開始日時</p>
           <p style="margin:0;font-size:15px;">${startStr}</p>
         </div>
         <a href="${joinUrl}" style="display:block;text-align:center;background:#7c3aed;color:#fff;text-decoration:none;border-radius:12px;padding:14px;font-weight:bold;font-size:15px;">参加ページを開く →</a>
@@ -150,7 +151,7 @@ export async function sendSpeakerPaymentNotification(opts: {
         to,
         from: { email: FROM_EMAIL, name: "Aiment" },
         subject: "【Aiment】スピーカー参加費の支払い完了",
-        text: `スピーカー参加費の支払いが完了しました。\n\n参加者名: ${participantName}\nメールアドレス: ${participantEmail}\n配信枠: ${sessionTitle}\n開始日時（JST）: ${startStr}`,
+        text: `スピーカー参加費の支払いが完了しました。\n\n参加者名: ${participantName}\nメールアドレス: ${participantEmail}\n配信枠: ${sessionTitle}\n開始日時: ${startStr}`,
         html: `
           <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#0f0f14;color:#e8e8f0;border-radius:16px;">
             <h2 style="color:#a78bfa;margin-bottom:8px;">Aiment</h2>
@@ -159,7 +160,7 @@ export async function sendSpeakerPaymentNotification(opts: {
               <tr><td style="color:#9090a0;padding:8px 0;border-bottom:1px solid #1a1a2e;">参加者名</td><td style="padding:8px 0;border-bottom:1px solid #1a1a2e;">${participantName}</td></tr>
               <tr><td style="color:#9090a0;padding:8px 0;border-bottom:1px solid #1a1a2e;">メールアドレス</td><td style="padding:8px 0;border-bottom:1px solid #1a1a2e;">${participantEmail}</td></tr>
               <tr><td style="color:#9090a0;padding:8px 0;border-bottom:1px solid #1a1a2e;">配信枠</td><td style="padding:8px 0;border-bottom:1px solid #1a1a2e;">${sessionTitle}</td></tr>
-              <tr><td style="color:#9090a0;padding:8px 0;">開始日時（JST）</td><td style="padding:8px 0;">${startStr}</td></tr>
+              <tr><td style="color:#9090a0;padding:8px 0;">開始日時</td><td style="padding:8px 0;">${startStr}</td></tr>
             </table>
           </div>
         `,
@@ -179,17 +180,17 @@ export async function sendStreamReminder(opts: {
   const { to, userName, sessionTitle, sessionId, startsAt, isPaid } = opts;
   const client = getSendGridClient();
   const joinUrl = `https://aiment.jp/join/${encodeURIComponent(sessionId)}`;
-  const startStr = startsAt.toLocaleString("en-US", { timeZone: "Asia/Tokyo", hour12: false });
+  const startStr = `${startsAt.toLocaleString("en-US", { timeZone: "Asia/Manila", hour12: false })} PHT (${startsAt.toLocaleString("en-US", { timeZone: "Asia/Tokyo", hour12: false, hour: "2-digit", minute: "2-digit" })} JST)`;
 
   const paymentWarning = isPaid
     ? ""
-    : `\n\n⚠️ Payment required: Your speaker reservation is not yet paid. You will NOT be able to enter the session without completing payment. Please visit the link below and pay before the stream starts.\n${joinUrl}`;
+    : `\n\n[Payment required] Your speaker reservation is not yet paid. You will NOT be able to enter the session without completing payment. Please visit the link below and pay before the stream starts.\n${joinUrl}`;
 
   const paymentWarningHtml = isPaid
     ? ""
     : `
       <div style="background:#2a1a2e;border:1px solid #7c3aed;border-radius:12px;padding:16px;margin:20px 0;">
-        <p style="color:#f472b6;font-weight:bold;margin:0 0 8px;">⚠️ Payment Required</p>
+        <p style="color:#f472b6;font-weight:bold;margin:0 0 8px;">Payment Required</p>
         <p style="color:#e8e8f0;margin:0;font-size:14px;">Your speaker reservation is <strong>not yet paid</strong>. You will <strong>not be able to enter</strong> the session without completing payment. Please pay before the stream starts.</p>
         <a href="${joinUrl}" style="display:inline-block;margin-top:12px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:8px;padding:10px 20px;font-weight:bold;">Pay now →</a>
       </div>`;
@@ -203,7 +204,7 @@ export async function sendStreamReminder(opts: {
     to,
     from: { email: FROM_EMAIL, name: "Aiment" },
     subject: `[Aiment] "${sessionTitle}" starts in 3 hours!`,
-    text: `Hi ${userName},\n\nYour reserved session is starting in 3 hours!\n\nSession: ${sessionTitle}\nStarts: ${startStr} (JST)\nJoin: ${joinUrl}${paymentWarning}\n\n— Aiment Team`,
+    text: `Hi ${userName},\n\nYour reserved session is starting in 3 hours!\n\nSession: ${sessionTitle}\nStarts: ${startStr}\nJoin: ${joinUrl}${paymentWarning}\n\n— Aiment Team`,
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#0f0f14;color:#e8e8f0;border-radius:16px;">
         <h2 style="color:#a78bfa;margin-bottom:4px;">Aiment</h2>
@@ -213,7 +214,7 @@ export async function sendStreamReminder(opts: {
         <div style="background:#1a1a2e;border-radius:12px;padding:20px;margin-bottom:20px;">
           <p style="margin:0 0 8px;font-size:13px;color:#9090a0;">Session</p>
           <p style="margin:0 0 16px;font-weight:bold;font-size:16px;">${sessionTitle}</p>
-          <p style="margin:0 0 4px;font-size:13px;color:#9090a0;">Starts at (JST)</p>
+          <p style="margin:0 0 4px;font-size:13px;color:#9090a0;">Starts at</p>
           <p style="margin:0;font-size:15px;">${startStr}</p>
         </div>
         ${paymentWarningHtml}

@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Footer } from "../components/home/Footer";
+import { SiteFooter } from "../components/landing/SiteFooter";
 import { TopNav } from "../components/home/TopNav";
 import { MultiDayScheduleGrid } from "../channels/components/MultiDayScheduleGrid";
 import { ScheduleFilters } from "../components/schedule/ScheduleFilters";
 import { ScheduleEvent, SessionCategory, Talent } from "../components/schedule/types";
 import { SlowLoadingScreen } from "../components/ui/SlowLoadingScreen";
 import { useI18n } from "../lib/i18n";
+import { TimeZoneNote } from "../components/ui/TimeZoneNote";
 import { getCachedActiveSessions, listActiveStreamSessions, subscribeStreamSessions, type StreamSession } from "../lib/streamSessions";
 
 function todayYmd() {
@@ -40,6 +41,15 @@ function addDaysYmd(value: string, days: number) {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+/** 期間の見出し。例: 10/20(火) – 10/22(木)。1日表示なら1つだけ。 */
+function formatRangeLabel(dates: string[], intlLocale: string) {
+  const fmt = (ymd: string) =>
+    new Intl.DateTimeFormat(intlLocale, { month: "numeric", day: "numeric", weekday: "short" }).format(new Date(`${ymd}T00:00:00`));
+  if (dates.length === 0) return "";
+  if (dates.length === 1) return fmt(dates[0]);
+  return `${fmt(dates[0])} – ${fmt(dates[dates.length - 1])}`;
 }
 
 function dateRange(startDate: string, count: number) {
@@ -121,12 +131,8 @@ export default function SchedulePage() {
     [sessions],
   );
 
-  const dateOptions = useMemo(
-    () => Array.from(new Set([...dateRange(todayDate, 14), ...scheduleEvents.map((event) => event.date)])).sort(),
-    [scheduleEvents, todayDate],
-  );
-
-  const [selectedDate, setSelectedDate] = useState(dateOptions.includes(todayDate) ? todayDate : dateOptions[0]);
+  // 表示期間の先頭日。今日より前には戻さない（YYYY-MM-DD は文字列のまま大小比較できる）。
+  const [selectedDate, setSelectedDate] = useState(todayDate);
   const [visibleDayCount, setVisibleDayCount] = useState(3);
   const [talentQuery, setTalentQuery] = useState("");
   const [startHour, setStartHour] = useState(10);
@@ -136,6 +142,14 @@ export default function SchedulePage() {
 
   const visibleDates = useMemo(() => dateRange(selectedDate, visibleDayCount), [selectedDate, visibleDayCount]);
   const visibleDateSet = useMemo(() => new Set(visibleDates), [visibleDates]);
+  const canGoPrev = selectedDate > todayDate;
+
+  const shiftDates = (direction: -1 | 1) => {
+    setSelectedDate((current) => {
+      const next = addDaysYmd(current, direction * visibleDayCount);
+      return next < todayDate ? todayDate : next;
+    });
+  };
 
   const filteredEvents = useMemo(() => {
     const query = talentQuery.trim().toLowerCase();
@@ -172,13 +186,14 @@ export default function SchedulePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] pb-20 text-[var(--text)] md:pb-0">
+    <div className="flex min-h-screen flex-col bg-[var(--bg)] text-[var(--text)]">
       <TopNav />
 
-      <main className="mx-auto max-w-[1400px] px-8 py-8">
-        <div className="mb-6">
+      <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 pb-16 pt-6 sm:px-6 sm:pt-8 lg:px-8">
+        <div className="mb-4 sm:mb-6">
           <h1 className="text-2xl font-bold text-[var(--text)]">{tx("配信スケジュール", "Stream Schedule")}</h1>
           <p className="mt-1 text-sm text-[var(--text-sub)]">{tx("時間帯とタレントを比較して、予約可能な枠をすばやく選べます。", "Compare time slots and talents to quickly find bookable streams.")}</p>
+          <TimeZoneNote className="mt-3" />
         </div>
 
         {initialLoading ? (
@@ -191,17 +206,19 @@ export default function SchedulePage() {
             <div className="min-h-[360px]" aria-hidden />
           )
         ) : (
-          <div className="space-y-5">
+          <div className="space-y-4 sm:space-y-5">
             <ScheduleFilters
-              dates={dateOptions}
-              selectedDate={selectedDate}
+              rangeLabel={formatRangeLabel(visibleDates, tx("ja-JP", "en-US"))}
+              canGoPrev={canGoPrev}
+              isShowingToday={selectedDate === todayDate}
               visibleDayCount={visibleDayCount}
               talentQuery={talentQuery}
               startHour={startHour}
               endHour={endHour}
               onlyAvailable={onlyAvailable}
               selectedCategories={selectedCategories}
-              onDateChange={setSelectedDate}
+              onPrev={() => shiftDates(-1)}
+              onNext={() => shiftDates(1)}
               onVisibleDayCountChange={setVisibleDayCount}
               onTalentQueryChange={setTalentQuery}
               onStartHourChange={handleStartHourChange}
@@ -235,7 +252,7 @@ export default function SchedulePage() {
         )}
       </main>
 
-      <Footer />
+      <SiteFooter />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { XMarkIcon } from "@heroicons/react/24/solid";
 import { ModalSession } from "./types";
 import { useI18n } from "../../lib/i18n";
 import { planLabel } from "../../lib/planAccess";
@@ -40,20 +41,21 @@ export function SessionDetailModal({ session, onClose, onParticipate }: SessionD
      : tx("現在は検証モードのため、サブスクなしで参加できます。", "Demo mode: join without subscription.");
  const primaryDisabled = joinBlockedByReservation || joinBlockedByPlan;
  return (
- <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+ <div className="fixed inset-0 z-50 flex items-center justify-center ui-scrim p-4" onClick={onClose}>
  <div
- className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-[var(--brand-bg-800)] shadow-2xl"
+ className="ui-modal flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden"
  onClick={(e) => e.stopPropagation()}
  >
  <div className="relative">
- <div className="aspect-video bg-gradient-to-br from-purple-50 to-pink-50">
+ <div className="aspect-video bg-[var(--brand-primary-soft)]">
  <img src={session.thumbnail} alt={session.vtuber} className="h-full w-full object-cover" />
  </div>
  <button
  onClick={onClose}
- className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-black/70 text-[var(--brand-text)] transition-colors hover:bg-black/90"
+ className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white text-[var(--brand-text)] transition-colors hover:bg-[var(--brand-bg-900)]"
+ aria-label={tx("閉じる", "Close")}
  >
- ✕
+ <XMarkIcon className="h-5 w-5" aria-hidden />
  </button>
  <div className="absolute bottom-4 left-4 rounded-lg bg-[var(--brand-primary)] px-4 py-2">
  <p className="text-sm font-bold text-white">{session.startsIn}</p>
@@ -119,7 +121,7 @@ export function SessionDetailModal({ session, onClose, onParticipate }: SessionD
  {tx("視聴のみ (無料)", "Watch only (Free)")}
  </button>
  <button
- className="flex-1 rounded-lg bg-[var(--brand-primary)] px-6 py-4 font-bold text-white transition-colors hover:bg-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+ className="ui-btn ui-btn-lg ui-btn-primary flex-1"
  disabled={primaryDisabled}
  onClick={() => onParticipate(session)}
  >

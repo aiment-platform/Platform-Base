@@ -1,0 +1,85 @@
+/* 土台：フォント、body、フォーム要素の既定。 */
+
+@font-face {
+  font-family: "Afacad Flux";
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("/fonts/afacad-flux/afacad-flux-300.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Afacad Flux";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/afacad-flux/afacad-flux-400.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Afacad Flux";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/afacad-flux/afacad-flux-500.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Afacad Flux";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/afacad-flux/afacad-flux-600.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Afacad Flux";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/afacad-flux/afacad-flux-700.ttf") format("truetype");
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.5;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+img[src*="aiment_logotype.svg"] {
+  filter: var(--brand-logo-filter) !important;
+}
+
+html:lang(ja) {
+  --font-ui: var(--font-jp);
+}
+
+html:lang(en) {
+  --font-ui: var(--font-latin);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+/* Enforce baseline typography: W6(SemiBold)+ across UI text */
+.font-thin,
+.font-extralight,
+.font-light,
+.font-normal,
+.font-medium {
+  font-weight: var(--font-weight-semibold) !important;
+}
+
+/* Keep input prompts lightweight for readability */
+input::placeholder,
+textarea::placeholder {
+  font-weight: var(--font-weight-regular);
+}

@@ -1,0 +1,96 @@
+/* 旧 ver0.2 の見た目。/dev/design-guideline の参考タブ専用。新しい画面では使わない。 */
+
+/* ==========================================================================
+   ver0.2 preview scope
+   Only /dev/design-guideline uses this, so the retired dark system can still
+   be shown next to ver0.3. Nothing in the product should carry .ui-v02.
+   ========================================================================== */
+.ui-v02 {
+  --bg: #252423;
+  --surface: #494746;
+  --surface-ring: transparent;
+  --primary: #7c6ae6;
+  --primary-light: #ac9eff;
+  --primary-dark: #6248f7;
+  --secondary: #00e5ff;
+  --accent: #ff3b5c;
+  --accent-dark: #c62742;
+  --neutral: #6b6867;
+  --neutral-dark: #514f4e;
+  --track: #3a3837;
+  --placeholder: #5f5d5c;
+  --text: #ededed;
+  --text-sub: #a3a09e;
+  --shadow-rgb: 0, 0, 0;
+
+  --background: var(--bg);
+  --foreground: var(--text);
+  --brand-bg-900: var(--bg);
+  --brand-bg-800: color-mix(in srgb, var(--bg) 72%, var(--surface) 28%);
+  --brand-surface: var(--surface);
+  --brand-surface-soft: color-mix(in srgb, var(--surface) 82%, #ffffff 18%);
+  --brand-primary: var(--primary);
+  --brand-primary-light: var(--primary-light);
+  --brand-primary-dark: var(--primary-dark);
+  --brand-secondary: var(--secondary);
+  --brand-accent: var(--accent);
+  --brand-text: var(--text);
+  --brand-text-muted: var(--text-sub);
+  --ui-shadow-1: 0 8px 24px rgba(0, 0, 0, 0.2);
+  --ui-shadow-2: 0 14px 36px rgba(0, 0, 0, 0.28);
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* ver0.2 buttons were flat: no ring, no thickness, no press travel. */
+.ui-v02 .ui-btn {
+  border-radius: var(--ui-radius-sm);
+  box-shadow: none;
+  transform: none;
+}
+
+.ui-v02 .ui-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.ui-v02 .ui-btn:active:not(:disabled),
+.ui-v02 .ui-btn:focus-visible,
+.ui-v02 .ui-btn:disabled {
+  transform: none;
+  box-shadow: none;
+}
+
+.ui-v02 .ui-btn-md { height: 42px; padding: 0 16px; }
+.ui-v02 .ui-btn-sm { height: 36px; padding: 0 12px; }
+.ui-v02 .ui-btn-primary { background: var(--brand-primary); color: #fff; }
+.ui-v02 .ui-btn-secondary { background: var(--brand-secondary); color: #000; }
+.ui-v02 .ui-btn-ghost { background: var(--brand-bg-900); color: var(--brand-text-muted); }
+.ui-v02 .ui-btn-soft { background: color-mix(in srgb, var(--brand-primary) 18%, transparent); color: var(--brand-primary); }
+.ui-v02 .ui-btn-danger { background: color-mix(in srgb, var(--brand-accent) 16%, transparent); color: var(--brand-accent); }
+.ui-v02 .ui-btn-success { background: color-mix(in srgb, #22c55e 85%, #16a34a 15%); color: #fff; }
+
+/* ver0.2 session card: dark frame, no white outline, no drop shadow. */
+.ui-v02 .aiment-session-card {
+  --card-ring: transparent;
+  --card-ring-w: 0px;
+  --card-surface: var(--brand-surface);
+  --card-track: color-mix(in srgb, var(--card-surface) 28%, var(--card-bg) 72%);
+}
+
+.ui-v02 .aiment-session-card__media-shell { filter: none; }
+.ui-v02 .aiment-session-card__frame { background: var(--card-surface); }
+.ui-v02 .aiment-session-card__frame::before { content: none; }
+.ui-v02 .aiment-session-card__level {
+  border-radius: clamp(4px, 1.3cqw, 6px);
+  background: var(--card-secondary);
+  box-shadow: none;
+  color: var(--card-bg);
+}
+.ui-v02 .aiment-session-card__ajl-label { color: var(--card-secondary); }
+.ui-v02 .aiment-session-card__spots,
+.ui-v02 .aiment-session-card__detail { color: var(--brand-text); }
+.ui-v02 .aiment-session-card__detail { background: var(--brand-primary-dark); }
+.ui-v02 .aiment-session-card__detail::before { content: none; }
+.ui-v02 .aiment-session-card__image { background: var(--card-surface); }
+.ui-v02 .aiment-session-card__avatar { background: var(--brand-surface-soft); color: var(--card-bg); }
+

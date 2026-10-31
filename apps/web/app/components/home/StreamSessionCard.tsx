@@ -48,10 +48,11 @@ export function StreamSessionCard({
         {
           "--slot-progress": slotProgress,
           "--slot-color": slotColor,
-          // 難易度バッジはレベルごとに色が変わる（面と、その下に覗く厚み）。
+          // 難易度バッジはレベルごとに色が変わる（面と、その下に覗く厚み、面の上の数字）。
           "--level-face": ajl.color,
           "--level-drop": ajl.dropColor,
-        } as CSSProperties & Record<"--slot-progress" | "--slot-color" | "--level-face" | "--level-drop", string>
+          "--level-ink": ajl.inkColor,
+        } as CSSProperties & Record<"--slot-progress" | "--slot-color" | "--level-face" | "--level-drop" | "--level-ink", string>
       }
     >
       <button type="button" onClick={onOpen} className="aiment-session-card__hitbox">

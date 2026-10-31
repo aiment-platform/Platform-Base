@@ -121,8 +121,9 @@ export function PhoneVerifyModal({ onSuccess, onClose, isDev }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-sm rounded-2xl bg-[var(--brand-bg-900)] p-6 shadow-xl">
+    // 画面が低い（横向き・キーボード表示中）ときは中身をスクロールできるように max-h を付ける
+    <div className="fixed inset-0 z-50 flex items-center justify-center ui-scrim p-4">
+      <div className="ui-modal max-h-full w-full max-w-sm overflow-y-auto p-5 sm:p-6">
         {step === "input" ? (
           <>
             <h2 className="mb-1 text-lg font-bold text-[var(--brand-text)]">電話番号の設定</h2>
@@ -135,7 +136,8 @@ export function PhoneVerifyModal({ onSuccess, onClose, isDev }: Props) {
               <select
                 value={countryCode}
                 onChange={(e) => setCountryCode(e.target.value)}
-                className="rounded-lg bg-[var(--brand-surface)] px-2 py-2.5 text-sm text-[var(--brand-text)] outline-none"
+                aria-label="国番号"
+                className="ui-select w-auto max-w-[45%] shrink-0 px-2"
               >
                 {COUNTRY_CODES.map((c) => (
                   <option key={c.code} value={c.code}>{c.label}</option>
@@ -145,16 +147,19 @@ export function PhoneVerifyModal({ onSuccess, onClose, isDev }: Props) {
                 type="tel"
                 value={phoneLocal}
                 onChange={(e) => setPhoneLocal(e.target.value)}
+                inputMode="tel"
+                autoComplete="tel-national"
+                aria-label="電話番号"
                 placeholder="090-0000-0000"
-                className="flex-1 rounded-lg bg-[var(--brand-surface)] px-4 py-2.5 text-sm text-[var(--brand-text)] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
+                className="ui-input min-w-0 flex-1"
               />
             </div>
 
             {/* SMS / 音声 */}
             <p className="mb-2 mt-5 text-xs font-semibold text-[var(--brand-text-muted)]">コードの取得方法</p>
-            <div className="flex gap-4">
+            <div className="flex flex-wrap gap-x-4">
               {(["sms", "voice"] as const).map((m) => (
-                <label key={m} className="flex cursor-pointer items-center gap-2 text-sm text-[var(--brand-text)]">
+                <label key={m} className="flex min-h-10 cursor-pointer items-center gap-2 text-sm text-[var(--brand-text)]">
                   <input
                     type="radio"
                     name="method"
@@ -167,13 +172,13 @@ export function PhoneVerifyModal({ onSuccess, onClose, isDev }: Props) {
               ))}
             </div>
 
-            {error ? <p className="mt-3 text-sm text-[var(--brand-accent)]">{error}</p> : null}
+            {error ? <p className="mt-3 text-sm text-[var(--brand-accent-ink)]">{error}</p> : null}
 
-            <div className="mt-6 flex justify-between">
+            <div className="mt-6 flex justify-between gap-2">
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg px-4 py-2 text-sm text-[var(--brand-text-muted)]"
+                className="ui-btn ui-btn-md ui-btn-ghost"
               >
                 キャンセル
               </button>
@@ -181,7 +186,7 @@ export function PhoneVerifyModal({ onSuccess, onClose, isDev }: Props) {
                 type="button"
                 onClick={() => void handleRequestCode()}
                 disabled={loading}
-                className="rounded-lg bg-[var(--brand-primary)] px-6 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                className="ui-btn ui-btn-md ui-btn-primary"
               >
                 {loading ? "送信中..." : "次へ"}
               </button>
@@ -195,35 +200,37 @@ export function PhoneVerifyModal({ onSuccess, onClose, isDev }: Props) {
             </p>
 
             {isDev && devCode ? (
-              <p className="mb-3 rounded-lg bg-[var(--brand-surface)] px-3 py-2 text-xs text-[var(--brand-secondary)]">
+              <p className="mb-3 rounded-lg bg-[var(--brand-warning-soft)] px-3 py-2 text-xs text-[var(--brand-warning-ink)]">
                 開発用コード: <strong>{devCode}</strong>
               </p>
             ) : null}
 
             {/* 6桁 OTP ボックス */}
-            <div className="flex justify-center gap-2" onPaste={handlePaste}>
+            <div className="flex justify-center gap-1.5 sm:gap-2" onPaste={handlePaste}>
               {digits.map((d, i) => (
                 <input
                   key={i}
                   ref={(el) => { inputRefs.current[i] = el; }}
                   type="text"
                   inputMode="numeric"
+                  autoComplete={i === 0 ? "one-time-code" : "off"}
+                  aria-label={`${i + 1}桁目`}
                   maxLength={1}
                   value={d}
                   onChange={(e) => handleDigitChange(i, e.target.value)}
                   onKeyDown={(e) => handleDigitKeyDown(i, e)}
-                  className="h-12 w-10 rounded-xl bg-[var(--brand-surface)] text-center text-lg font-bold text-[var(--brand-text)] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
+                  className="h-12 w-0 max-w-11 flex-1 rounded-xl bg-[var(--brand-bg-900)] text-center text-lg font-bold text-[var(--brand-text)] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
                 />
               ))}
             </div>
 
-            {error ? <p className="mt-3 text-center text-sm text-[var(--brand-accent)]">{error}</p> : null}
+            {error ? <p className="mt-3 text-center text-sm text-[var(--brand-accent-ink)]">{error}</p> : null}
 
-            <div className="mt-6 flex justify-between">
+            <div className="mt-6 flex justify-between gap-2">
               <button
                 type="button"
                 onClick={() => { setStep("input"); setDigits(Array(CODE_LENGTH).fill("")); setError(null); }}
-                className="rounded-lg px-4 py-2 text-sm text-[var(--brand-text-muted)]"
+                className="ui-btn ui-btn-md ui-btn-ghost"
               >
                 戻る
               </button>
@@ -231,7 +238,7 @@ export function PhoneVerifyModal({ onSuccess, onClose, isDev }: Props) {
                 type="button"
                 onClick={() => void handleConfirm()}
                 disabled={loading || digits.join("").length < CODE_LENGTH}
-                className="rounded-lg bg-[var(--brand-primary)] px-6 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                className="ui-btn ui-btn-md ui-btn-primary"
               >
                 {loading ? "確認中..." : "認証する"}
               </button>

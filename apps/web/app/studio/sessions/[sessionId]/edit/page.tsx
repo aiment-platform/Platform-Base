@@ -5,7 +5,6 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeftIcon } from "@heroicons/react/24/solid";
 import { TopNav } from "../../../../components/home/TopNav";
-import { AJL_LEVELS, getAjlInfo } from "../../../../lib/ajl";
 import type { Reservation, SubscriptionPlan } from "../../../../lib/apiTypes";
 import { useI18n } from "../../../../lib/i18n";
 import { useUserSession } from "../../../../lib/userSession";
@@ -17,6 +16,7 @@ import {
   type StreamSession,
 } from "../../../../lib/streamSessions";
 import { SPEAKER_FEE_ENABLED } from "@/lib/speakerFee";
+import { AjlLevelPicker } from "../../../components/AjlLevelPicker";
 
 const CATEGORY_OPTIONS = ["雑談", "ゲーム", "歌枠", "英語"] as const;
 
@@ -217,10 +217,10 @@ export default function SessionEditPage() {
   const listenerRes = reservations.filter((r) => r.type === "listener" && r.status === "reserved");
 
   return (
-    <div className="min-h-screen bg-[var(--brand-bg-900)] text-[var(--brand-text)]">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
       <TopNav mode="studio" />
 
-      <main className="mx-auto max-w-2xl px-6 py-10">
+      <main className="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-10">
         <div className="mb-6 flex items-center gap-3">
           <Link
             href="/studio/sessions"
@@ -254,14 +254,14 @@ export default function SessionEditPage() {
         {loading ? (
           <div className="py-20 text-center text-sm text-[var(--brand-text-muted)]">{tx("読み込み中...", "Loading...")}</div>
         ) : error && !session ? (
-          <div className="rounded-xl bg-[var(--brand-accent)]/15 px-4 py-4 text-sm text-[var(--brand-accent)]">{error}</div>
+          <div className="rounded-xl bg-[var(--brand-accent-soft)] px-4 py-4 text-sm text-[var(--brand-accent-ink)]">{error}</div>
         ) : tab === "settings" ? (
           <form onSubmit={handleSave} className="space-y-5">
             {error && (
-              <div className="rounded-xl bg-[var(--brand-accent)]/15 px-4 py-3 text-sm text-[var(--brand-accent)]">{error}</div>
+              <div className="rounded-xl bg-[var(--brand-accent-soft)] px-4 py-3 text-sm text-[var(--brand-accent-ink)]">{error}</div>
             )}
             {success && (
-              <div className="rounded-xl bg-green-500/15 px-4 py-3 text-sm text-green-400">{tx("保存しました。", "Saved.")}</div>
+              <div className="rounded-xl bg-[var(--brand-primary-soft)] px-4 py-3 text-sm text-[var(--brand-primary-ink)]">{tx("保存しました。", "Saved.")}</div>
             )}
 
             <div className="grid gap-1.5 text-sm">
@@ -337,81 +337,62 @@ export default function SessionEditPage() {
               />
             </label>
 
-            <div className="grid grid-cols-2 gap-4">
-              <label className="grid gap-1.5 text-sm">
-                <span className="text-[var(--brand-text-muted)]">{tx("参加者枠数", "Participant spots")}</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={30}
-                  value={slotsTotal}
-                  onChange={(e) => setSlotsTotal(Math.max(1, Number(e.target.value)))}
-                  className="rounded-xl bg-[var(--brand-surface)] px-4 py-2.5 text-[var(--brand-text)] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
-                />
-              </label>
+            {/* 枠数とプランは「リスナー（聞くだけ）」「スピーカー（声で参加）」の2行に分けて見せる。
+                以前は4つの欄が並んでいるだけで、どれがどちらの設定か分かりにくかった。
+                slotsTotal / requiredPlan がリスナー側（視聴）、speaker* がスピーカー側。 */}
+            <fieldset className="grid gap-4">
+              <legend className="mb-2 text-sm text-[var(--brand-text-muted)]">{tx("参加枠と必要プラン", "Spots & required plan")}</legend>
+              {(
+                [
+                  {
+                    key: "listener",
+                    title: tx("リスナー（聞いて参加）", "Listeners (watch & listen)"),
+                    slots: slotsTotal,
+                    setSlots: setSlotsTotal,
+                    plan: requiredPlan,
+                    setPlan: setRequiredPlan,
+                  },
+                  {
+                    key: "speaker",
+                    title: tx("スピーカー（声で参加）", "Speakers (join by voice)"),
+                    slots: speakerSlotsTotal,
+                    setSlots: setSpeakerSlotsTotal,
+                    plan: speakerRequiredPlan,
+                    setPlan: setSpeakerRequiredPlan,
+                  },
+                ] as const
+              ).map((row) => (
+                <div key={row.key} className="grid gap-1.5">
+                  <p className="text-sm font-semibold text-[var(--brand-text)]">{row.title}</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="grid gap-1 text-xs">
+                      <span className="text-[var(--brand-text-muted)]">{tx("枠数", "Spots")}</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={30}
+                        value={row.slots}
+                        onChange={(e) => row.setSlots(Math.max(1, Number(e.target.value)))}
+                        className="rounded-xl bg-[var(--brand-surface)] px-4 py-2.5 text-[var(--brand-text)] outline-none focus:ring-2 focus:ring-[var(--brand-primary)] text-sm"
+                      />
+                    </label>
+                    <label className="grid gap-1 text-xs">
+                      <span className="text-[var(--brand-text-muted)]">{tx("必要なプラン", "Plan required")}</span>
+                      <select
+                        value={row.plan}
+                        onChange={(e) => row.setPlan(e.target.value as SubscriptionPlan)}
+                        className="rounded-xl bg-[var(--brand-surface)] px-4 py-2.5 text-[var(--brand-text)] outline-none focus:ring-2 focus:ring-[var(--brand-primary)] text-sm"
+                      >
+                        <option value="free">{tx("なし（無料）", "None (free)")}</option>
+                        <option value="aimer">Aimer</option>
+                      </select>
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </fieldset>
 
-              <label className="grid gap-1.5 text-sm">
-                <span className="text-[var(--brand-text-muted)]">{tx("必要プラン", "Required Plan")}</span>
-                <select
-                  value={requiredPlan}
-                  onChange={(e) => setRequiredPlan(e.target.value as SubscriptionPlan)}
-                  className="rounded-xl bg-[var(--brand-surface)] px-4 py-2.5 text-[var(--brand-text)] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
-                >
-                  <option value="free">{tx("なし", "None (free)")}</option>
-                  <option value="aimer">Aimer</option>
-                </select>
-              </label>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <label className="grid gap-1.5 text-sm">
-                <span className="text-[var(--brand-text-muted)]">{tx("スピーカー枠数", "Speaker spots")}</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={30}
-                  value={speakerSlotsTotal}
-                  onChange={(e) => setSpeakerSlotsTotal(Math.max(1, Number(e.target.value)))}
-                  className="rounded-xl bg-[var(--brand-surface)] px-4 py-2.5 text-[var(--brand-text)] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
-                />
-              </label>
-
-              <label className="grid gap-1.5 text-sm">
-                <span className="text-[var(--brand-text-muted)]">{tx("スピーカー必要プラン", "Speaker Plan")}</span>
-                <select
-                  value={speakerRequiredPlan}
-                  onChange={(e) => setSpeakerRequiredPlan(e.target.value as SubscriptionPlan)}
-                  className="rounded-xl bg-[var(--brand-surface)] px-4 py-2.5 text-[var(--brand-text)] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
-                >
-                  <option value="free">{tx("なし", "None (free)")}</option>
-                  <option value="aimer">Aimer</option>
-                </select>
-              </label>
-            </div>
-
-            <div className="grid gap-2 rounded-xl bg-[var(--brand-surface)] p-4 text-sm">
-              <div>
-                <p className="text-[var(--brand-text-muted)]">AJL - aiment Japanese Level</p>
-                <p className="mt-1 text-xs text-[var(--brand-text-muted)]">{getAjlInfo(japaneseLevel).description}</p>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {AJL_LEVELS.map((level) => (
-                  <button
-                    key={level.level}
-                    type="button"
-                    onClick={() => setJapaneseLevel(level.level)}
-                    className={`rounded-lg px-3 py-2 text-left transition-colors ${
-                      japaneseLevel === level.level
-                        ? "bg-[var(--brand-primary)] text-white"
-                        : "bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
-                    }`}
-                  >
-                    <span className="block text-xs font-black">AJL {level.level}</span>
-                    <span className="mt-0.5 block text-[10px] font-semibold">JF {level.jfStandard} / {level.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+            <AjlLevelPicker id="edit-level-help" value={japaneseLevel} onChange={setJapaneseLevel} />
 
             <label className="flex cursor-pointer items-center gap-3 rounded-xl bg-[var(--brand-surface)] px-4 py-3 text-sm">
               <input
@@ -433,7 +414,7 @@ export default function SessionEditPage() {
               <button
                 type="submit"
                 disabled={saving || uploadingThumbnail}
-                className="rounded-xl bg-[var(--brand-primary)] px-6 py-2.5 text-sm font-bold text-white shadow-[0_6px_20px_rgba(124,106,230,0.4)] transition-all hover:brightness-110 disabled:opacity-50"
+                className="ui-btn ui-btn-md ui-btn-primary"
               >
                 {saving ? tx("保存中...", "Saving...") : tx("保存する", "Save")}
               </button>
@@ -447,7 +428,7 @@ export default function SessionEditPage() {
                 type="button"
                 onClick={() => void handleDelete()}
                 disabled={deleting}
-                className="rounded-xl border border-[var(--brand-accent)] px-5 py-2.5 text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:bg-[var(--brand-accent)]/10 disabled:opacity-50"
+                className="rounded-xl border border-[var(--brand-accent)] px-5 py-2.5 text-sm font-semibold text-[var(--brand-accent-ink)] transition-colors hover:bg-[var(--brand-accent-soft)] disabled:opacity-50"
               >
                 {deleting ? tx("削除中...", "Deleting...") : tx("この配信枠を削除", "Delete this session")}
               </button>
@@ -523,7 +504,7 @@ function ReservationRow({ r, formatDate }: { r: Reservation; formatDate: (s: str
         <p className="text-xs text-[var(--brand-text-muted)]">{formatDate(r.createdAt)}</p>
       </div>
       {r.type === "speaker" && (
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${isPaid ? "bg-green-500/20 text-green-400" : "bg-[var(--brand-text-muted)]/15 text-[var(--brand-text-muted)]"}`}>
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${isPaid ? "bg-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)]" : "bg-[var(--brand-text-muted)]/15 text-[var(--brand-text-muted)]"}`}>
           {SPEAKER_FEE_ENABLED ? (isPaid ? "支払済" : "未払い") : "無料"}
         </span>
       )}

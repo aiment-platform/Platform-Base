@@ -3,6 +3,7 @@ import { statusDot, statusLabel, statusStyle, toMinutes } from "./utils";
 import { getAjlInfo } from "../../lib/ajl";
 import { categoryLabel } from "../../lib/labels";
 import { useI18n } from "../../lib/i18n";
+import { timeZoneLabel, useViewerTimeZone } from "../../lib/timezone";
 
 type ScheduleGridProps = {
   talents: Talent[];
@@ -111,9 +112,10 @@ function buildLayouts(events: ScheduleEvent[]): EventLayout[] {
 
 export function ScheduleGrid({ talents, selectedDate, startHour, endHour, events, onReserve }: ScheduleGridProps) {
   const { tx } = useI18n();
+  const viewerTimeZone = useViewerTimeZone();
   if (talents.length === 0) {
     return (
-      <section className="rounded-2xl bg-[var(--brand-surface)] px-5 py-10 text-center shadow-lg shadow-black/25">
+      <section className="rounded-2xl bg-[var(--brand-surface)] px-5 py-10 text-center">
         <p className="text-sm font-semibold text-[var(--brand-text)]">{tx("配信スケジュールはまだありません。", "No stream schedule yet.")}</p>
         <p className="mt-1 text-xs text-[var(--brand-text-muted)]">{tx("配信枠が作成されるとここに表示されます。", "Created stream sessions will appear here.")}</p>
       </section>
@@ -134,10 +136,10 @@ export function ScheduleGrid({ talents, selectedDate, startHour, endHour, events
   const nowTop = (nowMinutes - rangeStart) * pxPerMinute;
 
   return (
-    <section className="overflow-hidden rounded-2xl bg-[var(--brand-surface)] shadow-lg shadow-black/25">
+    <section className="overflow-hidden rounded-2xl bg-[var(--brand-surface)]">
       <div className="overflow-auto">
         <div className="grid min-w-[980px]" style={{ gridTemplateColumns: `88px repeat(${talents.length}, minmax(200px, 1fr))` }}>
-          <div className="sticky left-0 top-0 z-20 bg-[var(--brand-surface)] px-3 py-3 text-xs font-semibold text-[var(--brand-text-muted)]">{tx("時間", "Time")}</div>
+          <div className="sticky left-0 top-0 z-20 bg-[var(--brand-surface)] px-3 py-3 text-xs font-semibold text-[var(--brand-text-muted)]">{viewerTimeZone ? timeZoneLabel(viewerTimeZone) : tx("時間", "Time")}</div>
 
           {talents.map((talent) => (
             <div key={talent.id} className="sticky top-0 z-10 bg-[var(--brand-surface)] px-3 py-2">
@@ -199,7 +201,7 @@ export function ScheduleGrid({ talents, selectedDate, startHour, endHour, events
                   return (
                     <div
                       key={event.id}
-                      className="absolute overflow-hidden rounded-md bg-[var(--brand-bg-900)] p-2 shadow-md shadow-black/25"
+                      className="absolute overflow-hidden rounded-md bg-[var(--brand-bg-900)] p-2"
                       style={{
                         top,
                         height,
@@ -211,19 +213,19 @@ export function ScheduleGrid({ talents, selectedDate, startHour, endHour, events
                         <span className={`h-2 w-2 rounded-full ${statusDot(event.status)}`} />
                         <p className="truncate text-[11px] font-semibold text-[var(--brand-text)]">{event.title}</p>
                       </div>
-                      <p className="mb-1 text-[10px] text-[var(--brand-text-muted)]">{formatTime(clampedStart)} - {formatTime(clampedEnd)}</p>
+                      <p className="mb-1 text-[11px] text-[var(--brand-text-muted)]">{formatTime(clampedStart)} - {formatTime(clampedEnd)}</p>
                       <div className="mb-1 flex flex-wrap gap-1">
-                        <span className="rounded bg-[var(--brand-secondary)]/40 px-1.5 py-0.5 text-[9px] font-black text-[var(--brand-text)]">AJL {ajl.level}</span>
+                        <span className="rounded px-1.5 py-0.5 text-[11px] font-black text-[var(--brand-text)]" style={{ background: ajl.color }}>AJL {ajl.level}</span>
                         {event.slotsLeft != null && event.slotsTotal != null ? (
-                          <span className="rounded bg-[var(--brand-surface)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--brand-text-muted)]">
+                          <span className="rounded bg-[var(--brand-surface)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--brand-text-muted)]">
                             {event.slotsLeft}/{event.slotsTotal}
                           </span>
                         ) : null}
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="truncate text-[10px] text-[var(--brand-text-muted)]">{categoryLabel(event.category, tx)}</span>
+                        <span className="truncate text-[11px] text-[var(--brand-text-muted)]">{categoryLabel(event.category, tx)}</span>
                         <button
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${statusStyle(event.status)}`}
+                          className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${statusStyle(event.status)}`}
                           onClick={() => {
                             if (event.status === "booked") return;
                             onReserve(event.sessionId);

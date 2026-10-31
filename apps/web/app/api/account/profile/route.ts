@@ -20,6 +20,8 @@ export async function PATCH(request: Request) {
       phoneNumber?: string;
       avatarUrl?: string;
       headerUrl?: string;
+      /** 中身は保存する側（updateAccountProfile）で整える */
+      profileItems?: unknown;
     };
     const user = await updateAccountProfile(currentUser.id, body);
     if (!user) {

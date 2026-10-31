@@ -15,7 +15,7 @@ const BEGINNER = AJL_LEVELS[1];
 const UPPER = AJL_LEVELS[3];
 
 function levelStyle(level: (typeof AJL_LEVELS)[number]) {
-  return { "--level-face": level.color, "--level-drop": level.dropColor } as CSSProperties;
+  return { "--level-face": level.color, "--level-drop": level.dropColor, "--level-ink": level.inkColor } as CSSProperties;
 }
 
 /** ホームに並ぶ配信カード。挿絵用なので押せない。 */

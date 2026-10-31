@@ -22,10 +22,10 @@ export default function StudioSessionsPage() {
   if (!hydrated || !isVtuber) return null;
 
   return (
-    <div className="min-h-screen bg-[var(--brand-bg-900)] text-[var(--brand-text)]">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
       <TopNav mode="studio" />
 
-      <main className="mx-auto max-w-4xl px-6 py-10">
+      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-10">
         <MySessionsManager />
       </main>
     </div>

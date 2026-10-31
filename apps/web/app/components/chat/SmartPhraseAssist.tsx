@@ -165,7 +165,7 @@ export function SmartPhraseAssist({ sessionState, onSendPhrase, onInsertPhrase, 
   return (
     <div className={`relative ${className}`.trim()}>
       {expanded ? (
-        <div className="mb-2 max-h-[280px] overflow-y-auto rounded-2xl bg-[var(--brand-surface)] p-3 shadow-[0_14px_30px_rgba(73,71,70,0.16)]">
+        <div className="ui-float mb-2 max-h-[280px] overflow-y-auto rounded-2xl bg-[var(--brand-surface)] p-3">
           <div className="mb-3 flex items-center justify-between gap-2">
             <div>
               <p className="text-sm font-bold text-[var(--brand-text)]">日本語フレーズ</p>
@@ -223,11 +223,11 @@ export function SmartPhraseAssist({ sessionState, onSendPhrase, onInsertPhrase, 
                           onPointerUp={clearLongPressTimer}
                           onPointerCancel={clearLongPressTimer}
                           onPointerLeave={clearLongPressTimer}
-                          className="group relative min-h-[74px] cursor-pointer rounded-xl bg-[var(--brand-surface)] px-3 py-2 text-left shadow-[0_10px_24px_rgba(73,71,70,0.12)] transition duration-150 hover:scale-[1.018] hover:bg-[var(--brand-surface-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-secondary)]/70"
+                          className="group relative min-h-[74px] cursor-pointer rounded-xl bg-[var(--brand-surface)] px-3 py-2 text-left transition duration-150 hover:scale-[1.018] hover:bg-[var(--brand-surface-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/50"
                         >
                           <span className="absolute right-2 top-2 flex items-center gap-1">
                             {sent ? (
-                              <span className="rounded-full bg-black px-2 py-0.5 text-[10px] font-bold text-[var(--brand-primary-dark)] shadow-lg shadow-black/8">
+                              <span className="rounded-full bg-black px-2 py-0.5 text-[11px] font-bold text-[var(--brand-primary-dark)]">
                                 Sent
                               </span>
                             ) : null}

@@ -13,26 +13,26 @@ export function PaymentModal({ clientSecret, title, onSuccess, onClose }: Paymen
   const isMockPayment = clientSecret.startsWith("mock_");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-[var(--brand-bg-900)] p-6 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center ui-scrim p-4">
+      <div className="ui-modal max-h-full w-full max-w-md overflow-y-auto p-5 sm:p-6">
         <h2 className="mb-5 text-lg font-semibold text-[var(--brand-text)]">{title}</h2>
         {isMockPayment ? (
           <>
-            <p className="rounded-xl bg-[var(--brand-surface)] px-4 py-3 text-sm leading-relaxed text-[var(--brand-text-muted)]">
+            <p className="rounded-xl bg-[var(--brand-bg-900)] px-4 py-3 text-sm leading-relaxed text-[var(--brand-text-muted)]">
               開発用のモック決済です。下のボタンで購入完了として進めます。
             </p>
             <div className="mt-5 flex gap-3">
               <button
                 type="button"
                 onClick={onSuccess}
-                className="h-11 flex-1 rounded-lg bg-[var(--brand-secondary)] text-sm font-semibold text-[var(--brand-text)]"
+                className="ui-btn ui-btn-md ui-btn-primary flex-1"
               >
                 完了にする
               </button>
               <button
                 type="button"
                 onClick={onClose}
-                className="h-11 rounded-lg bg-[var(--brand-surface-soft)] px-4 text-sm text-[var(--brand-text)]"
+                className="ui-btn ui-btn-md ui-btn-ghost"
               >
                 キャンセル
               </button>
@@ -40,9 +40,9 @@ export function PaymentModal({ clientSecret, title, onSuccess, onClose }: Paymen
           </>
         ) : (
           <>
-            <p className="rounded-xl bg-[var(--brand-accent)]/15 px-4 py-3 text-sm leading-relaxed text-[var(--brand-accent)]">
+            <p className="rounded-xl bg-[var(--brand-accent-soft)] px-4 py-3 text-sm leading-relaxed text-[var(--brand-accent-ink)]">
               Stripe決済フォームを表示するには、ローカル依存関係の復元が必要です。
-              <span className="mt-2 block font-semibold text-[var(--brand-text)]">
+              <span className="mt-2 block break-all font-semibold text-[var(--brand-text)]">
                 CI=true pnpm install --frozen-lockfile
               </span>
             </p>
@@ -50,7 +50,7 @@ export function PaymentModal({ clientSecret, title, onSuccess, onClose }: Paymen
               <button
                 type="button"
                 onClick={onClose}
-                className="h-11 rounded-lg bg-[var(--brand-surface-soft)] px-4 text-sm text-[var(--brand-text)]"
+                className="ui-btn ui-btn-md ui-btn-ghost"
               >
                 閉じる
               </button>

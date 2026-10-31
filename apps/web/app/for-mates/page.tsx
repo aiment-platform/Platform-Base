@@ -5,12 +5,12 @@ import Link from "next/link";
 import { RoleDiagram } from "../components/landing/RoleDiagram";
 import { SessionVideo } from "../components/landing/SessionVideo";
 import { SceneWhatIs } from "../lp/LearnerScenes";
+import { SiteFooter } from "../components/landing/SiteFooter";
 import { WaveEdge } from "../components/landing/WaveEdge";
-import { BODY, FaqItem, Lines as BreakLines, Section, SectionTitle, X_HANDLE, X_URL, XMark } from "../components/landing/primitives";
+import { BODY, FaqItem, Lines, Section, SectionTitle, X_HANDLE, X_URL, XMark } from "../components/landing/primitives";
 import { MembershipCard } from "./MembershipCard";
-import { mockSlots, STYLE_LABEL, type SupporterStyle } from "./slots";
+import { STYLE_LABEL, type SupporterStyle } from "./slots";
 import { StyleDiagram } from "./StyleDiagram";
-import { SupporterSlotCard } from "./SupporterSlotCard";
 import {
   SceneBackup,
   SceneEnd,
@@ -26,12 +26,12 @@ import {
  *
  * 前半は学習者向けLP（/lp）と同じ：aimentって何？ → 実際のセッション映像。
  * そのあと（LPで3STEPSに入るところ）からメイトの話に切り替える：
- * メイトとは → できること → 参加スタイル → 1回の例 → 参加できる回 →
+ * メイトとは → できること → 参加スタイル → 1回の例 →
  * Membership → 参加方法 → FAQ。
  * 文章は短く、場面は挿絵で。決まりごとは FAQ とガイドラインに。
  *
  * 固有名詞は使わない。仮データは「VTuber A」「ゲームA」のような抽象名。
- * 料金は未定。参加できる回は仮データ（slots.ts）。
+ * 料金は未定。参加できる回はページ内に並べず、実データのセッション一覧（/）へ案内する。
  */
 
 export const metadata: Metadata = {
@@ -157,34 +157,23 @@ const FAQ = [
   },
 ];
 
-function Lines({ lines, className = "" }: { lines: string[]; className?: string }) {
-  return (
-    <p className={className}>
-      {lines.map((line, index) => (
-        <span key={line}>
-          {line}
-          {index < lines.length - 1 ? <br /> : null}
-        </span>
-      ))}
-    </p>
-  );
-}
-
 export default function ForSupportersPage() {
+  // 表示言語の設定で <html lang> が en に切り替わっても、見出しを日本語の文節で
+  // 改行させる（word-break: auto-phrase は lang="ja" のときだけ効く）ため明示する
   return (
-    <main className="landing-page sp-page min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
+    <main lang="ja" className="landing-page sp-page min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
       {/* ================= Hero ================= */}
       <section className="bg-[var(--brand-primary)] pb-[clamp(48px,6vw,88px)] text-white [--brand-logo-filter:brightness(0)_invert(1)]">
+        {/* ヘッダー行は本文の幅（max-w）に入れず、画面の左右端に沿わせる */}
+        <div className="flex items-center justify-between px-6 pt-7 lg:px-10">
+          <Link href="/" className="inline-flex items-center" aria-label="aiment home">
+            <Image src="/logo/aiment_logotype.svg" alt="aiment" width={600} height={200} priority className="h-9 w-auto" />
+          </Link>
+          <Link href="/for-vtubers" className="text-[13px] font-bold text-white/85 underline-offset-4 hover:underline">
+            VTuberの方はこちら
+          </Link>
+        </div>
         <div className="mx-auto w-full max-w-[1180px] px-6 lg:px-10">
-          <div className="flex items-center justify-between pt-7">
-            <Link href="/" className="inline-flex items-center" aria-label="aiment home">
-              <Image src="/logo/aiment_logotype.svg" alt="aiment" width={600} height={200} priority className="h-9 w-auto" />
-            </Link>
-            <Link href="/for-vtubers" className="text-[13px] font-bold text-white/85 underline-offset-4 hover:underline">
-              VTuberの方はこちら
-            </Link>
-          </div>
-
           <div className="mt-[clamp(36px,5vw,72px)] grid items-center gap-10 lg:grid-cols-2">
             <div>
               <p className="text-sm font-bold tracking-[0.2em] text-white/85">日本のファンの方へ</p>
@@ -199,12 +188,13 @@ export default function ForSupportersPage() {
               />
               <Lines
                 lines={["メイト枠のある回では、", "日本のファンも一緒に参加できます。"]}
+                alwaysBreak
                 className="mt-3 text-[clamp(15px,calc(12px_+_0.42vw),18px)] font-bold leading-[2]"
               />
               <div className="mt-8 flex w-full max-w-[400px] flex-col gap-4">
-                <a href="#sessions" className="landing-cta ui-btn ui-btn-lg">
+                <Link href="/" className="landing-cta ui-btn ui-btn-lg">
                   参加できる回を見る
-                </a>
+                </Link>
                 <a href="#supporter" className="landing-cta landing-cta--ghost ui-btn ui-btn-lg">
                   メイトについて見る
                 </a>
@@ -224,14 +214,14 @@ export default function ForSupportersPage() {
         <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)]">
           <div>
             <SectionTitle align="left">aimentって何？</SectionTitle>
-            <BreakLines
+            <Lines
               lines={WHAT_IS.statement}
               alwaysBreak
               className="mt-[var(--ld-head-gap)] text-[clamp(21px,calc(12px_+_1.5vw),34px)] font-extrabold leading-[1.5]"
             />
             <div className="mt-[var(--ld-head-gap)] space-y-[var(--ld-item-gap)]">
               {WHAT_IS.paragraphs.map((lines) => (
-                <BreakLines key={lines[0]} lines={lines} className={BODY} />
+                <Lines key={lines[0]} lines={lines} className={BODY} />
               ))}
             </div>
           </div>
@@ -245,7 +235,7 @@ export default function ForSupportersPage() {
       <Section>
         <SectionTitle>実際のセッション映像</SectionTitle>
         <SessionVideo label="実際のセッション映像" />
-        <BreakLines
+        <Lines
           lines={SESSION_VIDEO_NOTE}
           className={`mx-auto mt-[var(--ld-head-gap)] max-w-[880px] text-left sm:text-center ${BODY}`}
         />
@@ -265,6 +255,7 @@ export default function ForSupportersPage() {
               <Lines lines={["メイトは、", "そのVTuberのaimentでの活動に参加できる月額メンバーシップです。"]} className="sp-lead mt-5" />
               <Lines
                 lines={["開始前に少し早く集まったり、", "本編をコメントしながら見たり、", "必要なときに少し手を貸したり。"]}
+                alwaysBreak
                 className="sp-lead mt-4"
               />
               <p className="sp-lead mt-4">回によっては、ゲームや会話にも参加します。</p>
@@ -355,24 +346,6 @@ export default function ForSupportersPage() {
         </ol>
       </section>
 
-      {/* ================= 参加できる回 ================= */}
-      <section id="sessions" className="mx-auto w-full max-w-[1180px] scroll-mt-6 px-6 py-[var(--ld-section-y)] lg:px-10">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="sp-kicker">参加できる回</p>
-            <h2 className="sp-h2">いま参加できるセッション</h2>
-          </div>
-          <Link href="/" className="text-[14px] font-extrabold text-[var(--brand-primary)] underline-offset-4 hover:underline">
-            セッション一覧を見る →
-          </Link>
-        </div>
-        <div className="sp-slots mt-[var(--ld-head-gap)]">
-          {mockSlots.map((slot) => (
-            <SupporterSlotCard key={slot.id} slot={slot} />
-          ))}
-        </div>
-      </section>
-
       {/* ================= Membership ================= */}
       <section className="sp-band">
         <div className="mx-auto w-full max-w-[1180px] px-6 lg:px-10">
@@ -436,9 +409,9 @@ export default function ForSupportersPage() {
         <div className="mx-auto w-full max-w-[1180px] px-6 pb-[clamp(56px,7vw,100px)] pt-[clamp(16px,3vw,40px)] text-center lg:px-10">
           <h2 className="text-[clamp(26px,3.2vw,44px)] font-extrabold leading-[1.4]">推しの次の回に。</h2>
           <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <a href="#sessions" className="landing-cta ui-btn ui-btn-lg w-full max-w-[320px] sm:w-auto">
+            <Link href="/" className="landing-cta ui-btn ui-btn-lg w-full max-w-[320px] sm:w-auto">
               参加できる回を見る
-            </a>
+            </Link>
             <Link href={SIGNUP_URL} className="landing-cta landing-cta--ghost ui-btn ui-btn-lg w-full max-w-[320px] sm:w-auto">
               メイトに登録
             </Link>
@@ -455,29 +428,7 @@ export default function ForSupportersPage() {
         </div>
       </section>
 
-      {/* ================= Footer ================= */}
-      <footer className="bg-[var(--brand-primary-dark)] text-white [--brand-logo-filter:brightness(0)_invert(1)]">
-        <div className="mx-auto flex w-full max-w-[1180px] flex-col items-center gap-6 px-6 py-8 sm:flex-row sm:justify-between lg:px-10">
-          <Image src="/logo/aiment_logotype.svg" alt="aiment" width={600} height={200} className="h-7 w-auto" />
-          <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13px] font-bold text-white/85" aria-label="Footer">
-            <Link href="/for-vtubers" className="hover:underline">
-              VTuberの方へ
-            </Link>
-            <Link href="/lp" className="hover:underline">
-              学習者（ラーナー）の方へ（English）
-            </Link>
-            <Link href={GUIDELINES_URL} className="hover:underline">
-              ガイドライン
-            </Link>
-            <Link href="/terms" className="hover:underline">
-              利用規約
-            </Link>
-            <Link href="/privacy" className="hover:underline">
-              プライバシー
-            </Link>
-          </nav>
-        </div>
-      </footer>
+      <SiteFooter />
     </main>
   );
 }

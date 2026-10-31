@@ -31,7 +31,8 @@ function InputLabel({
 }) {
   return (
     <label className="block space-y-2">
-      <span className="text-[10px] uppercase tracking-[0.22em] text-[var(--brand-text-muted)]">{label}</span>
+      {/* 昔の暗いテーマの名残（英字の大文字＋字間）をやめ、ほかの入力欄の見出し（FieldLabel）とそろえる */}
+      <span className="block text-xs font-bold text-[var(--brand-text-muted)]">{label}</span>
       {children}
     </label>
   );
@@ -41,7 +42,8 @@ function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className={`h-11 w-full border border-[var(--brand-text-muted)]/70 bg-transparent px-3 text-sm text-[var(--brand-text)] outline-none transition focus:border-[var(--brand-secondary)] ${props.className ?? ""}`}
+      // 文字は 16px。これより小さいと、iPhone は入力欄に触れたときに画面を拡大してしまう
+      className={`h-11 w-full rounded-lg border-0 bg-[var(--brand-bg-900)] px-3 text-base text-[var(--brand-text)] outline-none transition focus:ring-2 focus:ring-[var(--brand-primary)]/40 ${props.className ?? ""}`}
     />
   );
 }
@@ -95,23 +97,18 @@ export default function AuthPage() {
 
   if (isAuthenticated) {
     return (
-      <div className="min-h-screen bg-[var(--brand-bg-900)] text-[var(--brand-text)]">
+      <div className="min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
         <TopNav />
-        <main className="mx-auto max-w-5xl px-5 py-8 md:px-10 md:py-12">
-          <section className="relative overflow-hidden rounded-xl border border-[var(--brand-text-muted)] bg-[var(--brand-bg-900)] p-7">
-            <div className="relative z-10 space-y-4 text-center">
-              <p className="text-[11px] uppercase tracking-[0.38em] text-[var(--brand-text-muted)]">Account Protocol</p>
-              <h1 className="text-4xl font-semibold tracking-[0.05em] text-[var(--brand-secondary)]">READY</h1>
-              <p className="mx-auto max-w-2xl text-sm leading-6 text-[var(--brand-text-muted)]">
-                {tx("すでにログインしています。アカウント管理からプロフィール、認証、配信権限を確認してください。", "You are already logged in. Check your profile, verification, and streaming permissions from account settings.")}
-              </p>
-              <Link
-                href="/account"
-                className="inline-flex h-11 items-center justify-center border border-[var(--brand-secondary)] px-5 text-sm tracking-[0.22em] text-[var(--brand-secondary)] transition hover:bg-[color-mix(in_srgb,var(--brand-secondary)_12%,transparent)]"
-              >
-                ACCOUNT
-              </Link>
-            </div>
+        {/* 昔の暗いテーマの「Account Protocol / READY / ACCOUNT」の飾りをやめ、ふつうのパネルにする */}
+        <main className="mx-auto max-w-2xl px-4 pb-24 pt-6 md:px-10 md:pt-12 lg:pb-12">
+          <section className="ui-panel grid gap-4 p-5 text-center sm:p-7">
+            <h1 className="text-2xl font-black text-[var(--brand-text)]">{tx("ログインしています", "You're logged in")}</h1>
+            <p className="mx-auto max-w-2xl text-sm leading-6 text-[var(--brand-text-muted)]">
+              {tx("すでにログインしています。アカウント管理からプロフィール、認証、配信権限を確認してください。", "You are already logged in. Check your profile, verification, and streaming permissions from account settings.")}
+            </p>
+            <Link href="/account" className="ui-btn ui-btn-md ui-btn-primary mx-auto w-full sm:w-auto">
+              {tx("アカウント設定へ", "Account settings")}
+            </Link>
           </section>
         </main>
       </div>
@@ -145,50 +142,52 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--brand-bg-900)] text-[var(--brand-text)]">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
       <TopNav />
 
-      <main className="mx-auto max-w-2xl px-5 py-8 md:px-10 md:py-12">
-        <section className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[var(--brand-surface)] p-7">
-          <div className="relative z-10">
+      {/* 下の余白は、スマホの下固定ナビに最後の行が隠れないように */}
+      <main className="mx-auto max-w-2xl px-4 pb-24 pt-6 md:px-10 md:pt-12 lg:pb-12">
+        <section className="ui-panel p-5 sm:p-7">
+          <div>
             <div className="mb-6">
-              <h1 className="text-2xl font-semibold tracking-[0.02em]">{tx("ログイン", "Log in")}</h1>
+              <h1 className="text-2xl font-black">{tx("ログイン", "Log in")}</h1>
               <p className="mt-1 text-sm text-[var(--brand-text-muted)]">{tx("登録済みアカウントでログインします", "Log in with an existing account")}</p>
             </div>
 
             <form onSubmit={submit} className="space-y-4">
-              <InputLabel label="User ID / Email">
-                <TextInput type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
+              <InputLabel label={tx("メールアドレス", "Email")}>
+                <TextInput type="email" autoComplete="email" inputMode="email" value={email} onChange={(event) => setEmail(event.target.value)} />
               </InputLabel>
 
-              <InputLabel label="Password">
-                <TextInput type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+              <InputLabel label={tx("パスワード", "Password")}>
+                <TextInput type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} />
               </InputLabel>
 
-              {error ? <p className="rounded-xl border border-[var(--brand-accent)]/50 bg-[var(--brand-accent)]/8 px-4 py-3 text-sm text-[var(--brand-accent)]">{error}</p> : null}
+              {error ? <p className="rounded-xl border border-[var(--brand-accent)]/50 bg-[var(--brand-accent-soft)] px-4 py-3 text-sm text-[var(--brand-accent-ink)]">{error}</p> : null}
 
+              {/* 入力のすぐ下に、入力した内容で進むボタンを置く。Google は別の道なので下に（サインアップと同じ並び） */}
               <div className="grid gap-3">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="ui-btn ui-btn-md ui-btn-primary"
+                >
+                  {submitting ? tx("ログイン中…", "Logging in…") : tx("ログイン", "Log in")}
+                </button>
                 <button
                   type="button"
                   disabled={submitting}
                   onClick={handleGoogle}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-black/10 bg-white px-5 text-sm font-semibold tracking-[0.02em] text-[#202124] transition hover:bg-[#f8f9fa] disabled:opacity-50"
+                  className="ui-btn ui-btn-md ui-btn-ghost gap-2"
                 >
                   <GoogleLogo />
                   {tx("Googleでログイン", "Continue with Google")}
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="h-11 rounded-xl bg-[var(--brand-secondary)] px-5 text-sm font-bold tracking-[0.08em] text-black transition hover:brightness-110 disabled:opacity-60"
-                >
-                  {submitting ? "WORKING..." : "LOGIN"}
                 </button>
               </div>
 
               <p className="pt-1 text-sm text-[var(--brand-text-muted)]">
                 {tx("アカウントを持っていませんか？", "Don't have an account?")}{" "}
-                <Link href="/auth/signup" className="font-semibold text-[var(--brand-secondary)] underline-offset-2 hover:underline">
+                <Link href="/auth/signup" className="font-semibold text-[var(--brand-primary-ink)] underline-offset-2 hover:underline">
                   {tx("アカウントを新規作成", "Create an account")}
                 </Link>
               </p>

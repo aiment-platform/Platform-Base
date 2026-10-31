@@ -1,0 +1,461 @@
+/* ==========================================================================
+   /for-mates（日本のファン向け メイト（Mate）ページ）
+   イベントの案内ページとして組む。紫・淡紫・白の面を切り替え、
+   文章は短く、場面は挿絵（.sc-*）で見せる。
+   ========================================================================== */
+
+/* 区画の小見出し。大見出しの代わりに、小さく紫で置く */
+.sp-kicker {
+  margin: 0;
+  color: var(--brand-primary);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.sp-kicker--light {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.sp-h2 {
+  margin-top: 8px;
+  font-size: clamp(26px, calc(14px + 1.9vw), 40px);
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+/* 見出しの下の短い本文 */
+.sp-lead {
+  max-width: 34em;
+  color: var(--ld-ink-soft);
+  font-size: clamp(14px, calc(12px + 0.3vw), 16px);
+  font-weight: 700;
+  line-height: 2;
+}
+
+/* 淡い紫の面。白の区画と交互に */
+.sp-band {
+  padding: var(--ld-section-y) 0;
+  background: color-mix(in srgb, var(--brand-primary) 8%, #ffffff);
+}
+
+/* --- Hero の挿絵。少し大きめに ---------------------------------------------- */
+.sp-hero-art {
+  display: flex;
+  justify-content: center;
+}
+
+.sp-hero-art .sc-scene {
+  max-width: 600px;
+}
+
+/* --- 毎回の体験：文字と挿絵を左右に、段ごとに入れ替える ---------------------- */
+.sp-cando {
+  display: grid;
+  gap: clamp(40px, 6vw, 88px);
+  margin-top: var(--ld-head-gap);
+}
+
+.sp-cando__row {
+  display: grid;
+  align-items: center;
+  gap: clamp(24px, 4vw, 64px);
+}
+
+.sp-cando__label {
+  margin: 0;
+  color: var(--brand-primary);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+}
+
+.sp-cando__text > h2 {
+  margin-top: 10px;
+  font-size: clamp(26px, calc(14px + 1.9vw), 40px);
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.sp-cando__text > p:last-child {
+  margin-top: 14px;
+  max-width: 34em;
+  color: var(--ld-ink-soft);
+  font-size: clamp(14px, calc(12px + 0.25vw), 15.5px);
+  font-weight: 700;
+  line-height: 1.9;
+}
+
+.sp-cando__art {
+  display: flex;
+  justify-content: center;
+}
+
+@media (min-width: 1024px) {
+  .sp-cando__row {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  }
+
+  .sp-cando__row.is-flip .sp-cando__text {
+    order: 2;
+  }
+
+  .sp-cando__art {
+    justify-content: flex-end;
+  }
+
+  .sp-cando__row.is-flip .sp-cando__art {
+    justify-content: flex-start;
+  }
+}
+
+/* --- 1回の例：濃い紫の面に、ゲーム名を大きく。下に5つの場面 --------------------- */
+.sp-example {
+  padding: var(--ld-section-y) 0;
+  background: var(--brand-primary);
+  color: #ffffff;
+}
+
+.sp-example__game {
+  margin-top: 10px;
+  font-size: clamp(34px, calc(16px + 3.4vw), 72px);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.sp-example__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 0;
+  list-style: none;
+}
+
+.sp-example__meta > li {
+  padding: 6px 14px;
+  border-radius: var(--ui-radius-pill);
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+/* 5つの場面。狭い画面では横にスクロール、広い画面では5列 */
+.sp-moments {
+  display: flex;
+  gap: 16px;
+  margin: var(--ld-head-gap) 0 0;
+  padding: 0 24px;
+  overflow-x: auto;
+  list-style: none;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 24px;
+  scrollbar-width: none;
+}
+
+.sp-moments::-webkit-scrollbar {
+  display: none;
+}
+
+.sp-moment {
+  flex: 0 0 min(78vw, 360px);
+  scroll-snap-align: start;
+}
+
+.sp-moment__art .sc-scene {
+  max-width: none;
+}
+
+.sp-moment__time {
+  margin: 14px 0 0;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.85);
+  font-variant-numeric: tabular-nums;
+}
+
+/* できることの下：サポーターがいる意味 */
+.sp-why {
+  max-width: 760px;
+  margin: clamp(40px, 6vw, 88px) auto 0;
+  padding: clamp(22px, 3vw, 36px) clamp(20px, 3vw, 40px);
+  border-radius: var(--ui-radius-lg);
+  background: color-mix(in srgb, var(--brand-primary) 10%, #ffffff);
+}
+
+.sp-why > p {
+  margin: 0;
+  font-size: clamp(15px, calc(12px + 0.42vw), 18px);
+  font-weight: 700;
+  line-height: 2;
+}
+
+
+
+.sp-moment > h3 {
+  margin-top: 4px;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.sp-moment__body {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+@media (min-width: 1024px) {
+  .sp-moments {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    max-width: 1180px;
+    margin-inline: auto;
+    padding: 0 40px;
+    overflow: visible;
+  }
+
+  .sp-moment {
+    flex: none;
+  }
+}
+
+/* --- 3つのスタイル：帯の図 ----------------------------------------------------- */
+.sp-styles {
+  display: grid;
+  gap: 20px;
+}
+
+.sp-style {
+  padding: 22px 22px 20px;
+  border: 1px solid var(--ld-line);
+  border-radius: var(--ui-radius-lg);
+  background: var(--brand-surface);
+}
+
+.sp-style > h3 {
+  color: var(--brand-primary-dark);
+  font-size: clamp(19px, 1.7vw, 23px);
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.sp-style > p:last-child {
+  margin-top: 14px;
+  color: var(--ld-ink-soft);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.8;
+}
+
+.sp-style-bar {
+  margin-top: 18px;
+}
+
+.sp-style-bar__track {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 40px;
+}
+
+.sp-style-bar__seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 100%;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.sp-style-bar__seg.is-listen {
+  background: color-mix(in srgb, var(--brand-text) 7%, #ffffff);
+  color: var(--ld-ink-soft);
+}
+
+.sp-style-bar__seg.is-open {
+  background: var(--brand-primary);
+  color: #ffffff;
+}
+
+.sp-style-bar__seg svg,
+.sp-style-bar__dot svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sp-style-bar__dot {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand-primary);
+  color: #ffffff;
+}
+
+.sp-style-bar__ticks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  color: var(--ld-ink-soft);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+@media (min-width: 768px) {
+  .sp-styles {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* --- 「サンプル」バッジ（Membership カードで使用） ------------------------------ */
+.sp-slot__sample {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  padding: 3px 9px;
+  border-radius: var(--ui-radius-pill);
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+/* --- Membership カード ---------------------------------------------------------- */
+.sp-member {
+  width: 100%;
+  max-width: 420px;
+  overflow: hidden;
+  border: 1px solid var(--ld-line);
+  border-radius: var(--ui-radius-lg);
+  background: var(--brand-surface);
+}
+
+.sp-member__head {
+  position: relative;
+  padding: 22px 22px 20px;
+  color: #ffffff;
+  background: var(--brand-primary);
+}
+
+.sp-member__label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  opacity: 0.85;
+}
+
+.sp-member__head > h3 {
+  margin-top: 6px;
+  font-size: clamp(22px, 2vw, 26px);
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.sp-member__price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 12px 0 0;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.sp-member__tbd {
+  font-size: 22px;
+}
+
+.sp-member__per {
+  font-size: 13px;
+  font-weight: 800;
+  opacity: 0.85;
+}
+
+.sp-member__list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 20px 22px 0;
+  list-style: none;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.sp-member__list > li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sp-member__list svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--brand-primary);
+}
+
+.sp-member__note {
+  margin: 14px 22px 0;
+  color: var(--ld-ink-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sp-member > .ui-btn {
+  margin: 18px 22px 22px;
+  width: calc(100% - 44px);
+}
+
+/* --- 参加方法：大きな番号 ----------------------------------------------------- */
+.sp-steps {
+  display: grid;
+  gap: 28px;
+  margin: var(--ld-head-gap) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sp-steps__no {
+  display: block;
+  color: var(--brand-primary);
+  font-size: clamp(40px, 5vw, 64px);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.sp-steps h3 {
+  margin-top: 8px;
+  font-size: clamp(17px, 1.6vw, 22px);
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.sp-steps p {
+  margin-top: 6px;
+  color: var(--ld-ink-soft);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.8;
+}
+
+@media (min-width: 768px) {
+  .sp-steps {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+  }
+
+  .sp-steps--four {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

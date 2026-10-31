@@ -64,7 +64,7 @@ export default function AdminSupporterLotteryPage() {
   const cancelled = applications?.filter((a) => a.status === "cancelled") ?? [];
 
   return (
-    <div className="p-8">
+    <div className="px-4 py-6 sm:p-8">
       <h1 className="mb-1 text-2xl font-bold">サポーター抽選</h1>
       <p className="mb-8 text-sm text-[var(--brand-text-muted)]">申請者の視聴時間を加味した重み付き抽選</p>
 
@@ -77,7 +77,7 @@ export default function AdminSupporterLotteryPage() {
             onChange={(e) => setSessionId(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") void loadApplications(); }}
             placeholder="session-xxx"
-            className="w-full rounded-xl bg-black/[0.05] px-4 py-2.5 text-sm outline-none placeholder:text-[var(--brand-text-muted)]/60 focus:ring-2 focus:ring-[var(--brand-primary)]"
+            className="w-full rounded-xl border border-[var(--line)] bg-[var(--brand-surface)] px-4 py-2.5 text-base outline-none sm:text-sm placeholder:text-[var(--brand-text-muted)] focus:ring-2 focus:ring-[var(--brand-primary)]"
           />
         </div>
         <div>
@@ -86,7 +86,7 @@ export default function AdminSupporterLotteryPage() {
             value={hostUserId}
             onChange={(e) => setHostUserId(e.target.value)}
             placeholder="vtuber-xxx"
-            className="w-full rounded-xl bg-black/[0.05] px-4 py-2.5 text-sm outline-none placeholder:text-[var(--brand-text-muted)]/60 focus:ring-2 focus:ring-[var(--brand-primary)]"
+            className="w-full rounded-xl border border-[var(--line)] bg-[var(--brand-surface)] px-4 py-2.5 text-base outline-none sm:text-sm placeholder:text-[var(--brand-text-muted)] focus:ring-2 focus:ring-[var(--brand-primary)]"
           />
         </div>
         <div>
@@ -96,7 +96,7 @@ export default function AdminSupporterLotteryPage() {
             min={1}
             value={slots}
             onChange={(e) => setSlots(e.target.value)}
-            className="w-full rounded-xl bg-black/[0.05] px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
+            className="w-full rounded-xl border border-[var(--line)] bg-[var(--brand-surface)] px-4 py-2.5 text-base outline-none sm:text-sm focus:ring-2 focus:ring-[var(--brand-primary)]"
           />
         </div>
       </div>
@@ -121,7 +121,7 @@ export default function AdminSupporterLotteryPage() {
       </div>
 
       {error && (
-        <div className="mb-4 rounded-xl bg-[var(--brand-accent)]/15 px-4 py-3 text-sm text-[var(--brand-accent)]">{error}</div>
+        <div className="mb-4 rounded-xl bg-[var(--brand-accent-soft)] px-4 py-3 text-sm text-[var(--brand-accent-ink)]">{error}</div>
       )}
 
       {/* Lottery result banner */}
@@ -138,25 +138,25 @@ export default function AdminSupporterLotteryPage() {
       {applications !== null && (
         <div className="space-y-5">
           {[
-            { label: "当選", items: won, color: "bg-green-500/20 text-green-600" },
+            { label: "当選", items: won, color: "bg-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)]" },
             { label: "申請中（未抽選）", items: pending, color: "bg-[var(--brand-primary)]/15 text-[var(--brand-primary)]" },
-            { label: "落選", items: lost, color: "bg-black/[0.06] text-[var(--brand-text-muted)]" },
-            { label: "キャンセル", items: cancelled, color: "bg-black/[0.04] text-[var(--brand-text-muted)]/70" },
+            { label: "落選", items: lost, color: "bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)]" },
+            { label: "キャンセル", items: cancelled, color: "bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)] opacity-70" },
           ].map(({ label, items, color }) =>
             items.length > 0 ? (
               <section key={label}>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--brand-text-muted)]">{label} ({items.length})</p>
                 <div className="space-y-1.5">
                   {items.map((a) => (
-                    <div key={a.id} className="flex items-center gap-3 rounded-xl bg-black/[0.03] px-4 py-2.5">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/[0.06] text-sm font-bold">
+                    <div key={a.id} className="flex items-center gap-3 rounded-xl bg-[var(--brand-surface)] px-4 py-2.5">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand-bg-900)] text-sm font-bold">
                         {a.userName.charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold">{a.userName}</p>
-                        <p className="font-mono text-[10px] text-[var(--brand-text-muted)]">{a.userId}</p>
+                        <p className="truncate font-mono text-[11px] text-[var(--brand-text-muted)]">{a.userId}</p>
                       </div>
-                      <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${color}`}>
+                      <span className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-bold ${color}`}>
                         {label}
                       </span>
                     </div>
@@ -166,7 +166,7 @@ export default function AdminSupporterLotteryPage() {
             ) : null
           )}
           {applications.length === 0 && (
-            <p className="rounded-xl bg-black/[0.03] px-4 py-8 text-center text-sm text-[var(--brand-text-muted)]">
+            <p className="ui-panel px-4 py-8 text-center text-sm text-[var(--brand-text-muted)]">
               このセッションへの申請はありません。
             </p>
           )}

@@ -10,7 +10,10 @@ export type TokenParams = {
 };
 
 /**
- * VTuber (host) token: full publish + admin rights.
+ * VTuber (host) token: admin rights, but no media publishing from the browser.
+ * All audio/video comes from OBS via Ingress, so the browser's real camera and
+ * mic are excluded at the token level. canUpdateOwnMetadata lets the host set
+ * the "video hidden" attribute that viewers react to (apps/web/app/lib/hostVideo.ts).
  */
 export async function createVtuberToken(params: TokenParams): Promise<string> {
   const at = new AccessToken(params.apiKey, params.apiSecret, {
@@ -24,9 +27,10 @@ export async function createVtuberToken(params: TokenParams): Promise<string> {
     roomJoin: true,
     roomCreate: true,
     roomAdmin: true,
-    canPublish: true,
+    canPublish: false,
     canSubscribe: true,
     canPublishData: true,
+    canUpdateOwnMetadata: true,
   };
   at.addGrant(grant);
   return at.toJwt();
@@ -58,6 +62,8 @@ export async function createSpeakerToken(
 
 /**
  * Listener token: subscribe + data messages only.
+ * canPublish is false: an empty canPublishSources means "no restriction" in
+ * LiveKit, so it alone would still allow publishing a camera.
  */
 export async function createListenerToken(params: TokenParams): Promise<string> {
   const at = new AccessToken(params.apiKey, params.apiSecret, {
@@ -69,10 +75,9 @@ export async function createListenerToken(params: TokenParams): Promise<string> 
   const grant: VideoGrant = {
     room: params.roomName,
     roomJoin: true,
-    canPublish: true,
+    canPublish: false,
     canSubscribe: true,
     canPublishData: true,
-    canPublishSources: [],
   };
   at.addGrant(grant);
   return at.toJwt();

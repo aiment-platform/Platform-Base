@@ -504,11 +504,11 @@ export function OpenCueMiniPanelButton({ sessionId, onSendCue, className = "" }:
         onClick={() => {
           void openCueMiniPanel();
         }}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-secondary)] px-3 py-2.5 text-sm font-extrabold text-black transition hover:scale-[1.01] hover:brightness-95 focus-visible:outline-none"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-3 py-2.5 text-sm font-extrabold text-white transition hover:scale-[1.01] hover:brightness-95 focus-visible:outline-none"
       >
         英語アシスト
       </button>
-      {error ? <p className="rounded-lg bg-[var(--brand-accent)]/15 px-3 py-2 text-xs text-[var(--brand-accent)]">{error}</p> : null}
+      {error ? <p className="rounded-lg bg-[var(--brand-accent-soft)] px-3 py-2 text-xs text-[var(--brand-accent-ink)]">{error}</p> : null}
     </div>
   );
 }

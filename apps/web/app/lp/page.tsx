@@ -12,6 +12,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { ChatBubbleOvalLeftIcon } from "@heroicons/react/24/solid";
 
+import { SiteFooter } from "../components/landing/SiteFooter";
 import { WaveEdge } from "../components/landing/WaveEdge";
 import {
   BODY,
@@ -198,16 +199,16 @@ export default function LandingPage() {
     <main className="landing-page lp-page min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
       {/* ================= Hero ================= */}
       <section className="bg-[var(--brand-primary)] pb-[clamp(56px,7vw,96px)] text-white [--brand-logo-filter:brightness(0)_invert(1)]">
+        {/* ヘッダー行は本文の幅（max-w）に入れず、画面の左右端に沿わせる */}
+        <div className="flex items-center justify-between px-6 pt-7 lg:px-10">
+          <Link href="/" className="inline-flex items-center" aria-label="aiment home">
+            <Image src="/logo/aiment_logotype.svg" alt="aiment" width={600} height={200} priority className="h-9 w-auto" />
+          </Link>
+          <Link href="/for-vtubers" className="text-[13px] font-bold text-white/85 underline-offset-4 hover:underline">
+            For VTubers
+          </Link>
+        </div>
         <div className="mx-auto w-full max-w-[1180px] px-6 lg:px-10">
-          <div className="flex items-center justify-between pt-7">
-            <Link href="/" className="inline-flex items-center" aria-label="aiment home">
-              <Image src="/logo/aiment_logotype.svg" alt="aiment" width={600} height={200} priority className="h-9 w-auto" />
-            </Link>
-            <Link href="/for-vtubers" className="text-[13px] font-bold text-white/85 underline-offset-4 hover:underline">
-              For VTubers
-            </Link>
-          </div>
-
           <div className="mt-[clamp(40px,6vw,88px)] grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.92fr)]">
             <div>
               <p className="flex flex-wrap items-center gap-3 text-sm font-bold tracking-[0.2em] text-white/85">
@@ -279,9 +280,9 @@ export default function LandingPage() {
             {STEPS.map((step) => (
               <div key={step.no} className="grid items-center gap-10 lg:grid-cols-2">
                 <div>
-                  <h3 className="flex flex-wrap items-baseline gap-x-5 gap-y-2">
+                  <h3 className="flex items-baseline gap-x-3 sm:gap-x-5">
                     <span className="text-[clamp(46px,6vw,86px)] font-medium leading-none tracking-tight">{step.no}</span>
-                    <span className="text-[clamp(24px,calc(14px_+_1.7vw),38px)] font-extrabold leading-tight">{step.title}</span>
+                    <span className="min-w-0 text-[clamp(24px,calc(14px_+_1.7vw),38px)] font-extrabold leading-tight">{step.title}</span>
                   </h3>
                   <Lines lines={step.body} className={`mt-[var(--ld-head-gap)] ${BODY}`} />
                 </div>
@@ -414,27 +415,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ================= Footer ================= */}
-      <footer className="bg-[var(--brand-primary-dark)] text-white [--brand-logo-filter:brightness(0)_invert(1)]">
-        <div className="mx-auto flex w-full max-w-[1180px] flex-col items-center gap-6 px-6 py-8 sm:flex-row sm:justify-between lg:px-10">
-          <Image src="/logo/aiment_logotype.svg" alt="aiment" width={600} height={200} className="h-7 w-auto" />
-          <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13px] font-bold text-white/85" aria-label="Footer">
-            <Link href="/for-vtubers" className="hover:underline">
-              For VTubers
-            </Link>
-            <Link href="/terms" className="hover:underline">
-              Terms
-            </Link>
-            <Link href="/privacy" className="hover:underline">
-              Privacy
-            </Link>
-            <a href={X_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 hover:underline">
-              <XMark className="h-[13px] w-[13px]" />
-              {X_HANDLE}
-            </a>
-          </nav>
-        </div>
-      </footer>
+      <SiteFooter />
     </main>
   );
 }

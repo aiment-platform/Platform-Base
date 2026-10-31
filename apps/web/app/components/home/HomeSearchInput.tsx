@@ -100,7 +100,7 @@ export function HomeSearchInput({ searchQuery, onSearchChange, className = "" }:
         onFocus={() => {
           if (vtubers.length > 0) setOpen(true);
         }}
-        className="w-full rounded-lg bg-[var(--brand-bg-900)] py-2 pl-9 pr-8 text-sm text-[var(--brand-text)] placeholder-[var(--brand-text-muted)] transition-all outline-none ring-1 ring-white/5 focus:ring-[var(--brand-primary)]/60"
+        className="w-full rounded-lg bg-[var(--brand-bg-900)] h-10 pl-9 pr-9 text-base text-[var(--brand-text)] placeholder-[var(--brand-text-muted)] transition-all outline-none ring-1 ring-transparent focus:ring-[var(--brand-primary)]/60 sm:h-9 sm:text-sm"
       />
       {searchQuery && (
         <button
@@ -109,7 +109,7 @@ export function HomeSearchInput({ searchQuery, onSearchChange, className = "" }:
             onSearchChange("");
             setOpen(false);
           }}
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
+          className="absolute right-0.5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
           aria-label={tx("検索をクリア", "Clear search")}
         >
           <XMarkIcon className="h-4 w-4" aria-hidden />
@@ -117,7 +117,7 @@ export function HomeSearchInput({ searchQuery, onSearchChange, className = "" }:
       )}
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-full overflow-hidden rounded-xl bg-[var(--brand-surface)] shadow-lg shadow-black/30 ring-1 ring-white/5">
+        <div className="ui-float absolute left-0 top-full z-50 mt-1 w-full overflow-hidden rounded-xl bg-[var(--brand-surface)]">
           {searching && (
             <p className="px-4 py-2.5 text-xs text-[var(--brand-text-muted)]">
               {tx("検索中...", "Searching...")}
@@ -150,7 +150,7 @@ export function HomeSearchInput({ searchQuery, onSearchChange, className = "" }:
               <span className="min-w-0">
                 <span className="block truncate text-sm font-semibold">{v.channelName ?? v.name}</span>
                 {v.channelName && v.channelName !== v.name && (
-                  <span className="block truncate text-[10px] text-[var(--brand-text-muted)]">{v.name}</span>
+                  <span className="block truncate text-[11px] text-[var(--brand-text-muted)]">{v.name}</span>
                 )}
               </span>
             </button>

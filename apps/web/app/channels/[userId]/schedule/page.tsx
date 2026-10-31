@@ -9,6 +9,7 @@ import type { StreamSession } from "../../../lib/streamSessions";
 import { ChannelHero } from "../../components/ChannelHero";
 import { ChannelTicketPanel } from "../../components/ChannelTicketPanel";
 import { MultiDayScheduleGrid, type MultiDayEvent } from "../../components/MultiDayScheduleGrid";
+import { SiteFooter } from "../../../components/landing/SiteFooter";
 
 type ChannelInfo = {
   userId: string;
@@ -169,7 +170,7 @@ export default function ChannelSchedulePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--brand-bg-900)] text-[var(--brand-text)]">
+      <div className="min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
         <TopNav />
         <main className="mx-auto max-w-[1200px] px-6 py-10">
           <p className="text-sm text-[var(--brand-text-muted)]">{tx("スケジュールを読み込み中...", "Loading schedule...")}</p>
@@ -180,10 +181,10 @@ export default function ChannelSchedulePage() {
 
   if (error || !channel) {
     return (
-      <div className="min-h-screen bg-[var(--brand-bg-900)] text-[var(--brand-text)]">
+      <div className="min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
         <TopNav />
         <main className="mx-auto flex max-w-[1200px] flex-col items-start gap-3 px-6 py-10">
-          <p className="text-sm text-[var(--brand-accent)]">{error ?? tx("チャンネルが見つかりません。", "Channel not found.")}</p>
+          <p className="text-sm text-[var(--brand-accent-ink)]">{error ?? tx("チャンネルが見つかりません。", "Channel not found.")}</p>
           <button onClick={() => router.push("/")} className="rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white">
             {tx("ホームに戻る", "Back to Home")}
           </button>
@@ -193,8 +194,9 @@ export default function ChannelSchedulePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--brand-bg-900)] text-[var(--brand-text)]">
+    <div className="flex min-h-screen flex-col bg-[var(--bg)] text-[var(--brand-text)]">
       <TopNav />
+      <div className="flex-1">
       <ChannelHero
         channelName={channel.channelName}
         userId={channel.userId}
@@ -209,7 +211,7 @@ export default function ChannelSchedulePage() {
           noBio: tx("紹介文は未設定です。", "No bio yet."),
         }}
       />
-      <main className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6">
+      <main className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8">
         <div className="mb-5">
           <ChannelTicketPanel
             targetUserId={channel.userId}
@@ -218,42 +220,52 @@ export default function ChannelSchedulePage() {
           />
         </div>
 
-        <section className="mb-5 rounded-2xl bg-[var(--brand-surface)] p-4 shadow-lg shadow-black/20">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="inline-flex items-center gap-1 rounded-xl bg-[var(--brand-bg-900)] p-1">
+        {/* スマホでは「期間の切替＋今日」「日付送り」「時間帯」を1段ずつに並べる。
+            1行に詰めると日付送りが折り返して、ボタンが潰れていた。 */}
+        <section className="mb-5 rounded-2xl bg-[var(--brand-surface)] p-3 sm:p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex w-full items-center gap-2 sm:w-auto">
+              <div className="ui-segment" role="group" aria-label={tx("表示期間", "Range")}>
+                <button
+                  type="button"
+                  aria-pressed={rangeMode === "3d"}
+                  onClick={() => setRangeMode("3d")}
+                  className="ui-segment__option h-9 whitespace-nowrap px-2.5 sm:px-3"
+                >
+                  {tx("3日", "3 days")}
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={rangeMode === "week"}
+                  onClick={() => setRangeMode("week")}
+                  className="ui-segment__option h-9 whitespace-nowrap px-2.5 sm:px-3"
+                >
+                  {tx("1週間", "1 week")}
+                </button>
+              </div>
               <button
                 type="button"
-                onClick={() => setRangeMode("3d")}
-                className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${
-                  rangeMode === "3d" ? "bg-[var(--brand-primary)] text-white" : "text-[var(--brand-text-muted)]"
-                }`}
+                onClick={() => setBaseDate(todayYmd())}
+                className="ml-auto inline-flex h-10 shrink-0 items-center gap-1 rounded-lg bg-[var(--brand-bg-900)] px-3 text-sm font-semibold text-[var(--brand-text-muted)] hover:text-[var(--brand-text)] sm:order-last sm:ml-0"
               >
-                {tx("3日", "3 days")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setRangeMode("week")}
-                className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${
-                  rangeMode === "week" ? "bg-[var(--brand-primary)] text-white" : "text-[var(--brand-text-muted)]"
-                }`}
-              >
-                {tx("1週間", "1 week")}
+                <ArrowPathIcon className="h-4 w-4" aria-hidden />
+                <span>{tx("本日に戻る", "Back to Today")}</span>
               </button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex w-full items-center gap-2 sm:w-auto">
               <button
                 type="button"
                 onClick={() => handleMoveWindow(-1)}
                 aria-label={tx("前の期間", "Previous range")}
-                className="rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-[var(--brand-text-muted)]"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)]"
               >
                 <ChevronLeftIcon className="h-5 w-5" aria-hidden />
               </button>
               <select
                 value={effectiveBaseDate}
                 onChange={(event) => setBaseDate(event.target.value)}
-                className="rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-sm text-[var(--brand-text)] outline-none"
+                className="h-10 min-w-0 flex-1 rounded-lg bg-[var(--brand-bg-900)] px-3 text-base text-[var(--brand-text)] outline-none sm:flex-none sm:text-sm"
               >
                 {(dateOptions.length ? dateOptions : [todayYmd()]).map((date) => (
                   <option key={date} value={date}>
@@ -265,21 +277,13 @@ export default function ChannelSchedulePage() {
                 type="button"
                 onClick={() => handleMoveWindow(1)}
                 aria-label={tx("次の期間", "Next range")}
-                className="rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-[var(--brand-text-muted)]"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)]"
               >
                 <ChevronRightIcon className="h-5 w-5" aria-hidden />
               </button>
-              <button
-                type="button"
-                onClick={() => setBaseDate(todayYmd())}
-                className="inline-flex items-center gap-1 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-sm font-semibold text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
-              >
-                <ArrowPathIcon className="h-4 w-4" aria-hidden />
-                <span>{tx("本日に戻る", "Back to Today")}</span>
-              </button>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:ml-auto">
               <label className="flex items-center gap-2 text-sm text-[var(--brand-text-muted)]">
                 {tx("開始", "Start")}
                 <select
@@ -289,7 +293,7 @@ export default function ChannelSchedulePage() {
                     setStartHour(value);
                     if (value >= endHour) setEndHour(Math.min(24, value + 1));
                   }}
-                  className="rounded-md bg-[var(--brand-bg-900)] px-2 py-1 text-sm text-[var(--brand-text)] outline-none"
+                  className="h-10 rounded-md bg-[var(--brand-bg-900)] px-2 text-base text-[var(--brand-text)] outline-none sm:h-9 sm:text-sm"
                 >
                   {Array.from({ length: 24 }, (_, i) => i).map((hour) => (
                     <option key={hour} value={hour}>
@@ -307,7 +311,7 @@ export default function ChannelSchedulePage() {
                     setEndHour(value);
                     if (value <= startHour) setStartHour(Math.max(0, value - 1));
                   }}
-                  className="rounded-md bg-[var(--brand-bg-900)] px-2 py-1 text-sm text-[var(--brand-text)] outline-none"
+                  className="h-10 rounded-md bg-[var(--brand-bg-900)] px-2 text-base text-[var(--brand-text)] outline-none sm:h-9 sm:text-sm"
                 >
                   {Array.from({ length: 24 }, (_, i) => i + 1).map((hour) => (
                     <option key={hour} value={hour}>
@@ -316,7 +320,7 @@ export default function ChannelSchedulePage() {
                   ))}
                 </select>
               </label>
-              <label className="flex items-center gap-2 rounded-md bg-[var(--brand-bg-900)] px-2 py-1.5 text-sm text-[var(--brand-text-muted)]">
+              <label className="flex h-10 items-center gap-2 rounded-md bg-[var(--brand-bg-900)] px-3 text-sm text-[var(--brand-text-muted)]">
                 <input type="checkbox" checked={onlyAvailable} onChange={(event) => setOnlyAvailable(event.target.checked)} />
                 {tx("予約可能のみ", "Available only")}
               </label>
@@ -326,6 +330,8 @@ export default function ChannelSchedulePage() {
 
         <MultiDayScheduleGrid dates={visibleDates} events={events} startHour={startHour} endHour={endHour} />
       </main>
+      </div>
+      <SiteFooter />
     </div>
   );
 }

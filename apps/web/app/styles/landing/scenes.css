@@ -1,0 +1,305 @@
+/* ==========================================================================
+   挿絵（このページ固有の配置）
+   ========================================================================== */
+/* Learner / Supporter の札。Supporter は紫、Learner は黄（上の文字は本文の色） */
+.sc-you--learner .sc-you__tag {
+  background: var(--brand-warning);
+  color: var(--brand-text);
+}
+
+.sc-you--learner .sc-row {
+  border-color: color-mix(in srgb, var(--brand-warning) 60%, transparent);
+}
+
+/* マイクの札。ON は紫、OFF は灰色に斜線 */
+.sc-you.has-mic .sc-row {
+  padding-right: 7cqw;
+}
+
+.sc-mic {
+  position: absolute;
+  right: 1.4cqw;
+  top: 50%;
+  display: grid;
+  width: 4.4cqw;
+  height: 4.4cqw;
+  place-items: center;
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+.sc-mic > svg {
+  width: 2.6cqw;
+  height: 2.6cqw;
+}
+
+.sc-mic--on {
+  background: var(--brand-primary);
+  color: #ffffff;
+}
+
+.sc-mic--off {
+  background: color-mix(in srgb, var(--brand-text) 10%, #ffffff);
+  color: var(--ld-ink-soft);
+}
+
+.sc-mic--off::after {
+  position: absolute;
+  width: 0.5cqw;
+  height: 3.6cqw;
+  content: "";
+  border-radius: 1cqw;
+  background: var(--ld-ink-soft);
+  transform: rotate(45deg);
+}
+
+/* 切り替わる札は同じ場所に重ねる（OFF が消え、ON が出る） */
+.sc-mic.sc-out-40,
+.sc-mic.sc-in-40 {
+  animation-fill-mode: both;
+}
+
+/* 配信の枠の右上に乗せる札（時刻など） */
+.sc-tilechip {
+  position: absolute;
+  right: 45cqw;
+  top: 9.4cqw;
+  background: #ffffff;
+  font-variant-numeric: tabular-nums;
+}
+
+.sc-tilechip--mix {
+  background: var(--brand-primary);
+  color: #ffffff;
+  letter-spacing: 0.08em;
+}
+
+/* Hero：配信の枠の下に参加者4人、右にチャット */
+.sc-scene--hero .sc-tile {
+  top: 4cqw;
+  width: 46cqw;
+}
+
+.sc-list.sc-hero__roster {
+  left: 5cqw;
+  right: auto;
+  top: 30cqw;
+  width: 46cqw;
+  gap: 1cqw;
+}
+
+.sc-scene--hero .sc-row,
+.sc-scene--hero .sc-slot {
+  height: 6.2cqw;
+}
+
+.sc-scene--hero .sc-you__tag {
+  top: -1.2cqw;
+  font-size: 1.9cqw;
+}
+
+.sc-hero__host {
+  left: 8cqw;
+  top: 22cqw;
+  z-index: 2;
+}
+
+.sc-scene--hero .sc-schat {
+  right: 4cqw;
+  top: 4cqw;
+  bottom: 4cqw;
+  width: 43cqw;
+}
+
+/* 開始5分前：Supporter 3人、全員マイクON */
+.sc-gather__b1 { left: 8cqw; top: 41cqw; }
+.sc-gather__b2 { left: 14cqw; top: 50cqw; }
+.sc-gather__b3 { left: 22cqw; top: 41cqw; }
+
+/* 本編スタート：6人がそろう */
+.sc-scene--start .sc-list {
+  top: 4cqw;
+  gap: 1cqw;
+}
+
+.sc-scene--start .sc-row,
+.sc-scene--start .sc-slot {
+  height: 6.2cqw;
+}
+
+.sc-scene--start .sc-you__tag {
+  top: -1.2cqw;
+  font-size: 1.9cqw;
+}
+
+.sc-start__hello {
+  left: 10cqw;
+  top: 41cqw;
+}
+
+/* Learner中心／バックアップ：枠の下に参加者2人、右にチャット */
+.sc-scene--watch .sc-tile,
+.sc-scene--backup .sc-tile {
+  top: 5cqw;
+  width: 42cqw;
+}
+
+.sc-list.sc-watch__roster,
+.sc-list.sc-backup__roster {
+  left: 5cqw;
+  right: auto;
+  top: 32cqw;
+  width: 42cqw;
+  gap: 1.4cqw;
+}
+
+.sc-scene--watch .sc-row,
+.sc-scene--backup .sc-row {
+  height: 8cqw;
+}
+
+
+.sc-scene--watch .sc-schat,
+.sc-scene--backup .sc-schat {
+  right: 4cqw;
+  top: 5cqw;
+  bottom: 5cqw;
+  width: 46cqw;
+}
+
+.sc-watch__reply,
+.sc-backup__reply {
+  left: 12cqw;
+  top: 22cqw;
+  z-index: 2;
+}
+
+/* 枠が 42cqw 幅なので、札の右端もそれに合わせる */
+.sc-scene--watch .sc-tilechip,
+.sc-scene--backup .sc-tilechip {
+  right: 55cqw;
+}
+
+/* Native Mix：40% で Supporter のマイクが開く */
+.sc-scene--mix .sc-list {
+  top: 6cqw;
+}
+
+.sc-mix__b1 { left: 8cqw; top: 41cqw; }
+.sc-mix__b2 { left: 16cqw; top: 50cqw; border-color: var(--brand-primary); }
+.sc-mix__b3 { left: 30cqw; top: 41cqw; }
+
+/* 終了：吹き出しが順に */
+.sc-end__b1 { left: 8cqw; top: 41cqw; }
+.sc-end__b2 { left: 60cqw; top: 8cqw; }
+.sc-end__b3 { left: 64cqw; top: 22cqw; }
+.sc-end__b4 { left: 58cqw; top: 36cqw; }
+
+/* --- 共通：参加者一覧のチャット欄 --------------------------------------------- */
+.sc-chat-main {
+  position: absolute;
+  left: 5cqw;
+  top: 34cqw;
+  width: 42cqw;
+}
+
+.sc-schat {
+  position: absolute;
+  right: 4cqw;
+  top: 5cqw;
+  bottom: 5cqw;
+  display: flex;
+  width: 47cqw;
+  flex-direction: column;
+  padding: 2.2cqw;
+  border: 1px solid var(--ld-line);
+  border-radius: 3cqw;
+  background: #ffffff;
+}
+
+.sc-schat__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 2.6cqw;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.sc-schat__list {
+  display: grid;
+  gap: 1.2cqw;
+  margin: 2cqw 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sc-schat__msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.6cqw;
+  padding: 1.2cqw 1.6cqw;
+  border-radius: 2cqw;
+  background: color-mix(in srgb, var(--brand-primary) 7%, #ffffff);
+  font-size: 2.35cqw;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.sc-schat__who {
+  display: grid;
+  width: 4.4cqw;
+  height: 4.4cqw;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--brand-primary) 16%, #ffffff);
+  color: var(--brand-primary);
+  font-size: 2cqw;
+  font-weight: 800;
+}
+
+.sc-schat__text {
+  padding-top: 0.3cqw;
+}
+
+.sc-schat__msg--lrn {
+  background: var(--brand-warning-soft);
+}
+
+.sc-schat__msg--lrn > .sc-schat__who {
+  background: color-mix(in srgb, var(--brand-warning) 35%, #ffffff);
+  color: var(--brand-text);
+}
+
+.sc-schat__input {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  height: 6cqw;
+  padding: 0 2cqw;
+  border: 1px solid var(--ld-line);
+  border-radius: var(--ui-radius-pill);
+}
+
+.sc-schat__input > .sc-bar {
+  display: block;
+  width: 55%;
+  height: 1.8cqw;
+  border-radius: var(--ui-radius-pill);
+  background: var(--placeholder);
+}
+
+.sc-schat__foot {
+  display: flex;
+  align-items: center;
+  gap: 1.6cqw;
+  margin-top: auto;
+}
+
+/* 40% で消える（マイクの札の切り替えに使う） */
+@keyframes sc-out-40 {
+  0%, 40% { opacity: 1; }
+  43%, 100% { opacity: 0; }
+}
+.sc-out-40 { animation-name: sc-out-40; }

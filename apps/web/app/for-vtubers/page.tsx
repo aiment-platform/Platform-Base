@@ -27,6 +27,7 @@ import {
 } from "../components/landing/primitives";
 import { LevelHelpButton, LevelHelpPanel } from "../components/landing/LevelHelp";
 import { SceneCreate, SceneLive, SceneWelcome } from "./StepScenes";
+import { SiteFooter } from "../components/landing/SiteFooter";
 
 /**
  * VTuber向けのCTAページ。
@@ -303,12 +304,15 @@ function CtaButtons({ className = "" }: { className?: string }) {
 
 
 export default function ForVTubersPage() {
+  // 表示言語の設定で <html lang> が en に切り替わっても、見出しを日本語の文節で
+  // 改行させる（word-break: auto-phrase は lang="ja" のときだけ効く）ため明示する
   return (
-    <main className="landing-page min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
+    <main lang="ja" className="landing-page min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
       {/* ================= ヒーロー ================= */}
       <section className="bg-[var(--brand-primary)] pb-[clamp(56px,7vw,96px)] text-white [--brand-logo-filter:brightness(0)_invert(1)]">
-        <div className="mx-auto w-full max-w-[1180px] px-6 lg:px-10">
-          <Link href="/" className="inline-flex items-center pt-7" aria-label="aiment ホームへ">
+        {/* ヘッダー行は本文の幅（max-w）に入れず、画面の左端に沿わせる */}
+        <div className="px-6 pt-7 lg:px-10">
+          <Link href="/" className="inline-flex items-center" aria-label="aiment ホームへ">
             <Image
               src="/logo/aiment_logotype.svg"
               alt="aiment"
@@ -318,6 +322,8 @@ export default function ForVTubersPage() {
               className="h-9 w-auto"
             />
           </Link>
+        </div>
+        <div className="mx-auto w-full max-w-[1180px] px-6 lg:px-10">
 
           <p className="mt-10 text-center text-sm font-bold tracking-[0.2em] text-white/85">For VTubers</p>
           <p className="mt-2 text-center text-[clamp(24px,3.2vw,40px)] font-extrabold leading-tight">
@@ -341,7 +347,7 @@ export default function ForVTubersPage() {
         </div>
       </section>
 
-      {/* 紫 → クリーム。濃い波の裏から淡い波がのぞく。 */}
+      {/* 紫 → 背景色。濃い波の裏から淡い波がのぞく。 */}
       <WaveEdge />
 
       {/* ================= aimentって何？ ================= */}
@@ -378,11 +384,11 @@ export default function ForVTubersPage() {
           {STEPS.map((step) => (
             <div key={step.no} className="grid items-center gap-10 lg:grid-cols-2">
               <div>
-                <h3 className="flex flex-wrap items-baseline gap-x-5 gap-y-2">
+                <h3 className="flex items-baseline gap-x-3 sm:gap-x-5">
                   <span className="text-[clamp(46px,6vw,86px)] font-medium leading-none tracking-tight">
                     {step.no}
                   </span>
-                  <span className="text-[clamp(24px,calc(14px_+_1.7vw),38px)] font-extrabold leading-tight">
+                  <span className="min-w-0 text-[clamp(24px,calc(14px_+_1.7vw),38px)] font-extrabold leading-tight">
                     {step.title}
                   </span>
                 </h3>
@@ -543,7 +549,7 @@ export default function ForVTubersPage() {
         </div>
       </Section>
 
-      {/* クリーム → 紫。ヒーロー側の波を上下反転して対にする。 */}
+      {/* 背景色 → 紫。ヒーロー側の波を上下反転して対にする。 */}
       <WaveEdge flip />
 
       {/* ================= 末尾のCTA =================
@@ -578,6 +584,8 @@ export default function ForVTubersPage() {
           </div>
         </div>
       </section>
+
+      <SiteFooter />
     </main>
   );
 }

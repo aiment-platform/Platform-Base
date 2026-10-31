@@ -58,7 +58,7 @@ export function TroubleshootPanel({ sessionId, collect }: Props) {
   }, [collect, sessionId, note, tx]);
 
   return (
-    <div className="rounded-2xl bg-[var(--brand-surface)] p-3 shadow-lg shadow-black/25">
+    <div className="rounded-2xl bg-[var(--brand-surface)] p-3">
       <button
         type="button"
         onClick={() => {
@@ -98,12 +98,12 @@ export function TroubleshootPanel({ sessionId, collect }: Props) {
                   className="flex items-start gap-2 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-xs"
                 >
                   {c.ok ? (
-                    <CheckCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
+                    <CheckCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-primary-ink)]" />
                   ) : (
-                    <ExclamationTriangleIcon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-accent)]" />
+                    <ExclamationTriangleIcon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-accent-ink)]" />
                   )}
                   <span className="min-w-0">
-                    <span className={c.ok ? "text-[var(--brand-text)]" : "text-[var(--brand-accent)]"}>{c.label}</span>
+                    <span className={c.ok ? "text-[var(--brand-text)]" : "text-[var(--brand-accent-ink)]"}>{c.label}</span>
                     {!c.ok && c.hint && (
                       <span className="mt-0.5 block text-[var(--brand-text-muted)]">{c.hint}</span>
                     )}
@@ -121,8 +121,8 @@ export function TroubleshootPanel({ sessionId, collect }: Props) {
             className="w-full rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-xs text-[var(--brand-text)] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
           />
 
-          {error && <p className="text-xs text-[var(--brand-accent)]">{error}</p>}
-          {sent && <p className="text-xs text-green-400">{tx("運営に送信しました。", "Sent to the operators.")}</p>}
+          {error && <p className="text-xs text-[var(--brand-accent-ink)]">{error}</p>}
+          {sent && <p className="text-xs text-[var(--brand-primary-ink)]">{tx("運営に送信しました。", "Sent to the operators.")}</p>}
 
           <button
             type="button"
