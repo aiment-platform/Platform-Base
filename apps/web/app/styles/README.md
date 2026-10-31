@@ -10,6 +10,7 @@
 | `session-card.css` | 配信枠カード（フォルダ形） | カードの見た目を変えたい |
 | `surfaces.css` | 面：`.ui-panel` / `.ui-sunken` / `.ui-float` / `.ui-modal`、幕の `.ui-scrim` | パネルや浮く面の作りを変えたい |
 | `controls.css` | 入力欄、ボタン `.ui-btn`、操作ボタン `.ui-ctl`、切替、メニュー行、タイル | ボタンの見た目を変えたい |
+| `v04.css` | UI ver0.4（試作）の差分。`<html data-ui="0.4">` のときだけ効く。見本は `/dev/design-guideline#ver0.4` | 0.4 の見た目を変えたい |
 | `legacy-v02.css` | 旧 ver0.2 の見本（ガイドページの旧タブ専用） | 基本は触らない |
 | `transitions.css` | 画面遷移の演出（全画面ワイプ・画面下の帯） | 遷移の見た目を変えたい |
 | `landing/*.css` | LP（`/lp`, `/for-vtubers`, `/for-mates`）固有の部分と挿絵 | LP のレイアウトを変えたい |

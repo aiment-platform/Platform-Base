@@ -4,6 +4,7 @@
  * /dev/design-guideline — デザインルールの見本帳。
  *
  *   GuidelineV031.tsx   … 現行（ver0.31）。新しい画面はこれに従う
+ *   GuidelineV04.tsx    … 試作（ver0.4）。0.31 からの差分だけを並べる
  *   GuidelineLegacy.tsx … 旧版（ver0.3 / ver0.2）。参考として残しているだけ
  *   Moodboard.tsx       … ブランドの方向性を比べるムードボード（未決定の案）
  *   shared.tsx          … 両方で使う見本部品
@@ -15,10 +16,12 @@ import { useSyncExternalStore } from "react";
 import { TopNav } from "../../components/home/TopNav";
 import { GuidelineV02Legacy, GuidelineV03Legacy } from "./GuidelineLegacy";
 import { GuidelineV031 } from "./GuidelineV031";
+import { GuidelineV04 } from "./GuidelineV04";
 import { Moodboard } from "./Moodboard";
 
 const VERSIONS = [
   { id: "0.31", label: "ver0.31（現行）" },
+  { id: "0.4", label: "ver0.4（試作）" },
   { id: "0.3", label: "ver0.3（旧）" },
   { id: "0.2", label: "ver0.2（旧）" },
   { id: "mood", label: "ムードボード" },
@@ -72,6 +75,7 @@ export default function DesignGuidelinePage() {
         </header>
 
         {version === "0.31" ? <GuidelineV031 /> : null}
+        {version === "0.4" ? <GuidelineV04 /> : null}
         {version === "0.3" ? <GuidelineV03Legacy /> : null}
         {version === "0.2" ? <GuidelineV02Legacy /> : null}
         {version === "mood" ? <Moodboard /> : null}
