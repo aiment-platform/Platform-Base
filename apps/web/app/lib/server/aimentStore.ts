@@ -389,139 +389,143 @@ function ensureSchema(): Promise<void> {
 
 async function initSchema() {
   const db = getDb();
-  await db`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      role TEXT NOT NULL,
-      email TEXT NOT NULL,
-      auth_provider TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      last_login_at TEXT,
-      channel_name TEXT,
-      bio TEXT,
-      avatar_url TEXT,
-      header_url TEXT,
-      phone_number TEXT,
-      email_verified_at TEXT,
-      phone_verified_at TEXT,
-      terms_accepted_at TEXT,
-      privacy_accepted_at TEXT,
-      password_hash TEXT,
-      pending_email_code TEXT,
-      pending_phone_code TEXT,
-      verification_requested_at TEXT
-    )
-  `;
-  await db`ALTER TABLE users ADD COLUMN IF NOT EXISTS header_url TEXT`;
-  await db`ALTER TABLE users ADD COLUMN IF NOT EXISTS country TEXT`;
-  await db`ALTER TABLE users ADD COLUMN IF NOT EXISTS language_level TEXT`;
-  await db`ALTER TABLE users ADD COLUMN IF NOT EXISTS sns_twitter TEXT`;
-  await db`ALTER TABLE users ADD COLUMN IF NOT EXISTS banned_at TEXT`;
-  await db`ALTER TABLE users ADD COLUMN IF NOT EXISTS sns_youtube TEXT`;
-  // チャンネルページのプロフィール欄（[{label, value}] を JSON の文字列で持つ）
-  await db`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_items TEXT`;
-  await db`
-    CREATE TABLE IF NOT EXISTS stream_sessions (
-      session_id TEXT PRIMARY KEY,
-      host_user_id TEXT NOT NULL,
-      title TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'prelive',
-      created_at TEXT NOT NULL,
-      starts_at TEXT NOT NULL,
-      description TEXT NOT NULL,
-      category TEXT NOT NULL,
-      thumbnail TEXT NOT NULL,
-      host_name TEXT NOT NULL,
-      participation_type TEXT NOT NULL DEFAULT 'First-come',
-      required_plan TEXT NOT NULL DEFAULT 'free',
-      reservation_required BOOLEAN NOT NULL DEFAULT FALSE,
-      slots_total INTEGER NOT NULL DEFAULT 5,
-      slots_left INTEGER NOT NULL DEFAULT 5,
-      speaker_slots_total INTEGER NOT NULL DEFAULT 5,
-      speaker_slots_left INTEGER NOT NULL DEFAULT 5,
-      speaker_required_plan TEXT NOT NULL DEFAULT 'free',
-      preferred_video_device_id TEXT,
-      preferred_video_label TEXT,
-      ingress_id TEXT,
-      stream_key TEXT,
-      rtmp_url TEXT
-    )
-  `;
-  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS ingress_id TEXT`;
-  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS stream_key TEXT`;
-  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS rtmp_url TEXT`;
-  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS planned_duration_min INTEGER`;
-  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS japanese_level INTEGER`;
-  // Columns added to CREATE TABLE after initial deploy — must also be here for existing DBs
-  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT ''`;
-  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT ''`;
-  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS thumbnail TEXT NOT NULL DEFAULT '/image/thumbnail/thumbnail_5.png'`;
-  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS host_name TEXT NOT NULL DEFAULT ''`;
-  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS participation_type TEXT NOT NULL DEFAULT 'First-come'`;
-  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS required_plan TEXT NOT NULL DEFAULT 'free'`;
-  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS reservation_required BOOLEAN NOT NULL DEFAULT FALSE`;
-  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS slots_total INTEGER NOT NULL DEFAULT 5`;
-  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS slots_left INTEGER NOT NULL DEFAULT 5`;
-  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS speaker_slots_total INTEGER NOT NULL DEFAULT 5`;
-  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS speaker_slots_left INTEGER NOT NULL DEFAULT 5`;
-  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS speaker_required_plan TEXT NOT NULL DEFAULT 'free'`;
-  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS preferred_video_device_id TEXT`;
-  await db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS preferred_video_label TEXT`;
-  await db`ALTER TABLE stream_sessions ALTER COLUMN slots_total SET DEFAULT 5`;
-  await db`ALTER TABLE stream_sessions ALTER COLUMN slots_left SET DEFAULT 5`;
-  await db`
-    CREATE TABLE IF NOT EXISTS reservations (
-      reservation_id TEXT PRIMARY KEY,
-      session_id TEXT NOT NULL,
-      user_id TEXT NOT NULL,
-      user_name TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'reserved',
-      type TEXT NOT NULL DEFAULT 'listener',
-      cancelled_at TEXT
-    )
-  `;
-  await db`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS payment_intent_id TEXT`;
-  await db`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'listener'`;
-  await db`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS cancelled_at TEXT`;
-  await db`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS email TEXT`;
-  await db`
-    CREATE TABLE IF NOT EXISTS session_comments (
-      id TEXT PRIMARY KEY,
-      session_id TEXT NOT NULL,
-      sender_id TEXT NOT NULL,
-      sender_role TEXT NOT NULL,
-      sender_name TEXT NOT NULL,
-      original_text TEXT NOT NULL,
-      original_lang TEXT NOT NULL,
-      translated_text TEXT,
-      translated_lang TEXT,
-      created_at TEXT NOT NULL,
-      deleted_at TEXT,
-      deleted_by TEXT
-    )
-  `;
-  await db`
-    CREATE TABLE IF NOT EXISTS participation_tickets (
-      ticket_id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      scope TEXT NOT NULL,
-      session_id TEXT,
-      status TEXT NOT NULL DEFAULT 'active',
-      granted_by TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      used_at TEXT,
-      used_session_id TEXT
-    )
-  `;
-  await db`CREATE INDEX IF NOT EXISTS idx_tickets_user_status ON participation_tickets (user_id, status)`;
-  await db`CREATE INDEX IF NOT EXISTS idx_stream_sessions_status ON stream_sessions (status)`;
-  await db`CREATE INDEX IF NOT EXISTS idx_stream_sessions_host_user_id ON stream_sessions (host_user_id)`;
-  await db`CREATE INDEX IF NOT EXISTS idx_stream_sessions_starts_at ON stream_sessions (starts_at)`;
-  await db`CREATE INDEX IF NOT EXISTS idx_reservations_session_id ON reservations (session_id)`;
-  await db`CREATE INDEX IF NOT EXISTS idx_reservations_user_id ON reservations (user_id)`;
-  await db`CREATE INDEX IF NOT EXISTS idx_session_comments_session_created ON session_comments (session_id, created_at)`;
+  // 起動のたびに走るので、全文を 1 回の HTTP リクエスト(1 トランザクション)にまとめて送る。
+  // 1 文ずつ await すると、関数と DB のリージョンが離れているぶん往復が積み重なる。
+  await db.transaction([
+    db`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        role TEXT NOT NULL,
+        email TEXT NOT NULL,
+        auth_provider TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        last_login_at TEXT,
+        channel_name TEXT,
+        bio TEXT,
+        avatar_url TEXT,
+        header_url TEXT,
+        phone_number TEXT,
+        email_verified_at TEXT,
+        phone_verified_at TEXT,
+        terms_accepted_at TEXT,
+        privacy_accepted_at TEXT,
+        password_hash TEXT,
+        pending_email_code TEXT,
+        pending_phone_code TEXT,
+        verification_requested_at TEXT
+      )
+    `,
+    db`ALTER TABLE users ADD COLUMN IF NOT EXISTS header_url TEXT`,
+    db`ALTER TABLE users ADD COLUMN IF NOT EXISTS country TEXT`,
+    db`ALTER TABLE users ADD COLUMN IF NOT EXISTS language_level TEXT`,
+    db`ALTER TABLE users ADD COLUMN IF NOT EXISTS sns_twitter TEXT`,
+    db`ALTER TABLE users ADD COLUMN IF NOT EXISTS banned_at TEXT`,
+    db`ALTER TABLE users ADD COLUMN IF NOT EXISTS sns_youtube TEXT`,
+    // チャンネルページのプロフィール欄（[{label, value}] を JSON の文字列で持つ）
+    db`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_items TEXT`,
+    db`
+      CREATE TABLE IF NOT EXISTS stream_sessions (
+        session_id TEXT PRIMARY KEY,
+        host_user_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'prelive',
+        created_at TEXT NOT NULL,
+        starts_at TEXT NOT NULL,
+        description TEXT NOT NULL,
+        category TEXT NOT NULL,
+        thumbnail TEXT NOT NULL,
+        host_name TEXT NOT NULL,
+        participation_type TEXT NOT NULL DEFAULT 'First-come',
+        required_plan TEXT NOT NULL DEFAULT 'free',
+        reservation_required BOOLEAN NOT NULL DEFAULT FALSE,
+        slots_total INTEGER NOT NULL DEFAULT 5,
+        slots_left INTEGER NOT NULL DEFAULT 5,
+        speaker_slots_total INTEGER NOT NULL DEFAULT 5,
+        speaker_slots_left INTEGER NOT NULL DEFAULT 5,
+        speaker_required_plan TEXT NOT NULL DEFAULT 'free',
+        preferred_video_device_id TEXT,
+        preferred_video_label TEXT,
+        ingress_id TEXT,
+        stream_key TEXT,
+        rtmp_url TEXT
+      )
+    `,
+    db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS ingress_id TEXT`,
+    db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS stream_key TEXT`,
+    db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS rtmp_url TEXT`,
+    db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS planned_duration_min INTEGER`,
+    db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS japanese_level INTEGER`,
+    // Columns added to CREATE TABLE after initial deploy — must also be here for existing DBs
+    db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT ''`,
+    db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT ''`,
+    db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS thumbnail TEXT NOT NULL DEFAULT '/image/thumbnail/thumbnail_5.png'`,
+    db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS host_name TEXT NOT NULL DEFAULT ''`,
+    db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS participation_type TEXT NOT NULL DEFAULT 'First-come'`,
+    db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS required_plan TEXT NOT NULL DEFAULT 'free'`,
+    db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS reservation_required BOOLEAN NOT NULL DEFAULT FALSE`,
+    db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS slots_total INTEGER NOT NULL DEFAULT 5`,
+    db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS slots_left INTEGER NOT NULL DEFAULT 5`,
+    db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS speaker_slots_total INTEGER NOT NULL DEFAULT 5`,
+    db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS speaker_slots_left INTEGER NOT NULL DEFAULT 5`,
+    db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS speaker_required_plan TEXT NOT NULL DEFAULT 'free'`,
+    db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS preferred_video_device_id TEXT`,
+    db`ALTER TABLE stream_sessions ADD COLUMN IF NOT EXISTS preferred_video_label TEXT`,
+    db`ALTER TABLE stream_sessions ALTER COLUMN slots_total SET DEFAULT 5`,
+    db`ALTER TABLE stream_sessions ALTER COLUMN slots_left SET DEFAULT 5`,
+    db`
+      CREATE TABLE IF NOT EXISTS reservations (
+        reservation_id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        user_name TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'reserved',
+        type TEXT NOT NULL DEFAULT 'listener',
+        cancelled_at TEXT
+      )
+    `,
+    db`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS payment_intent_id TEXT`,
+    db`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'listener'`,
+    db`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS cancelled_at TEXT`,
+    db`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS email TEXT`,
+    db`
+      CREATE TABLE IF NOT EXISTS session_comments (
+        id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL,
+        sender_id TEXT NOT NULL,
+        sender_role TEXT NOT NULL,
+        sender_name TEXT NOT NULL,
+        original_text TEXT NOT NULL,
+        original_lang TEXT NOT NULL,
+        translated_text TEXT,
+        translated_lang TEXT,
+        created_at TEXT NOT NULL,
+        deleted_at TEXT,
+        deleted_by TEXT
+      )
+    `,
+    db`
+      CREATE TABLE IF NOT EXISTS participation_tickets (
+        ticket_id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        scope TEXT NOT NULL,
+        session_id TEXT,
+        status TEXT NOT NULL DEFAULT 'active',
+        granted_by TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        used_at TEXT,
+        used_session_id TEXT
+      )
+    `,
+    db`CREATE INDEX IF NOT EXISTS idx_tickets_user_status ON participation_tickets (user_id, status)`,
+    db`CREATE INDEX IF NOT EXISTS idx_stream_sessions_status ON stream_sessions (status)`,
+    db`CREATE INDEX IF NOT EXISTS idx_stream_sessions_host_user_id ON stream_sessions (host_user_id)`,
+    db`CREATE INDEX IF NOT EXISTS idx_stream_sessions_starts_at ON stream_sessions (starts_at)`,
+    db`CREATE INDEX IF NOT EXISTS idx_reservations_session_id ON reservations (session_id)`,
+    db`CREATE INDEX IF NOT EXISTS idx_reservations_user_id ON reservations (user_id)`,
+    db`CREATE INDEX IF NOT EXISTS idx_session_comments_session_created ON session_comments (session_id, created_at)`,
+  ]);
 }
 
 // Row → TypeScript type converters
