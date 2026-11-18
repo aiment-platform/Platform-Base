@@ -3,6 +3,7 @@
 import { StartingSoonSession } from "./types";
 import { formatSessionStartTime } from "../../lib/ajl";
 import { useI18n } from "../../lib/i18n";
+import { OptimizedImage } from "@/app/components/ui/OptimizedImage";
 
 type UpcomingTickerProps = {
  sessions: StartingSoonSession[];
@@ -27,14 +28,13 @@ export function UpcomingTicker({ sessions, onParticipate }: UpcomingTickerProps)
  onClick={() => onParticipate(s.id)}
  >
  <div className="w-14 overflow-hidden rounded bg-[var(--brand-bg-900)]" style={{ aspectRatio: "16/9" }}>
-<img src={s.thumbnail} alt={s.vtuber} className="h-full w-full object-cover" />
+<OptimizedImage src={s.thumbnail} alt={s.vtuber} width={112} height={63} className="h-full w-full object-cover" />
 </div>
  <div className="flex flex-col">
  <span className="inline-flex items-center gap-1.5 text-[11px] font-bold leading-tight text-[var(--brand-text)]">
  <span className="h-4 w-4 overflow-hidden rounded-full bg-[var(--brand-bg-900)]">
  {s.hostAvatarUrl ? (
- // eslint-disable-next-line @next/next/no-img-element
- <img src={s.hostAvatarUrl} alt={s.vtuber} className="h-full w-full object-cover" />
+ <OptimizedImage src={s.hostAvatarUrl} alt={s.vtuber} width={32} height={32} className="h-full w-full object-cover" />
  ) : (
  <span className="grid h-full w-full place-items-center text-[11px] font-bold text-[var(--brand-primary)]">
  {(s.hostChannelName || s.vtuber || "A").slice(0, 1).toUpperCase()}

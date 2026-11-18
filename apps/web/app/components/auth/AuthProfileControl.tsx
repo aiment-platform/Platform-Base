@@ -7,6 +7,7 @@ import { ArrowRightOnRectangleIcon, Cog6ToothIcon, RectangleStackIcon } from "@h
 import { useI18n } from "../../lib/i18n";
 import { useUserSession } from "../../lib/userSession";
 import { Card } from "../ui/Card";
+import { OptimizedImage } from "@/app/components/ui/OptimizedImage";
 
 function AuthDropdown({ onClose }: { onClose: () => void }) {
   const { isAuthenticated, logout } = useUserSession();
@@ -117,8 +118,7 @@ export function AuthProfileControl() {
         >
           <span className="relative block h-7 w-7 overflow-hidden rounded-full bg-[var(--brand-bg-800)]">
             {user?.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
+              <OptimizedImage src={user.avatarUrl} alt={user.name} width={56} height={56} className="h-full w-full object-cover" />
             ) : (
               <span className="grid h-full w-full place-items-center text-[11px] font-bold text-[var(--brand-primary)]">
                 {(user?.name || "A").slice(0, 1).toUpperCase()}

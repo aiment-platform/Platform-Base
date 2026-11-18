@@ -9,6 +9,7 @@ import { categoryLabel } from "../../lib/labels";
 import { deleteStreamSession, listMyStreamSessions, type StreamSession } from "../../lib/streamSessions";
 import { buttonClassName } from "../ui/Button";
 import { TimeZoneNote } from "../ui/TimeZoneNote";
+import { OptimizedImage } from "@/app/components/ui/OptimizedImage";
 
 const STATUS_LABEL: Record<StreamSession["status"], { jp: string; en: string }> = {
   prelive: { jp: "待機中", en: "Ready" },
@@ -128,8 +129,7 @@ export function MySessionsManager({ title, description, showCreateButton = true,
             // 枠付き（白いパネルの中）では行をカードにしない。ver0.4 では .ui-card に縁が付き、
             // 区切り線と重なって二重線になるため
             <div key={session.sessionId} className={`flex flex-wrap items-start gap-3 sm:flex-nowrap sm:items-center sm:gap-4 ${framed ? "py-4" : "ui-card p-4"}`}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={session.thumbnail} alt={session.title} className="aspect-video w-24 flex-shrink-0 rounded-lg object-cover sm:w-28" />
+              <OptimizedImage src={session.thumbnail} alt={session.title} width={224} height={126} className="aspect-video w-24 flex-shrink-0 rounded-lg object-cover sm:w-28" />
 
               <div className="min-w-0 flex-1">
                 <div className="mb-1 flex flex-wrap items-center gap-1.5 sm:gap-2">

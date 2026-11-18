@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeftIcon } from "@heroicons/react/24/solid";
 import { GlobeAsiaAustraliaIcon } from "@heroicons/react/24/outline";
 import { useI18n } from "../../lib/i18n";
 import type { PublicUserProfile } from "../../lib/server/aimentStore";
+import { OptimizedImage } from "@/app/components/ui/OptimizedImage";
 
 const LANGUAGE_LEVEL_LABEL: Record<string, { jp: string; en: string }> = {
   beginner:     { jp: "初心者",       en: "Beginner" },
@@ -84,7 +84,7 @@ export default function UserProfilePage() {
             <div className="flex items-start gap-4">
               <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full bg-[var(--brand-primary-soft)]">
                 {profile.avatarUrl ? (
-                  <Image src={profile.avatarUrl} alt={profile.name} width={80} height={80} className="h-full w-full object-cover" />
+                  <OptimizedImage src={profile.avatarUrl} alt={profile.name} width={80} height={80} className="h-full w-full object-cover" />
                 ) : (
                   <div className="grid h-full w-full place-items-center text-2xl font-extrabold text-[var(--brand-primary-ink)]">
                     {profile.name.trim().charAt(0).toUpperCase()}
@@ -156,7 +156,7 @@ export default function UserProfilePage() {
                       className="flex items-center gap-3 rounded-xl bg-[var(--brand-surface)] p-3 transition-colors hover:bg-[var(--brand-surface)]/80"
                     >
                       {s.thumbnail && (
-                        <Image src={s.thumbnail} alt={s.title} width={56} height={40} className="h-10 w-14 shrink-0 rounded-lg object-cover" />
+                        <OptimizedImage src={s.thumbnail} alt={s.title} width={56} height={40} className="h-10 w-14 shrink-0 rounded-lg object-cover" />
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold">{s.title}</p>

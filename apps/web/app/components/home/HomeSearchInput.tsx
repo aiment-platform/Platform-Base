@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
 import { useI18n } from "../../lib/i18n";
+import { OptimizedImage } from "@/app/components/ui/OptimizedImage";
 
 type VTuberResult = {
   id: string;
@@ -140,8 +141,7 @@ export function HomeSearchInput({ searchQuery, onSearchChange, className = "" }:
               }`}
             >
               {v.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={v.avatarUrl} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
+                <OptimizedImage src={v.avatarUrl} alt="" width={64} height={64} className="h-8 w-8 shrink-0 rounded-full object-cover" />
               ) : (
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/20 text-xs font-bold text-[var(--brand-primary)]">
                   {(v.channelName ?? v.name).slice(0, 1).toUpperCase()}

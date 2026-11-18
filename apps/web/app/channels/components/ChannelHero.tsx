@@ -7,6 +7,7 @@
  * ヘッダー画像があるときは、帯の上に細長く出す（名前を画像に重ねると読みにくくなるため）。
  */
 import { ChannelMenu } from "./ChannelMenu";
+import { OptimizedImage } from "@/app/components/ui/OptimizedImage";
 
 type ChannelHeroProps = {
   channelName: string;
@@ -60,8 +61,7 @@ export function ChannelHero({
     <section className="w-full">
       {headerUrl ? (
         <div className="h-28 w-full overflow-hidden bg-[var(--brand-primary-soft)] sm:h-40">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={headerUrl} alt={`${channelName} header`} className="h-full w-full object-cover" />
+          <OptimizedImage src={headerUrl} alt={`${channelName} header`} width={1920} height={400} sizes="100vw" priority className="h-full w-full object-cover" />
         </div>
       ) : null}
 
@@ -75,8 +75,7 @@ export function ChannelHero({
               style={{ boxShadow: "0 6px 0 0 var(--brand-primary-dark)" }}
             >
               {avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatarUrl} alt={channelName} className="h-full w-full object-cover" />
+                <OptimizedImage src={avatarUrl} alt={channelName} width={288} height={288} priority className="h-full w-full object-cover" />
               ) : (
                 <div className="grid h-full w-full place-items-center text-4xl font-black text-white sm:text-5xl">{channelName.slice(0, 1).toUpperCase()}</div>
               )}

@@ -10,6 +10,7 @@
  */
 import type { AjlInfo } from "../../lib/ajl";
 import { ReservedStamp, Ticket } from "../../components/ui/Ticket";
+import { OptimizedImage } from "@/app/components/ui/OptimizedImage";
 
 export type StartState =
   | { kind: "upcoming"; days: number; hours: number; minutes: number }
@@ -137,8 +138,7 @@ function HostLine({ host, tx }: Pick<JoinHeroProps, "host" | "tx">) {
   const body = (
     <>
       <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-[var(--placeholder)] text-sm font-bold text-white">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        {host.avatarUrl ? <img src={host.avatarUrl} alt="" className="h-full w-full object-cover" /> : initial}
+        {host.avatarUrl ? <OptimizedImage src={host.avatarUrl} alt="" width={64} height={64} className="h-full w-full object-cover" /> : initial}
       </span>
       <span className="min-w-0 truncate text-sm font-bold text-[var(--brand-text)]">{host.name}</span>
     </>
@@ -223,8 +223,7 @@ export function JoinHero(props: JoinHeroProps) {
   return (
     <div className="ui-panel overflow-hidden">
       <div className="relative aspect-video max-h-[480px] w-full bg-[var(--brand-primary-soft)]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        {thumbnail ? <img src={thumbnail} alt={title} className="h-full w-full object-cover" /> : null}
+        {thumbnail ? <OptimizedImage src={thumbnail} alt={title} width={1280} height={720} sizes="(max-width: 1280px) 100vw, 1280px" priority className="h-full w-full object-cover" /> : null}
       </div>
       <div className="grid gap-6 p-5 sm:p-7">
         <div className="grid gap-3">
