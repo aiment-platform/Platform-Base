@@ -36,6 +36,7 @@ import { getStreamSession, listActiveStreamSessions, type StreamSession } from "
 import { useWatchTimeTracker } from "../../hooks/useWatchTimeTracker";
 import { useUserSession } from "../../lib/userSession";
 import { useRouteTransition, useTransitionHold } from "../../components/ui/RouteTransition";
+import { OptimizedImage } from "@/app/components/ui/OptimizedImage";
 
 type Role = "host" | "listener" | "speaker" | "unknown";
 type RequestedRole = "host" | "listener" | "speaker";
@@ -1381,7 +1382,7 @@ export default function RoomPage() {
                     <div className="grid gap-3 sm:grid-cols-2">
                       {suggestedSessions.map((s) => (
                         <Link key={s.sessionId} href={`/join/${encodeURIComponent(s.sessionId)}`} className="flex gap-3 rounded-xl bg-[var(--brand-bg-900)] p-3 transition-colors hover:bg-[var(--brand-bg-900)]/60">
-                          {s.thumbnail && <Image src={s.thumbnail} alt={s.title} width={72} height={48} className="h-12 w-18 shrink-0 rounded-lg object-cover" />}
+                          {s.thumbnail && <OptimizedImage src={s.thumbnail} alt={s.title} width={72} height={48} className="h-12 w-18 shrink-0 rounded-lg object-cover" />}
                           <div className="min-w-0">
                             <p className="line-clamp-2 text-xs font-semibold">{s.title}</p>
                             <p className="mt-1 truncate text-[11px] text-[var(--brand-text-muted)]">{s.hostName}</p>
@@ -1404,7 +1405,7 @@ export default function RoomPage() {
                 <h1 className="text-base font-extrabold leading-snug">{session.title}</h1>
                 <div className="mt-3 flex items-center gap-3">
                   {session.hostAvatarUrl ? (
-                    <Image src={session.hostAvatarUrl} alt={session.hostName} width={36} height={36} className="h-9 w-9 rounded-full object-cover" />
+                    <OptimizedImage src={session.hostAvatarUrl} alt={session.hostName} width={36} height={36} className="h-9 w-9 rounded-full object-cover" />
                   ) : (
                     <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--brand-surface)] text-sm font-extrabold text-[var(--brand-text-muted)]">
                       {session.hostName.charAt(0).toUpperCase()}

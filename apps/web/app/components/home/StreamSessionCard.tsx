@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { getAjlInfo } from "../../lib/ajl";
+import { OptimizedImage } from "@/app/components/ui/OptimizedImage";
 
 type StreamSessionCardProps = {
   title: string;
@@ -70,8 +71,7 @@ export function StreamSessionCard({
             <span className="aiment-session-card__detail-label">detail</span>
           </span>
           <span className="aiment-session-card__image">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={thumbnail} alt={title} />
+            <OptimizedImage src={thumbnail} alt={title} width={480} height={270} />
             <span className="aiment-session-card__time">{formatCardStartTime(startsAt)}</span>
           </span>
         </span>
@@ -84,8 +84,7 @@ export function StreamSessionCard({
           aria-label={`${channelName} channel`}
         >
           {hostAvatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={hostAvatarUrl} alt={channelName} />
+            <OptimizedImage src={hostAvatarUrl} alt={channelName} width={64} height={64} />
           ) : (
             initial
           )}

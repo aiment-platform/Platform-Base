@@ -27,6 +27,7 @@ import { cancelReservation, listMyReservations, subscribeReservations } from "..
 import { getStreamSession } from "../lib/streamSessions";
 import { formatInTimeZone, timeZoneLabel, useViewerTimeZone } from "../lib/timezone";
 import { useUserSession } from "../lib/userSession";
+import { OptimizedImage } from "@/app/components/ui/OptimizedImage";
 
 type Entry = { reservation: Reservation; session: StreamSession; start: StartState };
 type Tab = "upcoming" | "past";
@@ -133,8 +134,7 @@ function TicketRow({
           ボタンは下に回して横幅いっぱいにし、タイトルは2行まで出す */}
       <div className="flex h-full flex-col gap-3 p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-4">
         <button type="button" onClick={() => navigate(joinHref)} className="hidden shrink-0 sm:block" tabIndex={-1} aria-hidden>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={session.thumbnail} alt="" className="aspect-video w-28 rounded-lg object-cover" />
+          <OptimizedImage src={session.thumbnail} alt="" width={224} height={126} className="aspect-video w-28 rounded-lg object-cover" />
         </button>
         <div className="min-w-0 flex-1">
           <Link href={joinHref} className="line-clamp-2 text-sm font-black text-[var(--brand-text)] hover:text-[var(--brand-primary-ink)] sm:block sm:truncate">

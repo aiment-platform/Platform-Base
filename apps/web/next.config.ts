@@ -43,6 +43,10 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: remoteImagePatterns,
   },
+  // 画面側(OptimizedImage)で「最適化に回してよい画像か」を同じ条件で判定するために渡す。
+  env: {
+    NEXT_PUBLIC_REMOTE_IMAGE_PATTERNS: JSON.stringify(remoteImagePatterns),
+  },
   async headers() {
     return [
       {

@@ -4,6 +4,7 @@ import { XMarkIcon } from "@heroicons/react/24/solid";
 import { ModalSession } from "./types";
 import { useI18n } from "../../lib/i18n";
 import { planLabel } from "../../lib/planAccess";
+import { OptimizedImage } from "@/app/components/ui/OptimizedImage";
 
 type SessionDetailModalProps = {
  session: ModalSession;
@@ -48,7 +49,7 @@ export function SessionDetailModal({ session, onClose, onParticipate }: SessionD
  >
  <div className="relative">
  <div className="aspect-video bg-[var(--brand-primary-soft)]">
- <img src={session.thumbnail} alt={session.vtuber} className="h-full w-full object-cover" />
+ <OptimizedImage src={session.thumbnail} alt={session.vtuber} width={1280} height={720} sizes="(max-width: 672px) 100vw, 672px" className="h-full w-full object-cover" />
  </div>
  <button
  onClick={onClose}
