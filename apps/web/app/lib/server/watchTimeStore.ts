@@ -22,25 +22,29 @@ function ensureSchema() {
 
 async function initSchema() {
   const db = getDb();
-  await db`
-    CREATE TABLE IF NOT EXISTS watch_sessions (
-      id TEXT PRIMARY KEY,
-      viewer_user_id TEXT NOT NULL,
-      host_user_id TEXT NOT NULL,
-      stream_session_id TEXT NOT NULL,
-      started_at TEXT NOT NULL,
-      ended_at TEXT
-    )
-  `;
-  await db`
-    CREATE TABLE IF NOT EXISTS user_host_stats (
-      viewer_user_id TEXT NOT NULL,
-      host_user_id TEXT NOT NULL,
-      watch_time_hours FLOAT NOT NULL DEFAULT 0,
-      win_count INT NOT NULL DEFAULT 0,
-      PRIMARY KEY (viewer_user_id, host_user_id)
-    )
-  `;
+  // 起動のたびに走るので、全文を 1 回の HTTP リクエスト(1 トランザクション)にまとめて送る。
+  // 1 文ずつ await すると、関数と DB のリージョンが離れているぶん往復が積み重なる。
+  await db.transaction([
+    db`
+      CREATE TABLE IF NOT EXISTS watch_sessions (
+        id TEXT PRIMARY KEY,
+        viewer_user_id TEXT NOT NULL,
+        host_user_id TEXT NOT NULL,
+        stream_session_id TEXT NOT NULL,
+        started_at TEXT NOT NULL,
+        ended_at TEXT
+      )
+    `,
+    db`
+      CREATE TABLE IF NOT EXISTS user_host_stats (
+        viewer_user_id TEXT NOT NULL,
+        host_user_id TEXT NOT NULL,
+        watch_time_hours FLOAT NOT NULL DEFAULT 0,
+        win_count INT NOT NULL DEFAULT 0,
+        PRIMARY KEY (viewer_user_id, host_user_id)
+      )
+    `,
+  ]);
 }
 
 // ---------------------------------------------------------------------------

@@ -34,18 +34,22 @@ function ensureSchema() {
 
 async function initSchema() {
   const db = getDb();
-  await db`ALTER TABLE users ADD COLUMN IF NOT EXISTS watch_time_hours FLOAT NOT NULL DEFAULT 0`;
-  await db`ALTER TABLE users ADD COLUMN IF NOT EXISTS supporter_win_count INT NOT NULL DEFAULT 0`;
-  await db`
-    CREATE TABLE IF NOT EXISTS supporter_applications (
-      id TEXT PRIMARY KEY,
-      session_id TEXT NOT NULL,
-      user_id TEXT NOT NULL,
-      user_name TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'pending',
-      created_at TEXT NOT NULL
-    )
-  `;
+  // 起動のたびに走るので、全文を 1 回の HTTP リクエスト(1 トランザクション)にまとめて送る。
+  // 1 文ずつ await すると、関数と DB のリージョンが離れているぶん往復が積み重なる。
+  await db.transaction([
+    db`ALTER TABLE users ADD COLUMN IF NOT EXISTS watch_time_hours FLOAT NOT NULL DEFAULT 0`,
+    db`ALTER TABLE users ADD COLUMN IF NOT EXISTS supporter_win_count INT NOT NULL DEFAULT 0`,
+    db`
+      CREATE TABLE IF NOT EXISTS supporter_applications (
+        id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        user_name TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TEXT NOT NULL
+      )
+    `,
+  ]);
 }
 
 // ---------------------------------------------------------------------------
