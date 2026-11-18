@@ -24,7 +24,25 @@ function resolveR2ImgSrc() {
 
 const r2ImgSrc = resolveR2ImgSrc();
 
+// Google ログインのユーザーはアイコンが Google のプロフィール画像(lh3.googleusercontent.com)になる。
+const googleAvatarOrigin = "https://lh3.googleusercontent.com";
+
+// next/image で外部画像を最適化できるホスト。ここに無いホストは /_next/image が 400 を返す。
+const remoteImagePatterns: NonNullable<NextConfig["images"]>["remotePatterns"] = [
+  { protocol: "https", hostname: new URL(googleAvatarOrigin).hostname },
+  // 未設定時のフォールバック "https://*.r2.dev" は next/image では "**.r2.dev" と書く
+  r2ImgSrc === "https://*.r2.dev"
+    ? { protocol: "https", hostname: "**.r2.dev" }
+    : {
+        protocol: new URL(r2ImgSrc).protocol === "http:" ? "http" : "https",
+        hostname: new URL(r2ImgSrc).hostname,
+      },
+];
+
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: remoteImagePatterns,
+  },
   async headers() {
     return [
       {
@@ -36,7 +54,7 @@ const nextConfig: NextConfig = {
               `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${stripeCsp} https://pay.google.com https://accounts.google.com`,
               `frame-src 'self' ${stripeCsp} https://pay.google.com`,
               `connect-src 'self' ${stripeCsp} https://api.stripe.com https://api.frankfurter.app https://*.livekit.cloud wss://*.livekit.cloud`,
-              `img-src 'self' data: blob: https://*.stripe.com ${r2ImgSrc}`,
+              `img-src 'self' data: blob: https://*.stripe.com ${r2ImgSrc} ${googleAvatarOrigin}`,
             ].join("; "),
           },
           { key: "X-Frame-Options", value: "DENY" },
