@@ -4,11 +4,11 @@ import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useParams, useRouter } from "next/navigation";
 import { MicrophoneIcon } from "@heroicons/react/24/solid";
 import { SelectField } from "../../components/ui/Field";
-import { loadStripe } from "@stripe/stripe-js";
+import { loadStripe, type StripeElementLocale } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { getAjlInfo } from "../../lib/ajl";
 import { HOST_TIME_ZONE, formatInTimeZone, sameWallClock, timeZoneLabel, useViewerTimeZone } from "../../lib/timezone";
-import { useI18n } from "../../lib/i18n";
+import { LOCALES, useI18n } from "../../lib/i18n";
 import { participationLabel } from "../../lib/labels";
 import { getStreamSession } from "../../lib/streamSessions";
 import { useUserSession } from "../../lib/userSession";
@@ -52,6 +52,7 @@ function PaymentForm({
   onSuccess: () => void;
   onCancel: () => void;
 }) {
+  const { tx } = useI18n();
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -70,13 +71,13 @@ function PaymentForm({
     });
 
     if (confirmError) {
-      setError(confirmError.message ?? "決済に失敗しました。");
+      setError(confirmError.message ?? tx("決済に失敗しました。", "Payment failed.", { tw: "付款失敗。", ko: "결제에 실패했어요." }));
       setLoading(false);
       return;
     }
 
     if (!paymentIntent?.id) {
-      setError("決済情報が取得できませんでした。");
+      setError(tx("決済情報が取得できませんでした。", "Could not get the payment details.", { tw: "無法取得付款資訊。", ko: "결제 정보를 가져오지 못했어요." }));
       setLoading(false);
       return;
     }
@@ -92,13 +93,13 @@ function PaymentForm({
       );
       if (!res.ok) {
         const data = (await res.json()) as { error?: string };
-        setError(data.error ?? "支払い確定に失敗しました。");
+        setError(data.error ?? tx("支払い確定に失敗しました。", "Failed to confirm the payment.", { tw: "確認付款失敗。", ko: "결제 확인에 실패했어요." }));
         setLoading(false);
         return;
       }
       onSuccess();
     } catch {
-      setError("支払い確定に失敗しました。");
+      setError(tx("支払い確定に失敗しました。", "Failed to confirm the payment.", { tw: "確認付款失敗。", ko: "결제 확인에 실패했어요." }));
       setLoading(false);
     }
   };
@@ -112,7 +113,9 @@ function PaymentForm({
         disabled={!stripe || loading}
         className="ui-btn ui-btn-md ui-btn-primary w-full"
       >
-        {loading ? "処理中..." : `₱${amountPhp} を支払う`}
+        {loading
+          ? tx("処理中...", "Processing...", { tw: "處理中...", ko: "처리 중..." })
+          : tx(`₱${amountPhp} を支払う`, `Pay ₱${amountPhp}`, { tw: `支付 ₱${amountPhp}`, ko: `₱${amountPhp} 결제하기` })}
       </button>
       <button
         type="button"
@@ -120,7 +123,7 @@ function PaymentForm({
         disabled={loading}
         className="ui-btn ui-btn-md ui-btn-ghost w-full"
       >
-        キャンセル
+        {tx("キャンセル", "Cancel", { tw: "取消", ko: "취소" })}
       </button>
     </form>
   );
@@ -130,7 +133,9 @@ function PaymentForm({
 export function JoinPageClient() {
   const router = useRouter();
   const { navigate } = useRouteTransition();
-  const { tx } = useI18n();
+  const { tx, intlLocale, locale } = useI18n();
+  // Stripe の支払い欄も表示言語に合わせる（ja / en / zh-TW / ko はどれも Stripe が対応している）
+  const stripeLocale = (LOCALES.find((entry) => entry.id === locale)?.htmlLang ?? "auto") as StripeElementLocale;
   const viewerTimeZone = useViewerTimeZone();
   const params = useParams<{ sessionId: string }>();
   const sessionId = params?.sessionId ?? "";
@@ -226,7 +231,7 @@ export function JoinPageClient() {
         const data = (await res.json()) as { error?: string };
         if (!data.error?.includes("already have")) {
           setReservationStatus("none");
-          setPaymentError(data.error ?? "予約の作成に失敗しました。");
+          setPaymentError(data.error ?? tx("予約の作成に失敗しました。", "Failed to create the reservation.", { tw: "建立預約失敗。", ko: "예약을 만들지 못했어요." }));
           return;
         }
       }
@@ -234,7 +239,7 @@ export function JoinPageClient() {
       await checkReservation();
     } catch {
       setReservationStatus("none");
-      setPaymentError("予約の作成に失敗しました。");
+      setPaymentError(tx("予約の作成に失敗しました。", "Failed to create the reservation.", { tw: "建立預約失敗。", ko: "예약을 만들지 못했어요." }));
     }
   };
 
@@ -249,12 +254,12 @@ export function JoinPageClient() {
       );
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setPaymentError(data.error ?? tx("チケットの使用に失敗しました。", "Failed to use the ticket."));
+        setPaymentError(data.error ?? tx("チケットの使用に失敗しました。", "Failed to use the ticket.", { tw: "票券使用失敗。", ko: "티켓을 사용하지 못했어요." }));
         return;
       }
       await checkReservation(); // paid に更新される
     } catch {
-      setPaymentError(tx("通信エラーが発生しました。", "A network error occurred."));
+      setPaymentError(tx("通信エラーが発生しました。", "A network error occurred.", { tw: "發生網路錯誤。", ko: "네트워크 오류가 발생했어요." }));
     } finally {
       setRedeemingTicket(false);
     }
@@ -276,14 +281,14 @@ export function JoinPageClient() {
         error?: string;
       };
       if (!res.ok || !data.clientSecret) {
-        setPaymentError(data.error ?? "決済の準備に失敗しました。");
+        setPaymentError(data.error ?? tx("決済の準備に失敗しました。", "Failed to prepare the payment.", { tw: "付款準備失敗。", ko: "결제를 준비하지 못했어요." }));
         setPaymentLoading(false);
         return;
       }
       setClientSecret(data.clientSecret);
       if (data.amountPhp) setAmountPhp(data.amountPhp);
     } catch {
-      setPaymentError("決済の準備に失敗しました。");
+      setPaymentError(tx("決済の準備に失敗しました。", "Failed to prepare the payment.", { tw: "付款準備失敗。", ko: "결제를 준비하지 못했어요." }));
     } finally {
       setPaymentLoading(false);
     }
@@ -351,7 +356,7 @@ export function JoinPageClient() {
         setReady(true);
         setErrorMessage(null);
       } catch {
-        setErrorMessage(tx("マイクの利用が許可されていません。ブラウザ設定を確認してください。", "Microphone access is not allowed. Please check your browser settings."));
+        setErrorMessage(tx("マイクの利用が許可されていません。ブラウザ設定を確認してください。", "Microphone access is not allowed. Please check your browser settings.", { tw: "未允許使用麥克風，請確認瀏覽器設定。", ko: "마이크 사용이 허용되지 않았어요. 브라우저 설정을 확인해 주세요." }));
         setReady(false);
       }
     };
@@ -396,7 +401,7 @@ export function JoinPageClient() {
         title: dynamicSession.title,
         description: dynamicSession.description,
         // 配信中かどうかはチケットの半券で出すので、ここは長さだけ
-        duration: tx(`約${dynamicSession.plannedDurationMin ?? 60}分`, `About ${dynamicSession.plannedDurationMin ?? 60} min`),
+        duration: tx(`約${dynamicSession.plannedDurationMin ?? 60}分`, `About ${dynamicSession.plannedDurationMin ?? 60} min`, { tw: `約 ${dynamicSession.plannedDurationMin ?? 60} 分鐘`, ko: `약 ${dynamicSession.plannedDurationMin ?? 60}분` }),
         durationMin: dynamicSession.plannedDurationMin ?? 60,
         status: dynamicSession.status,
         hostUserId: dynamicSession.hostUserId,
@@ -411,8 +416,8 @@ export function JoinPageClient() {
     }
     return {
       id: sessionId || "unknown",
-      vtuber: tx("読み込み中", "Loading"),
-      title: tx("配信枠を読み込んでいます", "Loading session"),
+      vtuber: tx("読み込み中", "Loading", { tw: "載入中", ko: "불러오는 중" }),
+      title: tx("配信枠を読み込んでいます", "Loading session", { tw: "正在載入直播", ko: "세션을 불러오는 중" }),
       description: "",
       duration: "",
       durationMin: 60,
@@ -435,6 +440,7 @@ export function JoinPageClient() {
       ? tx(
           `日本時間 ${formatInTimeZone(session.startsAt, HOST_TIME_ZONE, { hour: "2-digit", minute: "2-digit" })}`,
           `${formatInTimeZone(session.startsAt, HOST_TIME_ZONE, { hour: "2-digit", minute: "2-digit" })} in Japan (JST)`,
+          { tw: `日本時間 ${formatInTimeZone(session.startsAt, HOST_TIME_ZONE, { hour: "2-digit", minute: "2-digit" })}`, ko: `일본 시간 ${formatInTimeZone(session.startsAt, HOST_TIME_ZONE, { hour: "2-digit", minute: "2-digit" })}` },
         )
       : null;
 
@@ -447,22 +453,22 @@ export function JoinPageClient() {
   const mobileCtaLabel = isEnded || sessionLoading
     ? null
     : authStatus === "guest"
-      ? tx("ログインして参加する", "Log in to join")
+      ? tx("ログインして参加する", "Log in to join", { tw: "登入以參加", ko: "로그인하고 참여하기" })
       : reservationStatus === "paid"
         ? isLive
-          ? tx("今すぐ入る", "Join now")
-          : tx("参加の準備へ", "Get ready to join")
+          ? tx("今すぐ入る", "Join now", { tw: "立即進入", ko: "지금 입장" })
+          : tx("参加の準備へ", "Get ready to join", { tw: "準備參加", ko: "참여 준비하기" })
         : reservationStatus === "reserved"
-          ? tx("予約の状況を見る", "View my reservation")
-          : tx("スピーカー枠を予約する", "Reserve a speaker spot");
+          ? tx("予約の状況を見る", "View my reservation", { tw: "查看我的預約", ko: "내 예약 보기" })
+          : tx("スピーカー枠を予約する", "Reserve a speaker spot", { tw: "預約發言名額", ko: "스피커 자리 예약하기" });
 
   if (!sessionLoading && !dynamicSession) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[var(--bg)] text-[var(--brand-text)]">
-        <p className="text-lg font-semibold">{tx("配信枠が見つかりません", "Session not found")}</p>
-        <p className="text-sm text-[var(--brand-text-muted)]">{tx("この枠はすでに終了しているか、存在しません。", "This session has ended or does not exist.")}</p>
+        <p className="text-lg font-semibold">{tx("配信枠が見つかりません", "Session not found", { tw: "找不到這場直播", ko: "세션을 찾을 수 없어요" })}</p>
+        <p className="text-sm text-[var(--brand-text-muted)]">{tx("この枠はすでに終了しているか、存在しません。", "This session has ended or does not exist.", { tw: "這場直播已結束或不存在。", ko: "이 세션은 종료되었거나 존재하지 않아요." })}</p>
         <button onClick={() => router.push("/")} className="ui-btn ui-btn-md ui-btn-primary">
-          {tx("ホームに戻る", "Back to Home")}
+          {tx("ホームに戻る", "Back to Home", { tw: "回到首頁", ko: "홈으로 돌아가기" })}
         </button>
       </div>
     );
@@ -514,9 +520,9 @@ export function JoinPageClient() {
         <aside id="join-panel" className="ui-panel grid scroll-mt-24 gap-4 self-start p-5 lg:sticky lg:top-24">
           {isEnded ? (
             <div className="grid gap-3">
-              <p className="text-lg font-black text-[var(--brand-text)]">{tx("この配信は終了しました", "This session has ended")}</p>
+              <p className="text-lg font-black text-[var(--brand-text)]">{tx("この配信は終了しました", "This session has ended", { tw: "這場直播已結束", ko: "이 세션은 종료되었어요" })}</p>
               <p className="text-sm leading-6 text-[var(--brand-text-muted)]">
-                {tx("次の配信は、チャンネルのスケジュールから探せます。", "Find the next session on the channel schedule.")}
+                {tx("次の配信は、チャンネルのスケジュールから探せます。", "Find the next session on the channel schedule.", { tw: "可以在頻道的節目表找到下一場直播。", ko: "다음 세션은 채널 일정에서 찾을 수 있어요." })}
               </p>
               {session.hostUserId ? (
                 <button
@@ -524,41 +530,41 @@ export function JoinPageClient() {
                   onClick={() => navigate(`/channels/${encodeURIComponent(session.hostUserId!)}/schedule`)}
                   className="ui-btn ui-btn-md ui-btn-primary w-full"
                 >
-                  {tx("チャンネルのスケジュールを見る", "See the channel schedule")}
+                  {tx("チャンネルのスケジュールを見る", "See the channel schedule", { tw: "查看頻道節目表", ko: "채널 일정 보기" })}
                 </button>
               ) : null}
             </div>
           ) : (
             <div>
               <h2 className="text-lg font-black text-[var(--brand-text)]">
-                {isLive ? tx("いま配信中です", "Live now") : hasReservation ? tx("予約済みです", "You're booked") : tx("スピーカーとして参加", "Join as a speaker")}
+                {isLive ? tx("いま配信中です", "Live now", { tw: "直播中", ko: "라이브 중" }) : hasReservation ? tx("予約済みです", "You're booked", { tw: "已完成預約", ko: "예약 완료" }) : tx("スピーカーとして参加", "Join as a speaker", { tw: "以發言者身分參加", ko: "스피커로 참여하기" })}
               </h2>
               <p className="mt-1 text-sm leading-6 text-[var(--brand-text-muted)]">
                 {isLive && hasReservation
-                  ? tx("マイクを確認したら、すぐに入れます。", "Check your microphone and jump right in.")
+                  ? tx("マイクを確認したら、すぐに入れます。", "Check your microphone and jump right in.", { tw: "確認麥克風後就能馬上進入。", ko: "마이크를 확인하면 바로 입장할 수 있어요." })
                   : hasReservation
-                    ? tx("チケットに予約済みの印が付いています。始まる前にマイクを確かめておきましょう。", "Your ticket is stamped. Check your microphone before it starts.")
-                    : tx("声で会話に参加します。見るだけの視聴は準備中です。", "Join the conversation by voice. Watch-only viewing is coming soon.")}
+                    ? tx("チケットに予約済みの印が付いています。始まる前にマイクを確かめておきましょう。", "Your ticket is stamped. Check your microphone before it starts.", { tw: "你的票券已蓋上預約章。開始前先確認一下麥克風吧。", ko: "티켓에 예약 도장이 찍혔어요. 시작 전에 마이크를 확인해 두세요." })
+                    : tx("声で会話に参加します。見るだけの視聴は準備中です。", "Join the conversation by voice. Watch-only viewing is coming soon.", { tw: "用聲音加入對話。僅觀看的模式正在準備中。", ko: "음성으로 대화에 참여해요. 시청 전용 기능은 준비 중이에요." })}
               </p>
             </div>
           )}
 
           {!isEnded && (authStatus === "loading" || reservationStatus === "loading") && (
             <div className="flex h-40 items-center justify-center">
-              <p className="text-sm text-[var(--brand-text-muted)]">{tx("確認中...", "Checking...")}</p>
+              <p className="text-sm text-[var(--brand-text-muted)]">{tx("確認中...", "Checking...", { tw: "確認中...", ko: "확인 중..." })}</p>
             </div>
           )}
 
           {!isEnded && authStatus === "guest" && reservationStatus !== "loading" && (
             <div className="flex flex-col items-center gap-4 rounded-xl bg-[var(--brand-bg-900)] p-5 text-center">
               <p className="text-sm text-[var(--brand-text)]">
-                {tx("スピーカーとして参加するにはアカウントが必要です。", "You need an account to join as a speaker.")}
+                {tx("スピーカーとして参加するにはアカウントが必要です。", "You need an account to join as a speaker.", { tw: "需要帳號才能以發言者身分參加。", ko: "스피커로 참여하려면 계정이 필요해요." })}
               </p>
               <button
                 onClick={() => router.push(`/auth?redirect=${encodeURIComponent(`/join/${sessionId}`)}`)}
                 className="ui-btn ui-btn-md ui-btn-primary w-full"
               >
-                {tx("ログイン / アカウント作成", "Log in / Sign up")}
+                {tx("ログイン / アカウント作成", "Log in / Sign up", { tw: "登入 / 註冊", ko: "로그인 / 회원가입" })}
               </button>
             </div>
           )}
@@ -567,14 +573,15 @@ export function JoinPageClient() {
           {!isEnded && authStatus === "logged-in" && isAdmin && (
             <div className="flex flex-col gap-4 rounded-xl border border-[var(--brand-primary)]/40 bg-[var(--brand-bg-900)] p-5">
               <div>
-                <p className="text-xs font-bold text-[var(--brand-primary-ink)]">{tx("管理者", "Admin")}</p>
+                <p className="text-xs font-bold text-[var(--brand-primary-ink)]">{tx("管理者", "Admin", { tw: "管理員", ko: "관리자" })}</p>
                 <h2 className="mt-2 text-base font-semibold text-[var(--brand-text)]">
-                  {tx("管理者として参加", "Join as admin")}
+                  {tx("管理者として参加", "Join as admin", { tw: "以管理員身分參加", ko: "관리자로 참여하기" })}
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-[var(--brand-text-muted)]">
                   {tx(
                     "予約・支払い・枠の上限を無視して、スピーカーとして参加できます。",
                     "Join as a speaker, ignoring reservation, payment, and slot limits.",
+                    { tw: "可忽略預約、付款與名額上限，以發言者身分參加。", ko: "예약, 결제, 자리 제한과 관계없이 스피커로 참여할 수 있어요." },
                   )}
                 </p>
               </div>
@@ -582,7 +589,7 @@ export function JoinPageClient() {
                 onClick={() => navigate(`/room/${encodeURIComponent(session.id)}?role=speaker&mic=1`)}
                 className="ui-btn ui-btn-md ui-btn-primary w-full"
               >
-                {tx("スピーカーとして入室", "Enter as speaker")}
+                {tx("スピーカーとして入室", "Enter as speaker", { tw: "以發言者身分進入", ko: "스피커로 입장" })}
               </button>
             </div>
           )}
@@ -591,21 +598,21 @@ export function JoinPageClient() {
           {!isEnded && authStatus === "logged-in" && !isAdmin && (reservationStatus === "none" || reservationStatus === "reserving") && (
             <div className="flex flex-col gap-4 rounded-xl bg-[var(--brand-bg-900)] p-5">
               <div>
-                <p className="text-xs font-bold text-[var(--brand-text-muted)]">{tx("プロフィール確認", "Profile check")}</p>
-                <p className="mt-2 text-sm font-semibold text-[var(--brand-text)]">{user?.name || tx("表示名未設定", "No display name set")}</p>
-                <p className="mt-1 text-xs text-[var(--brand-text-muted)]">{tx("この名前で参加者一覧に表示されます。", "This name will be shown in the participant list.")}</p>
+                <p className="text-xs font-bold text-[var(--brand-text-muted)]">{tx("プロフィール確認", "Profile check", { tw: "確認個人檔案", ko: "프로필 확인" })}</p>
+                <p className="mt-2 text-sm font-semibold text-[var(--brand-text)]">{user?.name || tx("表示名未設定", "No display name set", { tw: "尚未設定顯示名稱", ko: "표시 이름 미설정" })}</p>
+                <p className="mt-1 text-xs text-[var(--brand-text-muted)]">{tx("この名前で参加者一覧に表示されます。", "This name will be shown in the participant list.", { tw: "參加者名單中會顯示這個名稱。", ko: "참여자 목록에 이 이름으로 표시됩니다." })}</p>
               </div>
               <div>
-                <h2 className="text-base font-semibold text-[var(--brand-text)]">{tx("スピーカー枠を申し込む", "Apply for a speaker slot")}</h2>
+                <h2 className="text-base font-semibold text-[var(--brand-text)]">{tx("スピーカー枠を申し込む", "Apply for a speaker slot", { tw: "申請發言名額", ko: "스피커 자리 신청" })}</h2>
                 <p className="mt-2 text-sm text-[var(--brand-text-muted)]">
                   {dynamicSession
-                    ? tx(`残り ${dynamicSession.speakerSlotsLeft} 枠 / ${dynamicSession.speakerSlotsTotal} 枠`, `${dynamicSession.speakerSlotsLeft} / ${dynamicSession.speakerSlotsTotal} slots left`)
-                    : tx("スピーカー枠の詳細を確認しています", "Checking speaker slots...")}
+                    ? tx(`残り ${dynamicSession.speakerSlotsLeft} 枠 / ${dynamicSession.speakerSlotsTotal} 枠`, `${dynamicSession.speakerSlotsLeft} / ${dynamicSession.speakerSlotsTotal} slots left`, { tw: `剩餘 ${dynamicSession.speakerSlotsLeft} / ${dynamicSession.speakerSlotsTotal} 個名額`, ko: `${dynamicSession.speakerSlotsLeft} / ${dynamicSession.speakerSlotsTotal}자리 남음` })
+                    : tx("スピーカー枠の詳細を確認しています", "Checking speaker slots...", { tw: "正在確認發言名額...", ko: "스피커 자리를 확인하는 중..." })}
                 </p>
                 <p className="mt-2 rounded-lg bg-[var(--brand-surface)] px-3 py-2 text-xs text-[var(--brand-text-muted)]">
                   {SPEAKER_FEE_ENABLED
-                    ? tx("予約は無料です。配信24時間前になったら参加費の支払いが必要です。", "Reservation is free. Payment is required within 24h of the stream.")
-                    : tx("参加費は現在無料です。予約するだけで参加できます。", "Participation is currently free. Just reserve a slot to join.")}
+                    ? tx("予約は無料です。配信24時間前になったら参加費の支払いが必要です。", "Reservation is free. Payment is required within 24h of the stream.", { tw: "預約免費。直播前 24 小時起需要支付參加費。", ko: "예약은 무료예요. 방송 24시간 전부터 참가비 결제가 필요해요." })
+                    : tx("参加費は現在無料です。予約するだけで参加できます。", "Participation is currently free. Just reserve a slot to join.", { tw: "目前參加免費，只要預約就能參加。", ko: "현재 참가비는 무료예요. 예약만 하면 참여할 수 있어요." })}
                 </p>
               </div>
               {paymentError && <p className="text-xs text-[var(--brand-accent-ink)]">{paymentError}</p>}
@@ -615,10 +622,10 @@ export function JoinPageClient() {
                 className="ui-btn ui-btn-md ui-btn-primary w-full"
               >
                 {reservationStatus === "reserving"
-                  ? tx("予約中...", "Reserving...")
+                  ? tx("予約中...", "Reserving...", { tw: "預約中...", ko: "예약 중..." })
                   : dynamicSession != null && dynamicSession.speakerSlotsLeft === 0
-                    ? tx("満枠です", "No slots left")
-                    : tx("スピーカー枠を予約する（無料）", "Reserve a speaker slot (free)")}
+                    ? tx("満枠です", "No slots left", { tw: "名額已滿", ko: "만석" })
+                    : tx("スピーカー枠を予約する（無料）", "Reserve a speaker slot (free)", { tw: "預約發言名額（免費）", ko: "스피커 자리 예약하기 (무료)" })}
               </button>
             </div>
           )}
@@ -627,21 +634,23 @@ export function JoinPageClient() {
           {!isEnded && authStatus === "logged-in" && !isAdmin && reservationStatus === "reserved" && !clientSecret && (
             <div className="flex flex-col gap-4 rounded-xl bg-[var(--brand-bg-900)] p-5">
               <div>
-                <p className="text-xs font-bold text-[var(--brand-primary-ink)]">{tx("予約完了", "Reserved")}</p>
+                <p className="text-xs font-bold text-[var(--brand-primary-ink)]">{tx("予約完了", "Reserved", { tw: "預約完成", ko: "예약 완료" })}</p>
                 <h2 className="mt-2 text-base font-semibold text-[var(--brand-text)]">
                   {paymentWindowOpen
-                    ? tx("支払いを完了して参加を確定する", "Pay to confirm your participation")
-                    : tx("予約が完了しました", "Your reservation is confirmed")}
+                    ? tx("支払いを完了して参加を確定する", "Pay to confirm your participation", { tw: "完成付款以確定參加", ko: "결제하고 참여 확정하기" })
+                    : tx("予約が完了しました", "Your reservation is confirmed", { tw: "預約已完成", ko: "예약이 완료되었어요" })}
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-[var(--brand-text-muted)]">
                   {paymentWindowOpen
                     ? tx(
                         "支払いが可能になりました。配信に参加するには支払いを完了してください。支払いが完了していない場合は入室できません。",
                         "Payment is now open. Please pay to join. You won't be able to enter without completing payment.",
+                        { tw: "現在可以付款了。要參加直播請先完成付款，未完成付款將無法進入。", ko: "이제 결제할 수 있어요. 참여하려면 결제를 완료해 주세요. 결제를 완료하지 않으면 입장할 수 없어요." },
                       )
                     : tx(
                         "配信24時間前になると支払いが可能になります。支払いを済ませてから配信に参加してください。支払いが完了していない場合は入室できません。",
                         "Payment opens 24 hours before the stream. You must pay before joining — unpaid reservations cannot enter.",
+                        { tw: "直播前 24 小時開放付款。請先完成付款再參加直播，未完成付款將無法進入。", ko: "방송 24시간 전부터 결제할 수 있어요. 결제를 마친 후 참여해 주세요. 결제를 완료하지 않으면 입장할 수 없어요." },
                       )}
                 </p>
               </div>
@@ -649,10 +658,10 @@ export function JoinPageClient() {
               {usableTicketCount > 0 && (
                 <div className="rounded-lg border border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 p-3">
                   <p className="text-xs font-semibold text-[var(--brand-primary)]">
-                    {tx(`参加チケットを ${usableTicketCount} 枚お持ちです`, `You have ${usableTicketCount} participation ticket(s)`)}
+                    {tx(`参加チケットを ${usableTicketCount} 枚お持ちです`, `You have ${usableTicketCount} participation ticket(s)`, { tw: `你有 ${usableTicketCount} 張參加票券`, ko: `참가 티켓이 ${usableTicketCount}장 있어요` })}
                   </p>
                   <p className="mt-1 text-xs text-[var(--brand-text-muted)]">
-                    {tx("チケットを使うと支払い不要で参加を確定できます。", "Use a ticket to confirm without payment.")}
+                    {tx("チケットを使うと支払い不要で参加を確定できます。", "Use a ticket to confirm without payment.", { tw: "使用票券就能免付款確定參加。", ko: "티켓을 사용하면 결제 없이 참여를 확정할 수 있어요." })}
                   </p>
                   <button
                     onClick={() => void handleRedeemTicket()}
@@ -660,8 +669,8 @@ export function JoinPageClient() {
                     className="ui-btn ui-btn-md ui-btn-primary mt-2 w-full"
                   >
                     {redeemingTicket
-                      ? tx("使用中...", "Using...")
-                      : tx("チケットで参加（支払いスキップ）", "Join with a ticket (skip payment)")}
+                      ? tx("使用中...", "Using...", { tw: "使用中...", ko: "사용 중..." })
+                      : tx("チケットで参加（支払いスキップ）", "Join with a ticket (skip payment)", { tw: "用票券參加（免付款）", ko: "티켓으로 참여 (결제 생략)" })}
                   </button>
                 </div>
               )}
@@ -671,7 +680,7 @@ export function JoinPageClient() {
                   disabled={paymentLoading}
                   className="ui-btn ui-btn-md ui-btn-primary w-full"
                 >
-                  {paymentLoading ? tx("準備中...", "Preparing...") : tx("今すぐ支払う →", "Pay now →")}
+                  {paymentLoading ? tx("準備中...", "Preparing...", { tw: "準備中...", ko: "준비 중..." }) : tx("今すぐ支払う →", "Pay now →", { tw: "立即付款 →", ko: "지금 결제하기 →" })}
                 </button>
               ) : (
                 <div className="rounded-lg bg-[var(--brand-surface)] px-3 py-2.5 text-xs text-[var(--brand-text-muted)]">
@@ -679,8 +688,9 @@ export function JoinPageClient() {
                     ? tx(
                         `支払い開始: ${new Date(new Date(dynamicSession.startsAt).getTime() - 24 * 60 * 60 * 1000).toLocaleString("ja-JP")}${viewerTimeZone ? ` ${timeZoneLabel(viewerTimeZone)}` : ""}`,
                         `Payment opens: ${new Date(new Date(dynamicSession.startsAt).getTime() - 24 * 60 * 60 * 1000).toLocaleString("en-US")}${viewerTimeZone ? ` ${timeZoneLabel(viewerTimeZone)}` : ""}`,
+                        { tw: `開放付款：${new Date(new Date(dynamicSession.startsAt).getTime() - 24 * 60 * 60 * 1000).toLocaleString(intlLocale)}${viewerTimeZone ? ` ${timeZoneLabel(viewerTimeZone)}` : ""}`, ko: `결제 시작: ${new Date(new Date(dynamicSession.startsAt).getTime() - 24 * 60 * 60 * 1000).toLocaleString(intlLocale)}${viewerTimeZone ? ` ${timeZoneLabel(viewerTimeZone)}` : ""}` },
                       )
-                    : tx("配信24時間前から支払い可能です", "Payment opens 24h before the stream")}
+                    : tx("配信24時間前から支払い可能です", "Payment opens 24h before the stream", { tw: "直播前 24 小時開放付款", ko: "방송 24시간 전부터 결제할 수 있어요" })}
                 </div>
               )}
             </div>
@@ -689,10 +699,10 @@ export function JoinPageClient() {
           {/* 支払い Stripe フォーム（インライン） */}
           {!isEnded && authStatus === "logged-in" && !isAdmin && reservationStatus === "reserved" && clientSecret && (
             <div className="rounded-xl bg-[var(--brand-bg-900)] p-5">
-              <p className="text-xs font-bold text-[var(--brand-primary-ink)]">{tx("参加費のお支払い", "Speaker Fee")}</p>
+              <p className="text-xs font-bold text-[var(--brand-primary-ink)]">{tx("参加費のお支払い", "Speaker Fee", { tw: "參加費付款", ko: "참가비 결제" })}</p>
               <Elements
                 stripe={stripePromise}
-                options={{ clientSecret, appearance: { theme: "stripe", variables: { colorPrimary: "#6248F7", borderRadius: "12px" } } }}
+                options={{ clientSecret, locale: stripeLocale, appearance: { theme: "stripe", variables: { colorPrimary: "#6248F7", borderRadius: "12px" } } }}
               >
                 <PaymentForm
                   sessionId={sessionId}
@@ -708,7 +718,7 @@ export function JoinPageClient() {
           {!isEnded && authStatus === "logged-in" && !isAdmin && reservationStatus === "paid" && selectedPath !== "speaker" && (
             // 説明は上の見出しとチケットのスタンプで足りるので、ここはボタンだけ。配信中は「入る」ことを前に出す
             <button onClick={() => setSelectedPath("speaker")} className="ui-btn ui-btn-md ui-btn-primary w-full">
-              {isLive ? tx("マイクを確認して入る", "Check mic and join now") : tx("マイクを確認する", "Check my microphone")}
+              {isLive ? tx("マイクを確認して入る", "Check mic and join now", { tw: "確認麥克風並進入", ko: "마이크 확인 후 입장" }) : tx("マイクを確認する", "Check my microphone", { tw: "確認麥克風", ko: "마이크 확인하기" })}
             </button>
           )}
 
@@ -717,13 +727,13 @@ export function JoinPageClient() {
             <div className="rounded-xl bg-[var(--brand-bg-900)] p-4 sm:p-5">
               {/* マイクの確認。オン・オフの大きなボタン、声に合わせて光るメーター、マイクの選択だけにする */}
               <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-base font-black text-[var(--brand-text)]">{tx("マイクの確認", "Microphone check")}</h2>
+                <h2 className="text-base font-black text-[var(--brand-text)]">{tx("マイクの確認", "Microphone check", { tw: "麥克風確認", ko: "마이크 확인" })}</h2>
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs font-black ${
                     ready ? "bg-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)]" : "bg-[var(--brand-surface)] text-[var(--brand-text-muted)]"
                   }`}
                 >
-                  {ready ? tx("準備OK", "Ready") : tx("準備中…", "Preparing…")}
+                  {ready ? tx("準備OK", "Ready", { tw: "準備完成", ko: "준비 완료" }) : tx("準備中…", "Preparing…", { tw: "準備中…", ko: "준비 중…" })}
                 </span>
               </div>
 
@@ -732,7 +742,7 @@ export function JoinPageClient() {
                   type="button"
                   onClick={() => applyMic(!micOn)}
                   aria-pressed={micOn}
-                  aria-label={micOn ? tx("マイクをオフにする", "Turn microphone off") : tx("マイクをオンにする", "Turn microphone on")}
+                  aria-label={micOn ? tx("マイクをオフにする", "Turn microphone off", { tw: "關閉麥克風", ko: "마이크 끄기" }) : tx("マイクをオンにする", "Turn microphone on", { tw: "開啟麥克風", ko: "마이크 켜기" })}
                   className={`relative grid h-14 w-14 shrink-0 place-items-center rounded-full transition-colors ${
                     micOn ? "bg-[var(--brand-primary)] text-white" : "bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)]"
                   }`}
@@ -763,17 +773,17 @@ export function JoinPageClient() {
                   </div>
                   <p className="mt-2 text-xs font-bold text-[var(--brand-text-muted)]">
                     {!micOn
-                      ? tx("マイクはオフです", "Microphone is off")
+                      ? tx("マイクはオフです", "Microphone is off", { tw: "麥克風已關閉", ko: "마이크가 꺼져 있어요" })
                       : micLevel > 8
-                        ? tx("聞こえています", "We can hear you")
-                        : tx("声を出してみてください", "Say something to test")}
+                        ? tx("聞こえています", "We can hear you", { tw: "聽得到你的聲音", ko: "잘 들립니다" })
+                        : tx("声を出してみてください", "Say something to test", { tw: "試著說說話", ko: "말을 해 보세요" })}
                   </p>
                 </div>
               </div>
 
               {audioDevices.length > 1 ? (
                 <label className="mt-3 grid gap-1.5">
-                  <span className="text-xs font-bold text-[var(--brand-text-muted)]">{tx("使うマイク", "Microphone")}</span>
+                  <span className="text-xs font-bold text-[var(--brand-text-muted)]">{tx("使うマイク", "Microphone", { tw: "使用的麥克風", ko: "사용할 마이크" })}</span>
                   {/* 選択欄の地の色（--brand-bg-900）がこの箱と同じで、枠が見えなくなるので白い面にする。
                       .ui-select は @layer の外にあり Tailwind の bg では上書きできないため style で渡す */}
                   <SelectField
@@ -784,7 +794,7 @@ export function JoinPageClient() {
                   >
                     {audioDevices.map((device, index) => (
                       <option key={device.deviceId} value={device.deviceId}>
-                        {device.label || `${tx("マイク", "Microphone")} ${index + 1}`}
+                        {device.label || `${tx("マイク", "Microphone", { tw: "麥克風", ko: "마이크" })} ${index + 1}`}
                       </option>
                     ))}
                   </SelectField>
@@ -792,7 +802,7 @@ export function JoinPageClient() {
               ) : null}
 
               <p className="mt-3 text-xs text-[var(--brand-text-muted)]">
-                {tx(`「${user?.name || "表示名未設定"}」として参加します。`, `You'll join as "${user?.name || "No display name"}".`)}
+                {tx(`「${user?.name || "表示名未設定"}」として参加します。`, `You'll join as "${user?.name || "No display name"}".`, { tw: `將以「${user?.name || "尚未設定顯示名稱"}」的名稱參加。`, ko: `"${user?.name || "표시 이름 미설정"}"(으)로 참여합니다.` })}
               </p>
 
               {errorMessage && <p className="mt-4 rounded-xl bg-[var(--brand-accent-soft)] px-4 py-3 text-sm text-[var(--brand-accent-ink)]">{errorMessage}</p>}
@@ -800,14 +810,14 @@ export function JoinPageClient() {
               {/* 「戻る」は文字の幅だけ、「参加」に残りを渡す。半々にすると、スマホで「この設定で参加」が2行に折れる */}
               <div className="mt-5 flex gap-2">
                 <button onClick={() => setSelectedPath(null)} className="ui-btn ui-btn-md ui-btn-ghost shrink-0 px-4">
-                  {tx("戻る", "Back")}
+                  {tx("戻る", "Back", { tw: "返回", ko: "뒤로" })}
                 </button>
                 <button
                   onClick={joinNow}
                   disabled={!ready || !!errorMessage}
                   className="ui-btn ui-btn-md ui-btn-primary min-w-0 flex-1 whitespace-nowrap"
                 >
-                  {tx("この設定で参加", "Join with this setup")}
+                  {tx("この設定で参加", "Join with this setup", { tw: "用這個設定參加", ko: "이 설정으로 참여" })}
                 </button>
               </div>
             </div>

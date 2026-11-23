@@ -6,7 +6,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { CalendarDaysIcon, HomeIcon, RectangleStackIcon, TicketIcon, VideoCameraIcon } from "@heroicons/react/24/outline";
 import { AuthProfileControl } from "../auth/AuthProfileControl";
-import { useI18n } from "../../lib/i18n";
+import { useI18n, type TxMore } from "../../lib/i18n";
 import { useUserSession } from "../../lib/userSession";
 import { buttonClassName } from "../ui/Button";
 import { LocaleSwitch } from "../ui/LocaleSwitch";
@@ -18,12 +18,14 @@ type NavItem = {
   labelEn: string;
   href?: string;
   shortLabelEn?: string;
+  /** 繁体字・韓国語のラベル */
+  more?: TxMore;
   icon: ComponentType<SVGProps<SVGSVGElement>>;
 };
 
 const BASE_NAV_ITEMS: NavItem[] = [
-  { labelJp: "ライブ", labelEn: "Live", href: "/", shortLabelEn: "Live", icon: HomeIcon },
-  { labelJp: "スケジュール", labelEn: "Schedule", href: "/schedule", shortLabelEn: "Schedule", icon: CalendarDaysIcon },
+  { labelJp: "ライブ", labelEn: "Live", href: "/", shortLabelEn: "Live", more: { tw: "直播", ko: "라이브" }, icon: HomeIcon },
+  { labelJp: "スケジュール", labelEn: "Schedule", href: "/schedule", shortLabelEn: "Schedule", more: { tw: "節目表", ko: "스케줄" }, icon: CalendarDaysIcon },
 ];
 
 type TopNavProps = {
@@ -36,7 +38,7 @@ export function TopNav({ mode = "default", searchQuery, onSearchChange }: TopNav
   const { navigate } = useRouteTransition();
 
   const pathname = usePathname();
-  const { locale, tx } = useI18n();
+  const { tx } = useI18n();
   const { isAuthenticated, isVtuber } = useUserSession();
   const isStudioMode = mode === "studio";
   // 下固定のナビがある間は印を付けておく。読み込みの帯（.route-bar）が
@@ -51,8 +53,8 @@ export function TopNav({ mode = "default", searchQuery, onSearchChange }: TopNav
     ? [
         ...BASE_NAV_ITEMS,
         // 予約した枠の一覧（マイチケット）。予約はログインしている人だけができるので、ログイン中だけ出す
-        { labelJp: "チケット", labelEn: "Tickets", href: "/tickets", shortLabelEn: "Tickets", icon: TicketIcon },
-        { labelJp: "チャンネル", labelEn: "Channel", href: "/channel", shortLabelEn: "Channel", icon: RectangleStackIcon },
+        { labelJp: "チケット", labelEn: "Tickets", href: "/tickets", shortLabelEn: "Tickets", more: { tw: "票券", ko: "티켓" }, icon: TicketIcon },
+        { labelJp: "チャンネル", labelEn: "Channel", href: "/channel", shortLabelEn: "Channel", more: { tw: "頻道", ko: "채널" }, icon: RectangleStackIcon },
       ]
     : BASE_NAV_ITEMS;
 
@@ -86,7 +88,7 @@ export function TopNav({ mode = "default", searchQuery, onSearchChange }: TopNav
                     return (
                       <span key={item.labelJp} className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-[15px] text-[var(--brand-text-muted)]/80">
                         <Icon className="h-4 w-4" aria-hidden />
-                        {tx(item.labelJp, item.labelEn)}
+                        {tx(item.labelJp, item.labelEn, item.more)}
                       </span>
                     );
                   }
@@ -102,7 +104,7 @@ export function TopNav({ mode = "default", searchQuery, onSearchChange }: TopNav
                       }`}
                     >
                       <Icon className="h-4 w-4" aria-hidden />
-                      {tx(item.labelJp, item.labelEn)}
+                      {tx(item.labelJp, item.labelEn, item.more)}
                     </Link>
                   );
                 })}
@@ -136,7 +138,7 @@ export function TopNav({ mode = "default", searchQuery, onSearchChange }: TopNav
                   className={`hidden sm:inline-flex ${buttonClassName({ variant: "primary", size: "md" })}`}
                 >
                   <VideoCameraIcon className="h-5 w-5" aria-hidden />
-                  <span>{tx("配信を作成", "Create Stream")}</span>
+                  <span>{tx("配信を作成", "Create Stream", { tw: "建立直播", ko: "방송 만들기" })}</span>
                 </button>
               )}
               <div>
@@ -164,7 +166,7 @@ export function TopNav({ mode = "default", searchQuery, onSearchChange }: TopNav
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = item.href ? pathname === item.href : false;
-            const label = locale === "jp" ? item.labelJp : item.shortLabelEn ?? item.labelEn;
+            const label = tx(item.labelJp, item.shortLabelEn ?? item.labelEn, item.more);
             const itemClass = "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 text-[11px] font-bold leading-tight";
             if (!item.href) {
               return (

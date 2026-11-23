@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { M_PLUS_Rounded_1c, Nunito } from "next/font/google";
+import { M_PLUS_Rounded_1c, Noto_Sans_KR, Noto_Sans_TC } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { RouteTransitionProvider } from "./components/ui/RouteTransition";
 import { I18nProvider } from "./lib/i18n";
@@ -12,12 +13,31 @@ const roundedJp = M_PLUS_Rounded_1c({
   display: "swap",
   variable: "--font-rounded-jp",
 });
-const roundedLatin = Nunito({
-  weight: ["600", "700", "800", "900"],
-  subsets: ["latin"],
+// Nunito だけはリポジトリに置いたファイルから読む。Google が Nunito を「&」入りの URL で返すことがあり、
+// Turbopack がその URL を読めずにビルドが止まるため（next/font/google queries have exactly one entry）。
+// ファイルは Google Fonts の Nunito（latin・可変ウェイト）をそのまま保存したもの
+const roundedLatin = localFont({
+  src: "./fonts/nunito-latin-variable.woff2",
+  weight: "200 1000",
   display: "swap",
   adjustFontFallback: false,
   variable: "--font-rounded-latin",
+});
+
+// 繁体字・韓国語の書体。M PLUS Rounded 1c にはハングルがなく、漢字も日本の字形なので、
+// 表示言語が tw / ko のときだけ v04.css で前に並べる。丸い書体で太さがそろうものがないため、
+// 角ゴシックの Noto を使う。preload: false なので、その言語を開いた人だけがダウンロードする
+const sansTc = Noto_Sans_TC({
+  subsets: ["latin"],
+  display: "swap",
+  preload: false,
+  variable: "--font-tc",
+});
+const sansKr = Noto_Sans_KR({
+  subsets: ["latin"],
+  display: "swap",
+  preload: false,
+  variable: "--font-kr",
 });
 
 const SITE_URL = "https://aiment.jp";
@@ -64,7 +84,7 @@ export default function RootLayout({
       data-theme="light"
       data-ui="0.4"
       style={{ colorScheme: "light" }}
-      className={`${roundedJp.variable} ${roundedLatin.variable}`}
+      className={`${roundedJp.variable} ${roundedLatin.variable} ${sansTc.variable} ${sansKr.variable}`}
     >
       <body className="antialiased">
         <UserSessionProvider>

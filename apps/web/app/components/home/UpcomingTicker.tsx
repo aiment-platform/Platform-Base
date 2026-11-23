@@ -49,7 +49,7 @@ export function UpcomingTicker({ sessions, onParticipate }: UpcomingTickerProps)
  </div>
  ))}
  {sessions.length === 0 ? (
- <span className="py-1 text-[11px] text-[var(--brand-text-muted)]">{tx("近日予定の配信はありません", "No upcoming streams")}</span>
+ <span className="py-1 text-[11px] text-[var(--brand-text-muted)]">{tx("近日予定の配信はありません", "No upcoming streams", { tw: "近期沒有預定的直播", ko: "예정된 방송이 없어요" })}</span>
  ) : null}
  </div>
  </div>

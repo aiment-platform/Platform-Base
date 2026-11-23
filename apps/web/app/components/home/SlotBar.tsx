@@ -15,7 +15,7 @@ export function SlotBar({ left, total, size = "md" }: { left: number; total: num
  return (
  <div>
  <div className="mb-1 flex items-center justify-between">
- <span className="text-[11px] font-medium text-[var(--brand-text-muted)]">{tx("参加枠の残り", "Spots left")}</span>
+ <span className="text-[11px] font-medium text-[var(--brand-text-muted)]">{tx("参加枠の残り", "Spots left", { tw: "剩餘名額", ko: "남은 자리" })}</span>
  <span className={`text-xs font-bold ${textColor} ${urgency === "urgent" ? "animate-pulse" : ""}`}>
  {left} / {total}
  </span>

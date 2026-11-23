@@ -68,7 +68,7 @@ export function ScheduleFilters({
           type="button"
           onClick={onPrev}
           disabled={!canGoPrev}
-          aria-label={tx("前の期間", "Previous days")}
+          aria-label={tx("前の期間", "Previous days", { tw: "上一段期間", ko: "이전 기간" })}
           className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)] transition-colors hover:text-[var(--brand-text)] disabled:cursor-not-allowed disabled:opacity-40 sm:h-9 sm:w-9"
         >
           <ChevronLeftIcon className="h-4 w-4" aria-hidden />
@@ -77,7 +77,7 @@ export function ScheduleFilters({
         <button
           type="button"
           onClick={onNext}
-          aria-label={tx("次の期間", "Next days")}
+          aria-label={tx("次の期間", "Next days", { tw: "下一段期間", ko: "다음 기간" })}
           className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)] transition-colors hover:text-[var(--brand-text)] sm:h-9 sm:w-9"
         >
           <ChevronRightIcon className="h-4 w-4" aria-hidden />
@@ -89,15 +89,15 @@ export function ScheduleFilters({
           className="inline-flex h-10 shrink-0 items-center gap-1 rounded-lg bg-[var(--brand-bg-900)] px-3 text-xs font-medium text-[var(--brand-text-muted)] transition-colors hover:text-[var(--brand-text)] disabled:cursor-default disabled:opacity-40 sm:h-9"
         >
           <ArrowPathIcon className="h-3.5 w-3.5" aria-hidden />
-          <span>{tx("今日", "Today")}</span>
+          <span>{tx("今日", "Today", { tw: "今天", ko: "오늘" })}</span>
         </button>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 sm:mt-4">
         <span className="hidden text-xs font-semibold text-[var(--brand-text-muted)] sm:inline">
-          {tx("表示日数", "Days")}
+          {tx("表示日数", "Days", { tw: "顯示天數", ko: "표시 일수" })}
         </span>
-        <div className="ui-segment" role="group" aria-label={tx("表示日数", "Days")}>
+        <div className="ui-segment" role="group" aria-label={tx("表示日数", "Days", { tw: "顯示天數", ko: "표시 일수" })}>
           {VISIBLE_DAY_OPTIONS.map((count) => (
             <button
               key={count}
@@ -106,7 +106,7 @@ export function ScheduleFilters({
               onClick={() => onVisibleDayCountChange(count)}
               className="ui-segment__option h-9 whitespace-nowrap px-2 sm:px-3"
             >
-              {tx(`${count}日`, `${count} day${count > 1 ? "s" : ""}`)}
+              {tx(`${count}日`, `${count} day${count > 1 ? "s" : ""}`, { tw: `${count} 天`, ko: `${count}일` })}
             </button>
           ))}
         </div>
@@ -121,7 +121,7 @@ export function ScheduleFilters({
           }`}
         >
           <AdjustmentsHorizontalIcon className="h-4 w-4" aria-hidden />
-          <span>{tx("絞り込み", "Filters")}</span>
+          <span>{tx("絞り込み", "Filters", { tw: "篩選", ko: "필터" })}</span>
           {activeFilterCount > 0 ? (
             <span className="grid h-5 min-w-5 place-items-center rounded-full bg-[var(--brand-primary)] px-1 text-[11px] text-white">
               {activeFilterCount}
@@ -138,14 +138,14 @@ export function ScheduleFilters({
             <input
               value={talentQuery}
               onChange={(e) => onTalentQueryChange(e.target.value)}
-              placeholder={tx("名前で検索（例: ルミナ）", "Search by name (e.g. Lumina)")}
+              placeholder={tx("名前で検索（例: ルミナ）", "Search by name (e.g. Lumina)", { tw: "依名稱搜尋（例：Lumina）", ko: "이름으로 검색 (예: Lumina)" })}
               className="h-10 w-full rounded-md bg-[var(--brand-bg-900)] pl-9 pr-3 text-base text-[var(--brand-text)] outline-none placeholder:text-[var(--brand-text-muted)] sm:text-sm"
             />
           </div>
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <label className="flex items-center gap-2 text-sm text-[var(--brand-text)]">
-              <span>{tx("開始", "Start")}</span>
+              <span>{tx("開始", "Start", { tw: "開始", ko: "시작" })}</span>
               <select
                 value={startHour}
                 onChange={(e) => onStartHourChange(Number(e.target.value))}
@@ -160,7 +160,7 @@ export function ScheduleFilters({
             </label>
 
             <label className="flex items-center gap-2 text-sm text-[var(--brand-text)]">
-              <span>{tx("終了", "End")}</span>
+              <span>{tx("終了", "End", { tw: "結束", ko: "종료" })}</span>
               <select
                 value={endHour}
                 onChange={(e) => onEndHourChange(Number(e.target.value))}
@@ -176,7 +176,7 @@ export function ScheduleFilters({
 
             <label className="flex h-10 items-center gap-2 rounded-md bg-[var(--brand-bg-900)] px-3 text-sm text-[var(--brand-text)]">
               <input type="checkbox" checked={onlyAvailable} onChange={(e) => onOnlyAvailableChange(e.target.checked)} />
-              <span>{tx("予約可能のみ", "Only available")}</span>
+              <span>{tx("予約可能のみ", "Only available", { tw: "僅顯示可預約", ko: "예약 가능만" })}</span>
             </label>
           </div>
         </div>

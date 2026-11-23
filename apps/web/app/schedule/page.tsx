@@ -62,7 +62,7 @@ function toSessionCategory(value: string): SessionCategory {
 }
 
 export default function SchedulePage() {
-  const { tx } = useI18n();
+  const { tx, intlLocale } = useI18n();
   const [sessions, setSessions] = useState<StreamSession[]>(() => getCachedActiveSessions() ?? []);
   const [initialLoading, setInitialLoading] = useState(() => getCachedActiveSessions() === null);
   const [showSlowLoading, setShowSlowLoading] = useState(false);
@@ -191,16 +191,16 @@ export default function SchedulePage() {
 
       <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 pb-16 pt-6 sm:px-6 sm:pt-8 lg:px-8">
         <div className="mb-4 sm:mb-6">
-          <h1 className="text-2xl font-bold text-[var(--text)]">{tx("配信スケジュール", "Stream Schedule")}</h1>
-          <p className="mt-1 text-sm text-[var(--text-sub)]">{tx("時間帯とタレントを比較して、予約可能な枠をすばやく選べます。", "Compare time slots and talents to quickly find bookable streams.")}</p>
+          <h1 className="text-2xl font-bold text-[var(--text)]">{tx("配信スケジュール", "Stream Schedule", { tw: "直播節目表", ko: "라이브 일정" })}</h1>
+          <p className="mt-1 text-sm text-[var(--text-sub)]">{tx("時間帯とタレントを比較して、予約可能な枠をすばやく選べます。", "Compare time slots and talents to quickly find bookable streams.", { tw: "比較時段與 VTuber，快速找到可預約的場次。", ko: "시간대와 VTuber를 비교해 예약 가능한 회차를 빠르게 찾아보세요." })}</p>
           <TimeZoneNote className="mt-3" />
         </div>
 
         {initialLoading ? (
           showSlowLoading ? (
             <SlowLoadingScreen
-              title={tx("スケジュールを読み込んでいます", "Loading schedule")}
-              description={tx("VTuberの配信予定を整理しています。少しだけお待ちください。", "Organizing VTuber schedules. Please wait a moment.")}
+              title={tx("スケジュールを読み込んでいます", "Loading schedule", { tw: "正在載入節目表", ko: "일정을 불러오는 중" })}
+              description={tx("VTuberの配信予定を整理しています。少しだけお待ちください。", "Organizing VTuber schedules. Please wait a moment.", { tw: "正在整理 VTuber 的直播預定，請稍候。", ko: "VTuber 라이브 일정을 정리하고 있어요. 잠시만 기다려 주세요." })}
             />
           ) : (
             <div className="min-h-[360px]" aria-hidden />
@@ -208,7 +208,7 @@ export default function SchedulePage() {
         ) : (
           <div className="space-y-4 sm:space-y-5">
             <ScheduleFilters
-              rangeLabel={formatRangeLabel(visibleDates, tx("ja-JP", "en-US"))}
+              rangeLabel={formatRangeLabel(visibleDates, intlLocale)}
               canGoPrev={canGoPrev}
               isShowingToday={selectedDate === todayDate}
               visibleDayCount={visibleDayCount}

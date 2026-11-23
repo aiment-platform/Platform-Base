@@ -18,7 +18,7 @@ export function TimeZoneNote({ className = "" }: { className?: string }) {
   return (
     <span className={`inline-flex items-center gap-1.5 text-xs font-bold text-[var(--brand-text-muted)] ${className}`.trim()}>
       <GlobeAsiaAustraliaIcon className="h-4 w-4" aria-hidden />
-      {tx(`時刻は ${label}（あなたの地域）`, `Times in ${label} (your time)`)}
+      {tx(`時刻は ${label}（あなたの地域）`, `Times in ${label} (your time)`, { tw: `時間以 ${label} 顯示（你的所在地區）`, ko: `시간은 ${label} 기준이에요 (내 지역)` })}
     </span>
   );
 }

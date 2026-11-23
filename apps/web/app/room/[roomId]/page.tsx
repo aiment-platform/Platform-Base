@@ -31,7 +31,7 @@ import {
   type BilingualChatMessage,
   type ChatSenderRole,
 } from "../../lib/chatMessages";
-import { useI18n } from "../../lib/i18n";
+import { useI18n, type Translate } from "../../lib/i18n";
 import { getStreamSession, listActiveStreamSessions, type StreamSession } from "../../lib/streamSessions";
 import { useWatchTimeTracker } from "../../hooks/useWatchTimeTracker";
 import { useUserSession } from "../../lib/userSession";
@@ -189,12 +189,12 @@ const PREVIEW_SPEAKER_PARTICIPANTS: SpeakerParticipantItem[] = [
     lastSpokeAt: null,
   },
 ];
-function relativeTime(iso: string, tx: (jp: string, en: string) => string): string {
+function relativeTime(iso: string, tx: Translate): string {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-  if (diff < 1) return tx("たった今配信開始", "Just started");
-  if (diff < 60) return tx(`${diff}分前に配信開始`, `Started ${diff} min ago`);
+  if (diff < 1) return tx("たった今配信開始", "Just started", { tw: "剛開始直播", ko: "방금 방송 시작" });
+  if (diff < 60) return tx(`${diff}分前に配信開始`, `Started ${diff} min ago`, { tw: `${diff} 分鐘前開始直播`, ko: `${diff}분 전 방송 시작` });
   const h = Math.floor(diff / 60);
-  return tx(`${h}時間前に配信開始`, `Started ${h} hr ago`);
+  return tx(`${h}時間前に配信開始`, `Started ${h} hr ago`, { tw: `${h} 小時前開始直播`, ko: `${h}시간 전 방송 시작` });
 }
 function parseRequestedRole(value: string | null): RequestedRole {
   if (value === "host" || value === "speaker" || value === "listener") return value;
@@ -242,7 +242,7 @@ function SpeakerParticipantRow({
   compact = false,
 }: {
   participant: SpeakerParticipantItem;
-  tx: (ja: string, en: string) => string;
+  tx: Translate;
   compact?: boolean;
 }) {
   const level = Math.max(0.08, Math.min(1, participant.audioLevel || 0));
@@ -272,7 +272,7 @@ function SpeakerParticipantRow({
           <p className="truncate text-sm font-bold text-[var(--brand-text)]">{participant.name}</p>
           {participant.isSpeaking ? (
             <span className="shrink-0 rounded-full bg-[var(--brand-primary)]/25 px-1.5 py-0.5 text-[11px] font-bold text-[var(--brand-primary)]">
-              {tx("発話中", "Speaking")}
+              {tx("発話中", "Speaking", { tw: "發言中", ko: "말하는 중" })}
             </span>
           ) : null}
         </div>
@@ -284,7 +284,7 @@ function SpeakerParticipantRow({
             />
           </div>
           <span className={`text-[11px] font-semibold ${participant.muted ? "text-[var(--brand-accent-ink)]" : "text-[var(--brand-text-muted)]"}`}>
-            {participant.muted ? tx("ミュート", "Muted") : tx("待機", "Ready")}
+            {participant.muted ? tx("ミュート", "Muted", { tw: "已靜音", ko: "음소거" }) : tx("待機", "Ready", { tw: "待命", ko: "대기" })}
           </span>
         </div>
       </div>
@@ -322,7 +322,7 @@ function SpeakerPictureInPictureButton({
   tx,
 }: {
   participants: SpeakerParticipantItem[];
-  tx: (ja: string, en: string) => string;
+  tx: Translate;
 }) {
   const [error, setError] = useState<string | null>(null);
   const pipWindowRef = useRef<Window | null>(null);
@@ -332,7 +332,7 @@ function SpeakerPictureInPictureButton({
     pipRootRef.current?.render(
       <main className="h-screen overflow-hidden bg-[var(--brand-surface)] p-2 text-[var(--brand-text)]">
         <div className="flex items-center justify-between px-2 py-2">
-          <p className="text-xs font-bold">{tx("スピーカー", "Speakers")}</p>
+          <p className="text-xs font-bold">{tx("スピーカー", "Speakers", { tw: "發言者", ko: "발언자" })}</p>
           <span className="rounded-full bg-[var(--brand-bg-900)] px-2 py-0.5 text-[11px] font-semibold text-[var(--brand-text-muted)]">
             {participants.length}
           </span>
@@ -340,7 +340,7 @@ function SpeakerPictureInPictureButton({
         <div className="h-[calc(100vh-44px)] space-y-1.5 overflow-y-auto">
           {participants.length === 0 ? (
             <p className="rounded-xl bg-[var(--brand-bg-900)] px-3 py-3 text-xs text-[var(--brand-text-muted)]">
-              {tx("スピーカーはいません", "No speakers yet")}
+              {tx("スピーカーはいません", "No speakers yet", { tw: "目前沒有發言者", ko: "아직 발언자가 없어요" })}
             </p>
           ) : (
             participants.map((participant) => (
@@ -373,7 +373,7 @@ function SpeakerPictureInPictureButton({
 
     const documentPictureInPicture = window.documentPictureInPicture;
     if (!documentPictureInPicture) {
-      setError(tx("パネルを開けません。Chromeでお試しください。", "Panel requires Chrome."));
+      setError(tx("パネルを開けません。Chromeでお試しください。", "Panel requires Chrome.", { tw: "無法開啟面板，請使用 Chrome。", ko: "패널을 열 수 없어요. Chrome에서 시도해 주세요." }));
       return;
     }
 
@@ -397,7 +397,7 @@ function SpeakerPictureInPictureButton({
         pipWindowRef.current = null;
       });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : tx("パネルを開けませんでした。", "Could not open panel."));
+      setError(caught instanceof Error ? caught.message : tx("パネルを開けませんでした。", "Could not open panel.", { tw: "無法開啟面板。", ko: "패널을 열지 못했어요." }));
     }
   };
 
@@ -407,7 +407,7 @@ function SpeakerPictureInPictureButton({
       <button
         type="button"
         onClick={() => void openPanel()}
-        aria-label={tx("スピーカーパネルを開く", "Open speaker panel")}
+        aria-label={tx("スピーカーパネルを開く", "Open speaker panel", { tw: "開啟發言者面板", ko: "발언자 패널 열기" })}
         className="ui-btn ui-btn-sm ui-btn-primary h-10 w-10 rounded-full p-0"
       >
         <ArrowTopRightOnSquareIcon className="h-5 w-5" aria-hidden />
@@ -426,7 +426,7 @@ function SpeakerParticipantDock({
   tx,
 }: {
   participants: SpeakerParticipantItem[];
-  tx: (ja: string, en: string) => string;
+  tx: Translate;
 }) {
   if (participants.length === 0) return null;
 
@@ -688,7 +688,7 @@ export default function RoomPage() {
     const room = roomRef.current;
     const senderId = user?.id ?? (guestCommentClientId ? `guest:${guestCommentClientId}` : "");
     if (!senderId) {
-      setChatSendError(tx("コメント送信の準備中です。少し待ってください。", "Preparing comments. Please wait a moment."));
+      setChatSendError(tx("コメント送信の準備中です。少し待ってください。", "Preparing comments. Please wait a moment.", { tw: "留言功能準備中，請稍候。", ko: "채팅을 준비 중이에요. 잠시만 기다려 주세요." }));
       return;
     }
     setChatSendError(null);
@@ -721,7 +721,7 @@ export default function RoomPage() {
       })
       .catch((error: unknown) => {
         console.error("Failed to save chat message", error);
-        setChatSendError(tx("コメントの送信に失敗しました。", "Failed to send the message."));
+        setChatSendError(tx("コメントの送信に失敗しました。", "Failed to send the message.", { tw: "留言傳送失敗。", ko: "메시지를 보내지 못했어요." }));
       });
 
     if (room && status === "connected") {
@@ -742,7 +742,7 @@ export default function RoomPage() {
     const value = text.trim();
     if (!value) return;
     setChatSendError(null);
-    const displayName = user?.channelName ?? user?.name ?? tx("ゲスト", "Guest");
+    const displayName = user?.channelName ?? user?.name ?? tx("ゲスト", "Guest", { tw: "訪客", ko: "게스트" });
     publishTranslatedMessage({
       id: crypto.randomUUID(),
       sessionId: roomId,
@@ -772,7 +772,7 @@ export default function RoomPage() {
       })
       .catch((error: unknown) => {
         console.error("Failed to retract comment", error);
-        setChatSendError(tx("コメントの取り消しに失敗しました。", "Failed to retract the comment."));
+        setChatSendError(tx("コメントの取り消しに失敗しました。", "Failed to retract the comment.", { tw: "無法收回留言。", ko: "메시지를 취소하지 못했어요." }));
       });
   }, [roomId, tx, user?.id]);
 
@@ -858,7 +858,7 @@ export default function RoomPage() {
           if (!mounted) return;
           if (sessionData?.status === "live") break;
           if (sessionData === null) {
-            setFailureReason(tx("配信枠が見つかりませんでした。", "Session not found."));
+            setFailureReason(tx("配信枠が見つかりませんでした。", "Session not found.", { tw: "找不到這場直播。", ko: "방송을 찾을 수 없어요." }));
             setStatus("failed");
             return;
           }
@@ -1234,17 +1234,17 @@ export default function RoomPage() {
 
   const statusLabel =
     status === "connected"
-      ? tx("接続済み", "Connected")
+      ? tx("接続済み", "Connected", { tw: "已連線", ko: "연결됨" })
       : status === "connecting"
-        ? tx("接続中", "Connecting")
+        ? tx("接続中", "Connecting", { tw: "連線中", ko: "연결 중" })
         : status === "waitingForLive"
-          ? tx("配信開始待ち", "Waiting for broadcast")
+          ? tx("配信開始待ち", "Waiting for broadcast", { tw: "等待直播開始", ko: "방송 시작 대기 중" })
           : status === "failed"
-            ? tx("接続失敗", "Failed")
-            : tx("待機中", "Idle");
+            ? tx("接続失敗", "Failed", { tw: "連線失敗", ko: "연결 실패" })
+            : tx("待機中", "Idle", { tw: "待機中", ko: "대기 중" });
 
   if (!roomId) {
-    return <div className="p-8">{tx("Room IDを読み込んでいます...", "Loading room ID...")}</div>;
+    return <div className="p-8">{tx("Room IDを読み込んでいます...", "Loading room ID...", { tw: "正在載入房間 ID...", ko: "방 ID를 불러오는 중..." })}</div>;
   }
 
   return (
@@ -1258,7 +1258,7 @@ export default function RoomPage() {
           <div className="flex min-w-0 items-center gap-2">
             {/* スマホではタイトルを動画の下に出しているので、ヘッダーでは省いて状態だけ見せる */}
             <span className="hidden max-w-[260px] truncate rounded-full bg-[var(--brand-surface)] px-3 py-1 text-xs font-medium text-[var(--brand-text-muted)] sm:inline">
-              {session?.title ?? tx("配信ルーム", "Live room")}
+              {session?.title ?? tx("配信ルーム", "Live room", { tw: "直播間", ko: "라이브 룸" })}
             </span>
             <span className="hidden whitespace-nowrap rounded-full bg-[var(--brand-surface)] px-3 py-1 text-xs font-medium text-[var(--brand-text-muted)] md:inline">Role: {assignedRole}</span>
             <span
@@ -1292,7 +1292,7 @@ export default function RoomPage() {
                 <div ref={remoteAudioContainerRef} className="hidden" aria-hidden />
                 {status === "failed" && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--brand-surface)] px-6 text-center">
-                    <p className="text-sm font-semibold text-[var(--brand-accent-ink)]">{tx("接続に失敗しました", "Connection failed")}</p>
+                    <p className="text-sm font-semibold text-[var(--brand-accent-ink)]">{tx("接続に失敗しました", "Connection failed", { tw: "連線失敗", ko: "연결에 실패했어요" })}</p>
                     {failureReason && (
                       <p className="rounded-xl bg-[var(--brand-accent-soft)] px-4 py-2 text-xs text-[var(--brand-accent-ink)]">{failureReason}</p>
                     )}
@@ -1300,30 +1300,30 @@ export default function RoomPage() {
                       onClick={() => router.back()}
                       className="ui-btn ui-btn-md ui-btn-primary mt-1"
                     >
-                      {tx("戻る", "Back")}
+                      {tx("戻る", "Back", { tw: "返回", ko: "돌아가기" })}
                     </button>
                   </div>
                 )}
                 {status === "waitingForLive" && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[var(--brand-surface)] text-center">
-                    <p className="text-sm font-semibold text-[var(--brand-text)]">{tx("配信開始をお待ちください", "Waiting for broadcast to start")}</p>
+                    <p className="text-sm font-semibold text-[var(--brand-text)]">{tx("配信開始をお待ちください", "Waiting for broadcast to start", { tw: "請稍候直播開始", ko: "방송 시작을 기다려 주세요" })}</p>
                     <p className="text-xs text-[var(--brand-text-muted)]">
-                      {tx("VTuberが配信を開始すると自動で接続されます", "You will be connected automatically when the VTuber starts")}
+                      {tx("VTuberが配信を開始すると自動で接続されます", "You will be connected automatically when the VTuber starts", { tw: "VTuber 開始直播後會自動連線", ko: "VTuber가 방송을 시작하면 자동으로 연결됩니다" })}
                     </p>
                   </div>
                 )}
                 {status !== "failed" && status !== "waitingForLive" && hostVideoHidden && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[var(--brand-surface)] text-center">
                     <VideoCameraSlashIcon className="h-7 w-7 text-[var(--brand-text-muted)]" aria-hidden />
-                    <p className="text-sm font-semibold text-[var(--brand-text)]">{tx("配信者が映像を止めています", "The host has paused the video")}</p>
-                    <p className="text-xs text-[var(--brand-text-muted)]">{tx("音声はそのまま聞こえます", "You can still hear the audio")}</p>
+                    <p className="text-sm font-semibold text-[var(--brand-text)]">{tx("配信者が映像を止めています", "The host has paused the video", { tw: "直播主已暫停畫面", ko: "방송자가 영상을 일시 중지했어요" })}</p>
+                    <p className="text-xs text-[var(--brand-text-muted)]">{tx("音声はそのまま聞こえます", "You can still hear the audio", { tw: "仍可聽到聲音", ko: "소리는 계속 들을 수 있어요" })}</p>
                   </div>
                 )}
                 {status !== "failed" && status !== "waitingForLive" && !hostVideoHidden && !remoteConnected && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[var(--brand-surface)] text-center">
-                    <p className="text-sm font-semibold text-[var(--brand-text)]">{tx("配信者の映像を待機中", "Waiting for host stream")}</p>
+                    <p className="text-sm font-semibold text-[var(--brand-text)]">{tx("配信者の映像を待機中", "Waiting for host stream", { tw: "等待直播主畫面", ko: "방송자 영상 대기 중" })}</p>
                     <p className="text-xs text-[var(--brand-text-muted)]">
-                      {tx("接続されると自動でライブ映像に切り替わります", "Stream switches automatically when connected")}
+                      {tx("接続されると自動でライブ映像に切り替わります", "Stream switches automatically when connected", { tw: "連線後會自動切換為直播畫面", ko: "연결되면 자동으로 라이브 영상으로 전환됩니다" })}
                     </p>
                   </div>
                 )}
@@ -1342,7 +1342,7 @@ export default function RoomPage() {
                         <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06ZM18.584 5.106a.75.75 0 0 1 1.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 0 1-1.06-1.06 8.25 8.25 0 0 0 0-11.668.75.75 0 0 1 0-1.06Z" />
                         <path d="M15.932 7.757a.75.75 0 0 1 1.061 0 6 6 0 0 1 0 8.486.75.75 0 0 1-1.06-1.061 4.5 4.5 0 0 0 0-6.364.75.75 0 0 1 0-1.061Z" />
                       </svg>
-                      {tx("タップして音声を有効化", "Tap to enable audio")}
+                      {tx("タップして音声を有効化", "Tap to enable audio", { tw: "點一下開啟聲音", ko: "탭하여 소리 켜기" })}
                     </button>
                   </div>
                 )}
@@ -1355,7 +1355,7 @@ export default function RoomPage() {
                   <button
                     type="button"
                     onClick={toggleFullscreen}
-                    aria-label={isFullscreen ? tx("フルスクリーンを終了", "Exit fullscreen") : tx("フルスクリーン", "Fullscreen")}
+                    aria-label={isFullscreen ? tx("フルスクリーンを終了", "Exit fullscreen", { tw: "結束全螢幕", ko: "전체 화면 종료" }) : tx("フルスクリーン", "Fullscreen", { tw: "全螢幕", ko: "전체 화면" })}
                     className={`inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur transition-all hover:bg-black/50 focus-visible:opacity-100 ${
                       showVideoControls ? "opacity-100" : "opacity-0"
                     }`}
@@ -1374,11 +1374,11 @@ export default function RoomPage() {
             {/* Stream ended overlay */}
             {streamEnded && (
               <div className="rounded-2xl bg-[var(--brand-surface)] p-6">
-                <p className="text-center text-lg font-extrabold">{tx("配信が終了しました", "This stream has ended")}</p>
-                <p className="mt-1 text-center text-sm text-[var(--brand-text-muted)]">{tx("ご視聴ありがとうございました。", "Thank you for watching.")}</p>
+                <p className="text-center text-lg font-extrabold">{tx("配信が終了しました", "This stream has ended", { tw: "直播已結束", ko: "방송이 종료되었어요" })}</p>
+                <p className="mt-1 text-center text-sm text-[var(--brand-text-muted)]">{tx("ご視聴ありがとうございました。", "Thank you for watching.", { tw: "感謝收看。", ko: "시청해 주셔서 감사합니다." })}</p>
                 {suggestedSessions.length > 0 && (
                   <div className="mt-5">
-                    <p className="mb-3 text-xs font-bold text-[var(--brand-text-muted)]">{tx("他の配信を見る", "Other live sessions")}</p>
+                    <p className="mb-3 text-xs font-bold text-[var(--brand-text-muted)]">{tx("他の配信を見る", "Other live sessions", { tw: "觀看其他直播", ko: "다른 방송 보기" })}</p>
                     <div className="grid gap-3 sm:grid-cols-2">
                       {suggestedSessions.map((s) => (
                         <Link key={s.sessionId} href={`/join/${encodeURIComponent(s.sessionId)}`} className="flex gap-3 rounded-xl bg-[var(--brand-bg-900)] p-3 transition-colors hover:bg-[var(--brand-bg-900)]/60">
@@ -1386,7 +1386,7 @@ export default function RoomPage() {
                           <div className="min-w-0">
                             <p className="line-clamp-2 text-xs font-semibold">{s.title}</p>
                             <p className="mt-1 truncate text-[11px] text-[var(--brand-text-muted)]">{s.hostName}</p>
-                            {s.status === "live" && <span className="inline-block rounded bg-[var(--brand-accent)] px-1.5 py-0.5 text-[11px] font-bold text-white">{tx("配信中", "LIVE")}</span>}
+                            {s.status === "live" && <span className="inline-block rounded bg-[var(--brand-accent)] px-1.5 py-0.5 text-[11px] font-bold text-white">{tx("配信中", "LIVE", { tw: "直播中", ko: "LIVE" })}</span>}
                           </div>
                         </Link>
                       ))}
@@ -1394,7 +1394,7 @@ export default function RoomPage() {
                   </div>
                 )}
                 <button onClick={() => navigate("/")} className="mx-auto mt-5 block rounded-xl bg-[var(--brand-primary)] px-6 py-2.5 text-sm font-bold text-white">
-                  {tx("ホームへ", "Go Home")}
+                  {tx("ホームへ", "Go Home", { tw: "回到首頁", ko: "홈으로" })}
                 </button>
               </div>
             )}
@@ -1419,7 +1419,7 @@ export default function RoomPage() {
                 {session.description && (
                   <details className="mt-3 rounded-xl bg-[var(--brand-surface)] px-4 py-3 text-sm">
                     <summary className="cursor-pointer select-none font-semibold text-[var(--brand-text)]">
-                      {tx("概要", "Description")}
+                      {tx("概要", "Description", { tw: "簡介", ko: "설명" })}
                     </summary>
                     <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-[var(--brand-text-muted)]">{session.description}</p>
                   </details>
@@ -1433,17 +1433,17 @@ export default function RoomPage() {
               <>
             <div className="px-4 py-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold">{tx("ライブチャット", "Live Chat")}</p>
+                <p className="text-sm font-semibold">{tx("ライブチャット", "Live Chat", { tw: "聊天室", ko: "라이브 채팅" })}</p>
                 <div className="flex items-center gap-2">
                   <span className="rounded-full bg-[var(--brand-surface)] px-2 py-0.5 text-[11px] text-[var(--brand-text-muted)]">{chatMessages.length}件</span>
                   <button
                     type="button"
                     onClick={() => setChatOpen(false)}
-                    aria-label={tx("コメントを閉じる", "Close comments")}
+                    aria-label={tx("コメントを閉じる", "Close comments", { tw: "關閉聊天室", ko: "채팅 닫기" })}
                     className="ui-btn ui-btn-sm h-8 gap-1 px-3 text-[11px] ui-btn-ghost"
                   >
                     <ChatBubbleLeftRightIcon className="h-4 w-4" aria-hidden />
-                    <span>{tx("OFF", "Off")}</span>
+                    <span>{tx("OFF", "Off", { tw: "關閉", ko: "끄기" })}</span>
                   </button>
                 </div>
               </div>
@@ -1473,13 +1473,13 @@ export default function RoomPage() {
                           onClick={() => retractChatMessage(message.id)}
                           className="rounded-full bg-[var(--brand-bg-900)] px-2 py-0.5 text-[11px] font-bold text-[var(--brand-text-muted)] ring-1 ring-black/5 hover:text-[var(--brand-accent-ink)]"
                         >
-                          {tx("取消", "Undo")}
+                          {tx("取消", "Undo", { tw: "收回", ko: "취소" })}
                         </button>
                       ) : null}
                     </div>
                     {message.deletedAt ? (
                       <p className="text-sm italic leading-relaxed text-[var(--brand-text-muted)]">
-                        {tx("このコメントは取り消されました。", "This comment was retracted.")}
+                        {tx("このコメントは取り消されました。", "This comment was retracted.", { tw: "此留言已收回。", ko: "취소된 메시지예요." })}
                       </p>
                     ) : (
                       <p className={`text-sm leading-relaxed ${message.kind === "cue" ? "font-bold text-[var(--brand-primary-dark)]" : "text-[var(--brand-text)]"}`}>
@@ -1498,7 +1498,7 @@ export default function RoomPage() {
                 <button
                   type="button"
                   onClick={() => scrollChatToBottom("smooth")}
-                  aria-label={tx("最新コメントへ移動", "Jump to latest comments")}
+                  aria-label={tx("最新コメントへ移動", "Jump to latest comments", { tw: "跳到最新留言", ko: "최신 채팅으로 이동" })}
                   className="ui-btn ui-btn-sm ui-btn-primary absolute bottom-3 right-3 z-10 h-10 w-10 rounded-full p-0"
                 >
                   <ArrowDownCircleIcon className="h-5 w-5" aria-hidden />
@@ -1528,7 +1528,7 @@ export default function RoomPage() {
                     event.preventDefault();
                     sendChat();
                   }}
-                  placeholder={tx("チャットを入力", "Type a message")}
+                  placeholder={tx("チャットを入力", "Type a message", { tw: "輸入訊息", ko: "메시지 입력" })}
                   // scroll-mb: フォーカス時の自動スクロールで、下に浮いている操作バーの裏に入力欄が隠れないようにする
                   className="min-w-0 flex-1 scroll-mb-32 rounded-lg bg-[var(--brand-bg-900)] px-3 py-2 text-sm text-[var(--brand-text)] outline-none placeholder:text-[var(--brand-text-muted)]"
                 />
@@ -1537,7 +1537,7 @@ export default function RoomPage() {
                   disabled={!user && !guestCommentClientId}
                   className="ui-btn ui-btn-sm ui-btn-primary"
                 >
-                  {tx("送信", "Send")}
+                  {tx("送信", "Send", { tw: "傳送", ko: "보내기" })}
                 </button>
               </div>
               {chatSendError ? (
@@ -1559,12 +1559,12 @@ export default function RoomPage() {
               <button
                 type="button"
                 onClick={() => setChatOpen(true)}
-                aria-label={tx("コメントを開く", "Open comments")}
+                aria-label={tx("コメントを開く", "Open comments", { tw: "開啟聊天室", ko: "채팅 열기" })}
                 className="flex h-full min-h-[48px] w-full items-center justify-center gap-2 text-[var(--brand-text-muted)] transition-colors hover:bg-[var(--brand-bg-900)] hover:text-[var(--brand-primary)] xl:min-h-[64px] xl:flex-col"
               >
                 <ChatBubbleLeftRightIcon className="h-6 w-6" aria-hidden />
                 {/* 縦書きは xl の細い右カラム用。1列表示では横書きのボタンにする */}
-                <span className="text-[11px] font-bold xl:[writing-mode:vertical-rl]">{tx("コメント", "Chat")}</span>
+                <span className="text-[11px] font-bold xl:[writing-mode:vertical-rl]">{tx("コメント", "Chat", { tw: "聊天", ko: "채팅" })}</span>
               </button>
             )}
           </aside>
@@ -1580,7 +1580,7 @@ export default function RoomPage() {
                 <button
                   onClick={() => applyMic(!micOn)}
                   disabled={!canSendMic}
-                  aria-label={micOn ? tx("マイクをオフ", "Mute microphone") : tx("マイクをオン", "Unmute microphone")}
+                  aria-label={micOn ? tx("マイクをオフ", "Mute microphone", { tw: "關閉麥克風", ko: "마이크 끄기" }) : tx("マイクをオン", "Unmute microphone", { tw: "開啟麥克風", ko: "마이크 켜기" })}
                   className={`ui-ctl ui-ctl-md ui-ctl-icon ${canSendMic && micOn ? "ui-ctl-primary" : "ui-ctl-neutral"}`}
                 >
                   {micOn ? (
@@ -1597,7 +1597,7 @@ export default function RoomPage() {
                   type="button"
                   disabled={!canSendMic}
                   onClick={() => setShowMicMenu((v) => !v)}
-                  aria-label={tx("マイク入力を選択", "Select microphone input")}
+                  aria-label={tx("マイク入力を選択", "Select microphone input", { tw: "選擇麥克風輸入", ko: "마이크 입력 선택" })}
                   className="ui-ctl ui-ctl-md ui-ctl-neutral w-8 px-0"
                 >
                   <ChevronUpIcon className="h-4 w-4" aria-hidden />
@@ -1636,11 +1636,11 @@ export default function RoomPage() {
                 setShowMicMenu(false);
               }}
               aria-pressed={showDevicePanel}
-              aria-label={tx("入力設定を開く", "Open input settings")}
+              aria-label={tx("入力設定を開く", "Open input settings", { tw: "開啟輸入設定", ko: "입력 설정 열기" })}
               className={`ui-ctl ui-ctl-md ${showDevicePanel ? "ui-ctl-primary" : "ui-ctl-neutral"}`}
             >
               <Cog6ToothIcon className="h-5 w-5" aria-hidden />
-              <span className="hidden sm:inline">{tx("入力", "Input")}</span>
+              <span className="hidden sm:inline">{tx("入力", "Input", { tw: "輸入", ko: "입력" })}</span>
             </button>
 
             <button
@@ -1651,7 +1651,7 @@ export default function RoomPage() {
               className="ui-ctl ui-ctl-md ui-ctl-danger"
             >
               <PhoneXMarkIcon className="h-5 w-5" aria-hidden />
-              {tx("退出", "Leave")}
+              {tx("退出", "Leave", { tw: "離開", ko: "나가기" })}
             </button>
           </div>
 
@@ -1659,13 +1659,13 @@ export default function RoomPage() {
             <div className="mt-3 rounded-2xl bg-[var(--brand-surface)] p-3 text-sm text-[var(--brand-text)]">
               <div className="grid gap-2 md:grid-cols-2">
                 <div className="rounded-xl bg-[var(--brand-bg-900)] px-3 py-2">
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--brand-text-muted)]">{tx("役割", "Role")}</p>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--brand-text-muted)]">{tx("役割", "Role", { tw: "身分", ko: "역할" })}</p>
                   <p className="mt-1 font-semibold">{assignedRole}</p>
                 </div>
                 <div className="rounded-xl bg-[var(--brand-bg-900)] px-3 py-2">
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--brand-text-muted)]">{tx("マイク", "Microphone")}</p>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--brand-text-muted)]">{tx("マイク", "Microphone", { tw: "麥克風", ko: "마이크" })}</p>
                   <p className="mt-1 line-clamp-1 font-semibold">
-                    {audioDevices.find((device) => device.deviceId === selectedMicDeviceId)?.label ?? tx("デフォルト", "Default")}
+                    {audioDevices.find((device) => device.deviceId === selectedMicDeviceId)?.label ?? tx("デフォルト", "Default", { tw: "預設", ko: "기본값" })}
                   </p>
                 </div>
               </div>

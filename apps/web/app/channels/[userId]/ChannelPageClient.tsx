@@ -55,7 +55,7 @@ export function ChannelPageClient() {
         setSessions(payload.sessions ?? []);
       } catch (caught) {
         if (cancelled) return;
-        setError(caught instanceof Error ? caught.message : tx("チャンネルの取得に失敗しました。", "Failed to load channel."));
+        setError(caught instanceof Error ? caught.message : tx("チャンネルの取得に失敗しました。", "Failed to load channel.", { tw: "無法載入頻道。", ko: "채널을 불러오지 못했어요." }));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -81,7 +81,7 @@ export function ChannelPageClient() {
       <div className="min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
         <TopNav />
         <main className="mx-auto max-w-[1200px] px-6 py-10">
-          <p className="text-sm text-[var(--brand-text-muted)]">{tx("チャンネルを読み込み中...", "Loading channel...")}</p>
+          <p className="text-sm text-[var(--brand-text-muted)]">{tx("チャンネルを読み込み中...", "Loading channel...", { tw: "正在載入頻道...", ko: "채널을 불러오는 중..." })}</p>
         </main>
       </div>
     );
@@ -92,9 +92,9 @@ export function ChannelPageClient() {
       <div className="min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
         <TopNav />
         <main className="mx-auto flex max-w-[1200px] flex-col items-start gap-3 px-6 py-10">
-          <p className="text-sm text-[var(--brand-accent-ink)]">{error ?? tx("チャンネルが見つかりません。", "Channel not found.")}</p>
+          <p className="text-sm text-[var(--brand-accent-ink)]">{error ?? tx("チャンネルが見つかりません。", "Channel not found.", { tw: "找不到頻道。", ko: "채널을 찾을 수 없어요." })}</p>
           <button onClick={() => router.push("/")} className="ui-btn ui-btn-md ui-btn-primary">
-            {tx("ホームに戻る", "Back to Home")}
+            {tx("ホームに戻る", "Back to Home", { tw: "回到首頁", ko: "홈으로" })}
           </button>
         </main>
       </div>
@@ -118,10 +118,10 @@ export function ChannelPageClient() {
         basePath={`/channels/${encodeURIComponent(channel.userId)}`}
         active="overview"
         labels={{
-          upcoming: tx("予定", "Upcoming"),
-          archive: tx("配信した回数", "Streams"),
-          noBio: tx("紹介文は未設定です。", "No bio yet."),
-          levelTag: (range) => tx(`AJL ${range} が得意`, `Best for AJL ${range}`),
+          upcoming: tx("予定", "Upcoming", { tw: "預定", ko: "예정" }),
+          archive: tx("配信した回数", "Streams", { tw: "直播次數", ko: "라이브 횟수" }),
+          noBio: tx("紹介文は未設定です。", "No bio yet.", { tw: "尚未填寫自我介紹。", ko: "아직 소개글이 없어요." }),
+          levelTag: (range) => tx(`AJL ${range} が得意`, `Best for AJL ${range}`, { tw: `擅長 AJL ${range}`, ko: `AJL ${range} 추천` }),
         }}
       />
       {/* 左にプロフィールと 1on1、右に配信枠。スマホでは配信枠を先に（来た人がまず探すのは枠なので） */}
@@ -142,7 +142,7 @@ export function ChannelPageClient() {
 
         <div className="grid min-w-0 gap-10">
           {liveSessions.length > 0 ? (
-            <SessionSection title={tx("配信中", "Live now")} live>
+            <SessionSection title={tx("配信中", "Live now", { tw: "直播中", ko: "라이브 중" })} live>
               {liveSessions.map((session) => (
                 <ChannelSessionCard
                   key={session.sessionId}
@@ -154,10 +154,10 @@ export function ChannelPageClient() {
             </SessionSection>
           ) : null}
 
-          <SessionSection title={tx("これからの配信", "Upcoming")} aside={<TimeZoneNote />}>
+          <SessionSection title={tx("これからの配信", "Upcoming", { tw: "即將直播", ko: "예정된 라이브" })} aside={<TimeZoneNote />}>
             {upcomingSessions.length === 0 ? (
               <p className="col-span-full rounded-2xl bg-[var(--brand-bg-900)] px-4 py-6 text-center text-sm font-bold text-[var(--brand-text-muted)]">
-                {tx("予定している配信はまだありません。", "No upcoming streams yet.")}
+                {tx("予定している配信はまだありません。", "No upcoming streams yet.", { tw: "目前還沒有預定的直播。", ko: "아직 예정된 라이브가 없어요." })}
               </p>
             ) : (
               upcomingSessions.map((session) => (
@@ -173,7 +173,7 @@ export function ChannelPageClient() {
 
           {/* 過去の配信は、ないときは見出しごと出さない（空の見出しが場所を取るだけなので） */}
           {archivedSessions.length > 0 ? (
-            <SessionSection title={tx("過去の配信", "Past streams")}>
+            <SessionSection title={tx("過去の配信", "Past streams", { tw: "過去的直播", ko: "지난 라이브" })}>
               {archivedSessions.map((session) => (
                 <ChannelSessionCard
                   key={session.sessionId}
@@ -247,11 +247,11 @@ function ProfileCard({
     const min = getAjlInfo(levelRange.min);
     const max = getAjlInfo(levelRange.max);
     rows.push({
-      label: tx("得意レベル", "Best for"),
+      label: tx("得意レベル", "Best for", { tw: "擅長程度", ko: "추천 레벨" }),
       value: min.level === max.level ? `AJL ${min.level}（${min.label}）` : `AJL ${min.level}–${max.level}`,
     });
   }
-  rows.push({ label: tx("配信枠", "Sessions"), value: tx(`${sessionCount} 枠`, `${sessionCount}`) });
+  rows.push({ label: tx("配信枠", "Sessions", { tw: "直播場次", ko: "라이브 회차" }), value: tx(`${sessionCount} 枠`, `${sessionCount}`, { tw: `${sessionCount} 場`, ko: `${sessionCount}회` }) });
 
   return (
     <section className="overflow-hidden rounded-[20px] border-[1.5px] border-[var(--surface-edge,var(--line))] bg-[var(--brand-surface)]" style={{ boxShadow: "0 4px 0 0 var(--surface-edge, var(--line))" }}>
@@ -269,7 +269,7 @@ function ProfileCard({
       </dl>
       {items.length === 0 ? (
         <p className="mx-5 mb-5 mt-1 rounded-xl bg-[var(--brand-bg-900)] px-4 py-3 text-xs font-bold leading-relaxed text-[var(--brand-text-muted)]">
-          {tx("誕生日や好きなものなどは、まだ書かれていません。", "No profile details yet.")}
+          {tx("誕生日や好きなものなどは、まだ書かれていません。", "No profile details yet.", { tw: "尚未填寫生日、喜好等資料。", ko: "아직 생일이나 좋아하는 것 등이 작성되지 않았어요." })}
         </p>
       ) : (
         <div className="h-2" />
