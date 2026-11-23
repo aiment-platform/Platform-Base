@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { M_PLUS_Rounded_1c, Nunito } from "next/font/google";
+import { M_PLUS_Rounded_1c } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { RouteTransitionProvider } from "./components/ui/RouteTransition";
 import { I18nProvider } from "./lib/i18n";
@@ -12,9 +13,12 @@ const roundedJp = M_PLUS_Rounded_1c({
   display: "swap",
   variable: "--font-rounded-jp",
 });
-const roundedLatin = Nunito({
-  weight: ["600", "700", "800", "900"],
-  subsets: ["latin"],
+// Nunito だけはリポジトリに置いたファイルから読む。Google が Nunito を「&」入りの URL で返すことがあり、
+// Turbopack がその URL を読めずにビルドが止まるため（next/font/google queries have exactly one entry）。
+// ファイルは Google Fonts の Nunito（latin・可変ウェイト）をそのまま保存したもの
+const roundedLatin = localFont({
+  src: "./fonts/nunito-latin-variable.woff2",
+  weight: "200 1000",
   display: "swap",
   adjustFontFallback: false,
   variable: "--font-rounded-latin",
