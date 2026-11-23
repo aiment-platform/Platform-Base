@@ -138,6 +138,16 @@ function readStoredChatItems(sessionId: string): ChatItem[] {
   }
 }
 
+/**
+ * 配信の録画（管理者用アーカイブ）を始めてもらう。サーバー側で「配信中か」「OBS がつながっているか」
+ * 「もう録っていないか」を確かめるので、何度呼んでもよい。失敗しても配信には影響させない。
+ */
+function requestRecording(sessionId: string) {
+  void fetch(`/api/stream-sessions/${encodeURIComponent(sessionId)}/recording`, { method: "POST" }).catch(() => {
+    // 録画は裏方の機能なので、配信者の画面にはエラーを出さない
+  });
+}
+
 function writeStoredChatItems(sessionId: string, messages: ChatItem[]) {
   if (typeof window === "undefined") return;
 
@@ -860,7 +870,8 @@ export default function StudioLiveSessionPage() {
 
     room.on(RoomEvent.Connected, () => {
       setConnectionStatus("live");
-      void setStreamSessionStatus(session.sessionId, "live");
+      // 配信開始が記録されてから録画を頼む（OBS がもうつながっていれば、ここで録画が始まる）
+      void setStreamSessionStatus(session.sessionId, "live").then(() => requestRecording(session.sessionId));
       room.remoteParticipants.forEach((participant) => {
         upsertParticipant(participant);
       });
@@ -948,6 +959,8 @@ export default function StudioLiveSessionPage() {
     room.on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
       const isObs = isIngressIdentity(participant.identity);
       // 配信モニタ: OBS(ingress)の映像を「視聴者に見えている画」として表示する。
+      // OBS の映像が届いた＝VTuber が部屋に入った。録画がまだなら始めてもらう（回線切替の後もここを通る）
+      if (track.kind === Track.Kind.Video && isObs) requestRecording(session.sessionId);
       if (track.kind === Track.Kind.Video && isObs && monitorRef.current) {
         track.attach(monitorRef.current);
         monitorRef.current.muted = true;

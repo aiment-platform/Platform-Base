@@ -1,6 +1,7 @@
 import { deleteRoom, deleteRtmpIngress } from "@repo/livekit";
 import type { StreamSession } from "../apiTypes";
 import { clearSessionIngress } from "./aimentStore";
+import { stopSessionRecording } from "./sessionRecording";
 
 function getLivekitConfig() {
   const apiKey = process.env.LIVEKIT_API_KEY;
@@ -13,9 +14,12 @@ function getLivekitConfig() {
  * 管理者が配信を強制終了・削除したときの後片付け。
  * - LiveKitのルームを閉じて、ブラウザ配信のホスト・スピーカー・視聴者を全員切断する
  * - OBS用のIngressを削除し、DBの配信キーを消す(OBSが送り続けて枠を消費しないように)
+ * - 録画を止める(ルームを閉じても止まるが、ファイルの書き出しを確実に始めさせるため先に止める)
  * どちらも失敗しても終了/削除自体は止めない(残ったIngressは /admin/ingresses で掃除できる)。
  */
 export async function releaseSessionMedia(session: StreamSession) {
+  await stopSessionRecording(session.sessionId);
+
   const config = getLivekitConfig();
   if (config) {
     try {

@@ -82,3 +82,26 @@ export async function createListenerToken(params: TokenParams): Promise<string> 
   at.addGrant(grant);
   return at.toJwt();
 }
+
+/**
+ * Recorder token: an admin's browser that records the stream locally.
+ * hidden keeps it out of the participant list and viewer counts; it only subscribes.
+ */
+export async function createRecorderToken(params: TokenParams): Promise<string> {
+  const at = new AccessToken(params.apiKey, params.apiSecret, {
+    identity: params.userId,
+    name: params.userName,
+    ttl: "12h",
+  });
+
+  const grant: VideoGrant = {
+    room: params.roomName,
+    roomJoin: true,
+    canPublish: false,
+    canSubscribe: true,
+    canPublishData: false,
+    hidden: true,
+  };
+  at.addGrant(grant);
+  return at.toJwt();
+}
