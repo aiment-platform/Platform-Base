@@ -14,7 +14,7 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen bg-[var(--bg)] px-5 py-8 text-[var(--brand-text)] md:px-10 md:py-12">
-      <p className="text-sm text-[var(--brand-text-muted)]">{tx("ログインページへ移動中...", "Redirecting to login...")}</p>
+      <p className="text-sm text-[var(--brand-text-muted)]">{tx("ログインページへ移動中...", "Redirecting to login...", { tw: "正在前往登入頁面...", ko: "로그인 페이지로 이동 중..." })}</p>
     </main>
   );
 }

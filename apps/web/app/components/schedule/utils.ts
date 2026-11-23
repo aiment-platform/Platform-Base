@@ -1,3 +1,4 @@
+import type { Translate } from "../../lib/i18n";
 import { BookingStatus, ScheduleEvent, TimeSlot } from "./types";
 
 export function buildTimeSlots(startHour: number, endHour: number, stepMinutes = 30): TimeSlot[] {
@@ -25,10 +26,10 @@ export function eventSpansSlots(event: ScheduleEvent, slotMinutes: number): bool
   return slotMinutes >= start && slotMinutes < end;
 }
 
-export function statusLabel(status: BookingStatus, tx: (jp: string, en: string) => string): string {
-  if (status === "available") return tx("予約可", "Available");
-  if (status === "booked") return tx("予約済", "Reserved");
-  return tx("抽選", "Lottery");
+export function statusLabel(status: BookingStatus, tx: Translate): string {
+  if (status === "available") return tx("予約可", "Available", { tw: "可預約", ko: "예약 가능" });
+  if (status === "booked") return tx("予約済", "Reserved", { tw: "已預約", ko: "예약 완료" });
+  return tx("抽選", "Lottery", { tw: "抽選", ko: "추첨" });
 }
 
 export function statusStyle(status: BookingStatus): string {

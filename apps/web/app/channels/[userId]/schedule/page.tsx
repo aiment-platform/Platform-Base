@@ -99,7 +99,7 @@ export default function ChannelSchedulePage() {
         setSessions(payload.sessions ?? []);
       } catch (caught) {
         if (cancelled) return;
-        setError(caught instanceof Error ? caught.message : tx("スケジュールの取得に失敗しました。", "Failed to load schedule."));
+        setError(caught instanceof Error ? caught.message : tx("スケジュールの取得に失敗しました。", "Failed to load schedule.", { tw: "無法載入節目表。", ko: "일정을 불러오지 못했어요." }));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -173,7 +173,7 @@ export default function ChannelSchedulePage() {
       <div className="min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
         <TopNav />
         <main className="mx-auto max-w-[1200px] px-6 py-10">
-          <p className="text-sm text-[var(--brand-text-muted)]">{tx("スケジュールを読み込み中...", "Loading schedule...")}</p>
+          <p className="text-sm text-[var(--brand-text-muted)]">{tx("スケジュールを読み込み中...", "Loading schedule...", { tw: "正在載入節目表...", ko: "일정을 불러오는 중..." })}</p>
         </main>
       </div>
     );
@@ -184,9 +184,9 @@ export default function ChannelSchedulePage() {
       <div className="min-h-screen bg-[var(--bg)] text-[var(--brand-text)]">
         <TopNav />
         <main className="mx-auto flex max-w-[1200px] flex-col items-start gap-3 px-6 py-10">
-          <p className="text-sm text-[var(--brand-accent-ink)]">{error ?? tx("チャンネルが見つかりません。", "Channel not found.")}</p>
+          <p className="text-sm text-[var(--brand-accent-ink)]">{error ?? tx("チャンネルが見つかりません。", "Channel not found.", { tw: "找不到頻道。", ko: "채널을 찾을 수 없어요." })}</p>
           <button onClick={() => router.push("/")} className="rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white">
-            {tx("ホームに戻る", "Back to Home")}
+            {tx("ホームに戻る", "Back to Home", { tw: "回到首頁", ko: "홈으로" })}
           </button>
         </main>
       </div>
@@ -206,9 +206,9 @@ export default function ChannelSchedulePage() {
         basePath={`/channels/${encodeURIComponent(channel.userId)}`}
         active="schedule"
         labels={{
-          upcoming: tx("予定", "Upcoming"),
-          archive: tx("アーカイブ", "Archive"),
-          noBio: tx("紹介文は未設定です。", "No bio yet."),
+          upcoming: tx("予定", "Upcoming", { tw: "預定", ko: "예정" }),
+          archive: tx("アーカイブ", "Archive", { tw: "過去直播", ko: "아카이브" }),
+          noBio: tx("紹介文は未設定です。", "No bio yet.", { tw: "尚未填寫自我介紹。", ko: "아직 소개글이 없어요." }),
         }}
       />
       <main className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8">
@@ -225,14 +225,14 @@ export default function ChannelSchedulePage() {
         <section className="mb-5 rounded-2xl bg-[var(--brand-surface)] p-3 sm:p-4">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex w-full items-center gap-2 sm:w-auto">
-              <div className="ui-segment" role="group" aria-label={tx("表示期間", "Range")}>
+              <div className="ui-segment" role="group" aria-label={tx("表示期間", "Range", { tw: "顯示期間", ko: "표시 기간" })}>
                 <button
                   type="button"
                   aria-pressed={rangeMode === "3d"}
                   onClick={() => setRangeMode("3d")}
                   className="ui-segment__option h-9 whitespace-nowrap px-2.5 sm:px-3"
                 >
-                  {tx("3日", "3 days")}
+                  {tx("3日", "3 days", { tw: "3 天", ko: "3일" })}
                 </button>
                 <button
                   type="button"
@@ -240,7 +240,7 @@ export default function ChannelSchedulePage() {
                   onClick={() => setRangeMode("week")}
                   className="ui-segment__option h-9 whitespace-nowrap px-2.5 sm:px-3"
                 >
-                  {tx("1週間", "1 week")}
+                  {tx("1週間", "1 week", { tw: "1 週", ko: "1주" })}
                 </button>
               </div>
               <button
@@ -249,7 +249,7 @@ export default function ChannelSchedulePage() {
                 className="ml-auto inline-flex h-10 shrink-0 items-center gap-1 rounded-lg bg-[var(--brand-bg-900)] px-3 text-sm font-semibold text-[var(--brand-text-muted)] hover:text-[var(--brand-text)] sm:order-last sm:ml-0"
               >
                 <ArrowPathIcon className="h-4 w-4" aria-hidden />
-                <span>{tx("本日に戻る", "Back to Today")}</span>
+                <span>{tx("本日に戻る", "Back to Today", { tw: "回到今天", ko: "오늘로" })}</span>
               </button>
             </div>
 
@@ -257,7 +257,7 @@ export default function ChannelSchedulePage() {
               <button
                 type="button"
                 onClick={() => handleMoveWindow(-1)}
-                aria-label={tx("前の期間", "Previous range")}
+                aria-label={tx("前の期間", "Previous range", { tw: "上一段期間", ko: "이전 기간" })}
                 className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)]"
               >
                 <ChevronLeftIcon className="h-5 w-5" aria-hidden />
@@ -276,7 +276,7 @@ export default function ChannelSchedulePage() {
               <button
                 type="button"
                 onClick={() => handleMoveWindow(1)}
-                aria-label={tx("次の期間", "Next range")}
+                aria-label={tx("次の期間", "Next range", { tw: "下一段期間", ko: "다음 기간" })}
                 className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[var(--brand-bg-900)] text-[var(--brand-text-muted)]"
               >
                 <ChevronRightIcon className="h-5 w-5" aria-hidden />
@@ -285,7 +285,7 @@ export default function ChannelSchedulePage() {
 
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:ml-auto">
               <label className="flex items-center gap-2 text-sm text-[var(--brand-text-muted)]">
-                {tx("開始", "Start")}
+                {tx("開始", "Start", { tw: "開始", ko: "시작" })}
                 <select
                   value={startHour}
                   onChange={(event) => {
@@ -303,7 +303,7 @@ export default function ChannelSchedulePage() {
                 </select>
               </label>
               <label className="flex items-center gap-2 text-sm text-[var(--brand-text-muted)]">
-                {tx("終了", "End")}
+                {tx("終了", "End", { tw: "結束", ko: "종료" })}
                 <select
                   value={endHour}
                   onChange={(event) => {
@@ -322,7 +322,7 @@ export default function ChannelSchedulePage() {
               </label>
               <label className="flex h-10 items-center gap-2 rounded-md bg-[var(--brand-bg-900)] px-3 text-sm text-[var(--brand-text-muted)]">
                 <input type="checkbox" checked={onlyAvailable} onChange={(event) => setOnlyAvailable(event.target.checked)} />
-                {tx("予約可能のみ", "Available only")}
+                {tx("予約可能のみ", "Available only", { tw: "僅顯示可預約", ko: "예약 가능만" })}
               </label>
             </div>
           </div>

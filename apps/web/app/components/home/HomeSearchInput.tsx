@@ -94,7 +94,7 @@ export function HomeSearchInput({ searchQuery, onSearchChange, className = "" }:
       <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--brand-text-muted)]" aria-hidden />
       <input
         type="text"
-        placeholder={tx("VTuber名・配信タイトルで検索", "Search VTuber or stream title")}
+        placeholder={tx("VTuber名・配信タイトルで検索", "Search VTuber or stream title", { tw: "搜尋 VTuber 或直播標題", ko: "VTuber 이름 또는 방송 제목 검색" })}
         value={searchQuery}
         onChange={(e) => onSearchChange(e.target.value)}
         onKeyDown={handleKeyDown}
@@ -111,7 +111,7 @@ export function HomeSearchInput({ searchQuery, onSearchChange, className = "" }:
             setOpen(false);
           }}
           className="absolute right-0.5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]"
-          aria-label={tx("検索をクリア", "Clear search")}
+          aria-label={tx("検索をクリア", "Clear search", { tw: "清除搜尋", ko: "검색어 지우기" })}
         >
           <XMarkIcon className="h-4 w-4" aria-hidden />
         </button>
@@ -121,12 +121,12 @@ export function HomeSearchInput({ searchQuery, onSearchChange, className = "" }:
         <div className="ui-float absolute left-0 top-full z-50 mt-1 w-full overflow-hidden rounded-xl bg-[var(--brand-surface)]">
           {searching && (
             <p className="px-4 py-2.5 text-xs text-[var(--brand-text-muted)]">
-              {tx("検索中...", "Searching...")}
+              {tx("検索中...", "Searching...", { tw: "搜尋中…", ko: "검색 중..." })}
             </p>
           )}
           {!searching && vtubers.length === 0 && (
             <p className="px-4 py-2.5 text-xs text-[var(--brand-text-muted)]">
-              {tx("見つかりませんでした", "No results")}
+              {tx("見つかりませんでした", "No results", { tw: "找不到結果", ko: "검색 결과가 없어요" })}
             </p>
           )}
           {vtubers.map((v, i) => (

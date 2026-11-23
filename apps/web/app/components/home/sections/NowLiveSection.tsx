@@ -17,8 +17,8 @@ export function NowLiveSection({ sessions, onOpenSession, onOpenChannel }: NowLi
       <section className="pt-8">
         <div className="ui-panel flex items-center gap-3 px-5 py-4">
           <span className="h-2 w-2 rounded-full bg-[var(--placeholder)]" aria-hidden />
-          <p className="text-sm font-bold">{tx("いま配信中の枠はありません", "No streams are live right now")}</p>
-          <p className="text-sm text-[var(--brand-text-muted)]">{tx("下の予定から予約しておくと、始まったときに入れます。", "Reserve one below to join when it starts.")}</p>
+          <p className="text-sm font-bold">{tx("いま配信中の枠はありません", "No streams are live right now", { tw: "目前沒有正在直播的節目", ko: "지금 진행 중인 방송이 없어요" })}</p>
+          <p className="text-sm text-[var(--brand-text-muted)]">{tx("下の予定から予約しておくと、始まったときに入れます。", "Reserve one below to join when it starts.", { tw: "從下方的時程先預約，開始時就能加入。", ko: "아래 일정에서 예약해 두면 시작할 때 바로 참여할 수 있어요." })}</p>
         </div>
       </section>
     );
@@ -31,7 +31,7 @@ export function NowLiveSection({ sessions, onOpenSession, onOpenChannel }: NowLi
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" aria-hidden />
           LIVE
         </span>
-        <h2 className="ui-section-title text-lg font-bold">{tx("配信中", "Live now")}</h2>
+        <h2 className="ui-section-title text-lg font-bold">{tx("配信中", "Live now", { tw: "直播中", ko: "라이브 중" })}</h2>
         <span className="ui-count text-sm text-[var(--brand-text-muted)]">{sessions.length}</span>
       </div>
 

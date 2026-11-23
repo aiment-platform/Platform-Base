@@ -22,7 +22,7 @@ import { Ticket } from "../components/ui/Ticket";
 import { getStartState, startStateLabel, type StartState } from "../join/[sessionId]/JoinHero";
 import type { Reservation, StreamSession } from "../lib/apiTypes";
 import { getAjlInfo } from "../lib/ajl";
-import { useI18n } from "../lib/i18n";
+import { useI18n, type Translate } from "../lib/i18n";
 import { cancelReservation, listMyReservations, subscribeReservations } from "../lib/reservations";
 import { getStreamSession } from "../lib/streamSessions";
 import { formatInTimeZone, timeZoneLabel, useViewerTimeZone } from "../lib/timezone";
@@ -149,14 +149,14 @@ function TicketRow({
           <div className="mt-1 flex flex-wrap items-center gap-x-4 text-xs font-bold [&>*]:py-2 sm:mt-2 sm:[&>*]:py-0.5">
             {ended ? (
               <Link href={`/channels/${encodeURIComponent(session.hostUserId)}/schedule`} className="text-[var(--brand-primary-ink)] hover:underline">
-                {tx("この配信者の次の予定", "Next from this host")}
+                {tx("この配信者の次の予定", "Next from this host", { tw: "這位實況主的下一場", ko: "이 호스트의 다음 일정" })}
               </Link>
             ) : (
               <>
                 {live ? null : (
                   <button type="button" onClick={() => downloadIcs(session)} className="inline-flex items-center gap-1 whitespace-nowrap text-[var(--brand-primary-ink)] hover:underline">
                     <CalendarDaysIcon className="h-3.5 w-3.5" aria-hidden />
-                    {tx("カレンダーに追加", "Add to calendar")}
+                    {tx("カレンダーに追加", "Add to calendar", { tw: "加入行事曆", ko: "캘린더에 추가" })}
                   </button>
                 )}
                 {onCancel && !live ? (
@@ -178,7 +178,7 @@ function TicketRow({
                     }}
                     className={confirming ? "text-[var(--brand-accent-ink)] underline" : "text-[var(--brand-text-muted)] hover:underline"}
                   >
-                    {busy ? tx("キャンセル中…", "Cancelling…") : confirming ? tx("本当にキャンセルする", "Tap again to cancel") : tx("予約をキャンセル", "Cancel")}
+                    {busy ? tx("キャンセル中…", "Cancelling…", { tw: "取消中…", ko: "취소 중…" }) : confirming ? tx("本当にキャンセルする", "Tap again to cancel", { tw: "再點一次即取消", ko: "한 번 더 누르면 취소돼요" }) : tx("予約をキャンセル", "Cancel", { tw: "取消預約", ko: "예약 취소" })}
                   </button>
                 ) : null}
               </>
@@ -191,7 +191,7 @@ function TicketRow({
             onClick={() => navigate(joinHref)}
             className={`ui-btn ui-btn-sm h-10 w-full shrink-0 sm:h-[34px] sm:w-auto ${live || soon ? "ui-btn-primary" : "ui-btn-ghost"}`}
           >
-            {live ? tx("今すぐ入る", "Join now") : soon ? tx("マイクを確認", "Check mic") : tx("詳細", "Details")}
+            {live ? tx("今すぐ入る", "Join now", { tw: "立即進入", ko: "지금 입장" }) : soon ? tx("マイクを確認", "Check mic", { tw: "檢查麥克風", ko: "마이크 확인" }) : tx("詳細", "Details", { tw: "詳情", ko: "상세 보기" })}
           </button>
         )}
       </div>
@@ -200,7 +200,7 @@ function TicketRow({
 }
 
 /** これからの枠を、日ごとにまとめる。見出しは「今日」「明日」、それ以外は「11/02 (月)」 */
-function groupByDay(entries: Entry[], timeZone: string | undefined, now: number, tx: (ja: string, en: string) => string, locale: string) {
+function groupByDay(entries: Entry[], timeZone: string | undefined, now: number, tx: Translate, intlLocale: string) {
   const dayKey = (value: string | number) => formatInTimeZone(new Date(value), timeZone, { year: "numeric", month: "2-digit", day: "2-digit" });
   const today = dayKey(now);
   const tomorrow = dayKey(now + 86_400_000);
@@ -209,8 +209,8 @@ function groupByDay(entries: Entry[], timeZone: string | undefined, now: number,
     const key = dayKey(entry.session.startsAt);
     let group = groups.find((item) => item.key === key);
     if (!group) {
-      const date = formatInTimeZone(entry.session.startsAt, timeZone, { month: "2-digit", day: "2-digit", weekday: "short" }, locale === "jp" ? "ja-JP" : "en-US");
-      const label = key === today ? `${tx("今日", "Today")} ・ ${date}` : key === tomorrow ? `${tx("明日", "Tomorrow")} ・ ${date}` : date;
+      const date = formatInTimeZone(entry.session.startsAt, timeZone, { month: "2-digit", day: "2-digit", weekday: "short" }, intlLocale);
+      const label = key === today ? `${tx("今日", "Today", { tw: "今天", ko: "오늘" })} ・ ${date}` : key === tomorrow ? `${tx("明日", "Tomorrow", { tw: "明天", ko: "내일" })} ・ ${date}` : date;
       group = { key, label, entries: [] };
       groups.push(group);
     }
@@ -220,7 +220,7 @@ function groupByDay(entries: Entry[], timeZone: string | undefined, now: number,
 }
 
 export function TicketsPageClient() {
-  const { tx, locale } = useI18n();
+  const { tx, intlLocale } = useI18n();
   const { navigate } = useRouteTransition();
   const { isAuthenticated, hydrated } = useUserSession();
   const viewerTimeZone = useViewerTimeZone();
@@ -261,7 +261,7 @@ export function TicketsPageClient() {
         setError(null);
       } catch (loadError) {
         if (cancelled) return;
-        setError(loadError instanceof Error ? loadError.message : tx("読み込めませんでした", "Failed to load"));
+        setError(loadError instanceof Error ? loadError.message : tx("読み込めませんでした", "Failed to load", { tw: "無法載入", ko: "불러오지 못했어요" }));
         setEntries([]);
       }
     };
@@ -285,13 +285,13 @@ export function TicketsPageClient() {
     };
   }, [entries, now]);
 
-  const groups = useMemo(() => groupByDay(upcoming, timeZone, now, tx, locale), [upcoming, timeZone, now, tx, locale]);
+  const groups = useMemo(() => groupByDay(upcoming, timeZone, now, tx, intlLocale), [upcoming, timeZone, now, tx, intlLocale]);
 
   const handleCancel = async (reservationId: string) => {
     try {
       await cancelReservation(reservationId);
     } catch (cancelError) {
-      setError(cancelError instanceof Error ? cancelError.message : tx("キャンセルできませんでした", "Could not cancel"));
+      setError(cancelError instanceof Error ? cancelError.message : tx("キャンセルできませんでした", "Could not cancel", { tw: "無法取消", ko: "취소하지 못했어요" }));
     }
   };
 
@@ -303,29 +303,29 @@ export function TicketsPageClient() {
       <main className="mx-auto grid w-full max-w-[880px] gap-6 px-4 pb-28 pt-8 lg:pb-12">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-black sm:text-3xl">{tx("マイチケット", "My tickets")}</h1>
-            <p className="mt-1 text-sm text-[var(--brand-text-muted)]">{tx("予約した配信枠", "Sessions you've booked")}</p>
+            <h1 className="text-2xl font-black sm:text-3xl">{tx("マイチケット", "My tickets", { tw: "我的票券", ko: "내 티켓" })}</h1>
+            <p className="mt-1 text-sm text-[var(--brand-text-muted)]">{tx("予約した配信枠", "Sessions you've booked", { tw: "已預約的場次", ko: "예약한 세션" })}</p>
           </div>
           {viewerTimeZone ? (
-            <p className="text-xs font-bold text-[var(--brand-text-muted)]">{tx(`時刻は ${timeZoneLabel(viewerTimeZone)}`, `Times in ${timeZoneLabel(viewerTimeZone)}`)}</p>
+            <p className="text-xs font-bold text-[var(--brand-text-muted)]">{tx(`時刻は ${timeZoneLabel(viewerTimeZone)}`, `Times in ${timeZoneLabel(viewerTimeZone)}`, { tw: `時間以 ${timeZoneLabel(viewerTimeZone)} 顯示`, ko: `시간대: ${timeZoneLabel(viewerTimeZone)}` })}</p>
           ) : null}
         </header>
 
         {hydrated && !isAuthenticated ? (
           <div className="ui-panel grid justify-items-center gap-3 p-8 text-center">
             <TicketIcon className="h-10 w-10 text-[var(--brand-primary)]" aria-hidden />
-            <p className="font-black">{tx("ログインすると、予約した枠がここに並びます", "Log in to see the sessions you've booked")}</p>
+            <p className="font-black">{tx("ログインすると、予約した枠がここに並びます", "Log in to see the sessions you've booked", { tw: "登入後即可在這裡查看已預約的場次", ko: "로그인하면 예약한 세션을 여기서 볼 수 있어요" })}</p>
             <button type="button" onClick={() => navigate(`/auth?redirect=${encodeURIComponent("/tickets")}`)} className="ui-btn ui-btn-md ui-btn-primary">
-              {tx("ログイン", "Log in")}
+              {tx("ログイン", "Log in", { tw: "登入", ko: "로그인" })}
             </button>
           </div>
         ) : (
           <>
-            <div className="ui-segment w-fit" role="group" aria-label={tx("表示する予約", "Bookings to show")}>
+            <div className="ui-segment w-fit" role="group" aria-label={tx("表示する予約", "Bookings to show", { tw: "要顯示的預約", ko: "표시할 예약" })}>
               {(
                 [
-                  { id: "upcoming", label: tx("これから", "Upcoming"), count: upcomingCount },
-                  { id: "past", label: tx("過去", "Past"), count: past.length },
+                  { id: "upcoming", label: tx("これから", "Upcoming", { tw: "即將開始", ko: "예정" }), count: upcomingCount },
+                  { id: "past", label: tx("過去", "Past", { tw: "已結束", ko: "지난 세션" }), count: past.length },
                 ] as const
               ).map((item) => (
                 <button
@@ -344,15 +344,15 @@ export function TicketsPageClient() {
             {error ? <p className="rounded-xl bg-[var(--brand-accent-soft)] px-4 py-3 text-sm text-[var(--brand-accent-ink)]">{error}</p> : null}
 
             {entries === null ? (
-              <p className="py-10 text-center text-sm text-[var(--brand-text-muted)]">{tx("読み込み中…", "Loading…")}</p>
+              <p className="py-10 text-center text-sm text-[var(--brand-text-muted)]">{tx("読み込み中…", "Loading…", { tw: "載入中…", ko: "불러오는 중…" })}</p>
             ) : tab === "upcoming" ? (
               upcomingCount === 0 ? (
                 <div className="ui-panel grid justify-items-center gap-3 p-8 text-center">
                   <TicketIcon className="h-10 w-10 text-[var(--brand-primary)]" aria-hidden />
-                  <p className="font-black">{tx("予約した枠はまだありません", "No bookings yet")}</p>
-                  <p className="text-sm text-[var(--brand-text-muted)]">{tx("気になる配信の枠を予約すると、ここに並びます。", "Book a session and it will show up here.")}</p>
+                  <p className="font-black">{tx("予約した枠はまだありません", "No bookings yet", { tw: "還沒有預約", ko: "아직 예약이 없어요" })}</p>
+                  <p className="text-sm text-[var(--brand-text-muted)]">{tx("気になる配信の枠を予約すると、ここに並びます。", "Book a session and it will show up here.", { tw: "預約感興趣的直播場次後，就會顯示在這裡。", ko: "관심 있는 세션을 예약하면 여기에 표시돼요." })}</p>
                   <button type="button" onClick={() => navigate("/")} className="ui-btn ui-btn-md ui-btn-primary">
-                    {tx("配信を探す", "Find a session")}
+                    {tx("配信を探す", "Find a session", { tw: "尋找直播", ko: "세션 찾기" })}
                   </button>
                 </div>
               ) : (
@@ -361,7 +361,7 @@ export function TicketsPageClient() {
                     <section className="grid gap-3">
                       <h2 className="flex items-center gap-2 text-sm font-black text-[var(--brand-accent-ink)]">
                         <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--brand-accent)]" aria-hidden />
-                        {tx("いま入れる", "Live now")}
+                        {tx("いま入れる", "Live now", { tw: "現在可進入", ko: "지금 입장 가능" })}
                       </h2>
                       {live.map((entry) => (
                         <TicketRow key={entry.reservation.reservationId} entry={entry} timeZone={timeZone} />
@@ -379,7 +379,7 @@ export function TicketsPageClient() {
                 </div>
               )
             ) : past.length === 0 ? (
-              <p className="py-10 text-center text-sm text-[var(--brand-text-muted)]">{tx("終わった枠はまだありません", "No past sessions yet")}</p>
+              <p className="py-10 text-center text-sm text-[var(--brand-text-muted)]">{tx("終わった枠はまだありません", "No past sessions yet", { tw: "還沒有已結束的場次", ko: "아직 지난 세션이 없어요" })}</p>
             ) : (
               <div className="grid gap-3">
                 {past.map((entry) => (

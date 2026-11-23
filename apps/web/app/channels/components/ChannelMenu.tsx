@@ -12,8 +12,8 @@ export function ChannelMenu({ basePath, active }: ChannelMenuProps) {
   const { tx } = useI18n();
 
   const items = [
-    { key: "overview", href: basePath, label: tx("概要", "Overview") },
-    { key: "schedule", href: `${basePath}/schedule`, label: tx("スケジュール", "Schedule") },
+    { key: "overview", href: basePath, label: tx("概要", "Overview", { tw: "總覽", ko: "개요" }) },
+    { key: "schedule", href: `${basePath}/schedule`, label: tx("スケジュール", "Schedule", { tw: "節目表", ko: "일정" }) },
   ] as const;
 
   // 下線のタブ。選択中だけ紫の線と濃い文字

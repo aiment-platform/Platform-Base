@@ -9,6 +9,7 @@
  * スマホでは半券を上に置き、ミシン目を横に通す（チケットを縦にした形）。
  */
 import type { AjlInfo } from "../../lib/ajl";
+import type { Translate } from "../../lib/i18n";
 import { ReservedStamp, Ticket } from "../../components/ui/Ticket";
 import { OptimizedImage } from "@/app/components/ui/OptimizedImage";
 
@@ -36,22 +37,22 @@ export function getStartState(startsAt: string, durationMin: number, status: str
   };
 }
 
-type Tx = (ja: string, en: string) => string;
+type Tx = Translate;
 
 export function startStateLabel(state: StartState, tx: Tx): string {
   switch (state.kind) {
     case "live":
-      return tx("配信中", "Live now");
+      return tx("配信中", "Live now", { tw: "直播中", ko: "라이브 중" });
     case "ended":
-      return tx("終了しました", "Ended");
+      return tx("終了しました", "Ended", { tw: "已結束", ko: "종료됨" });
     case "soon":
-      return tx("まもなく開始", "Starting soon");
+      return tx("まもなく開始", "Starting soon", { tw: "即將開始", ko: "곧 시작" });
     case "tbd":
-      return tx("日時未定", "Time TBD");
+      return tx("日時未定", "Time TBD", { tw: "時間未定", ko: "시간 미정" });
     case "upcoming":
-      if (state.days > 0) return tx(`あと ${state.days}日 ${state.hours}時間`, `In ${state.days}d ${state.hours}h`);
-      if (state.hours > 0) return tx(`あと ${state.hours}時間 ${state.minutes}分`, `In ${state.hours}h ${state.minutes}m`);
-      return tx(`あと ${state.minutes}分`, `In ${state.minutes} min`);
+      if (state.days > 0) return tx(`あと ${state.days}日 ${state.hours}時間`, `In ${state.days}d ${state.hours}h`, { tw: `還有 ${state.days} 天 ${state.hours} 小時`, ko: `${state.days}일 ${state.hours}시간 후` });
+      if (state.hours > 0) return tx(`あと ${state.hours}時間 ${state.minutes}分`, `In ${state.hours}h ${state.minutes}m`, { tw: `還有 ${state.hours} 小時 ${state.minutes} 分`, ko: `${state.hours}시간 ${state.minutes}분 후` });
+      return tx(`あと ${state.minutes}分`, `In ${state.minutes} min`, { tw: `還有 ${state.minutes} 分鐘`, ko: `${state.minutes}분 후` });
   }
 }
 
@@ -148,7 +149,7 @@ function HostLine({ host, tx }: Pick<JoinHeroProps, "host" | "tx">) {
       type="button"
       onClick={host.onOpen}
       className="flex w-fit min-w-0 items-center gap-2 rounded-full pr-2 transition-colors hover:text-[var(--brand-primary-ink)]"
-      aria-label={tx(`${host.name} のチャンネル`, `${host.name}'s channel`)}
+      aria-label={tx(`${host.name} のチャンネル`, `${host.name}'s channel`, { tw: `${host.name} 的頻道`, ko: `${host.name}님의 채널` })}
     >
       {body}
     </button>
@@ -170,22 +171,22 @@ function SlotsBlock({
   return (
     <div className="grid gap-2">
       <p className="text-xs font-bold text-[var(--brand-text-muted)]">
-        {tx("スピーカー枠", "Speaker spots")} ・ {participationType}
+        {tx("スピーカー枠", "Speaker spots", { tw: "發言名額", ko: "스피커 자리" })} ・ {participationType}
       </p>
       <SlotGauge left={slotsLeft} total={slotsTotal} reserved={reserved} />
       <p className="text-sm font-bold text-[var(--brand-text)]">
         {reserved ? (
-          <span className="mr-2 rounded-full px-2 py-0.5 text-xs font-black text-white" style={{ background: SEAT_MINE }}>{tx("1席はあなた", "1 is yours")}</span>
+          <span className="mr-2 rounded-full px-2 py-0.5 text-xs font-black text-white" style={{ background: SEAT_MINE }}>{tx("1席はあなた", "1 is yours", { tw: "其中 1 席是你的", ko: "1자리는 내 자리" })}</span>
         ) : null}
         {slotsLeft === 0 ? (
-          tx("満席", "Full")
+          tx("満席", "Full", { tw: "已額滿", ko: "만석" })
         ) : (
           <>
-            {tx("残り ", "")}
+            {tx("残り ", "", { tw: "剩餘 ", ko: "" })}
             <span className="text-2xl font-black" style={{ color: isLow(slotsLeft, slotsTotal) ? "var(--brand-accent-ink)" : "var(--brand-primary-ink)" }}>
               {slotsLeft}
             </span>
-            {tx(` / ${slotsTotal} 枠`, ` of ${slotsTotal} left`)}
+            {tx(` / ${slotsTotal} 枠`, ` of ${slotsTotal} left`, { tw: ` / ${slotsTotal} 個名額`, ko: ` / ${slotsTotal}자리 남음` })}
           </>
         )}
       </p>
@@ -232,7 +233,7 @@ export function JoinHero(props: JoinHeroProps) {
           {start.kind === "live" ? (
             <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[var(--brand-accent)] px-2.5 py-1 text-xs font-black text-white">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" aria-hidden />
-              {tx("配信中", "LIVE")}
+              {tx("配信中", "LIVE", { tw: "直播中", ko: "LIVE" })}
             </span>
           ) : null}
           <h1 className="text-2xl font-black leading-tight sm:text-3xl">{title}</h1>
@@ -242,13 +243,13 @@ export function JoinHero(props: JoinHeroProps) {
           stackWhenNarrow
           stubColor={stubColor(start)}
           stubWidth="minmax(220px, 0.8fr)"
-          stubOverlay={reserved && start.kind !== "ended" ? <ReservedStamp label={tx("予約済み", "RESERVED")} /> : null}
+          stubOverlay={reserved && start.kind !== "ended" ? <ReservedStamp label={tx("予約済み", "RESERVED", { tw: "已預約", ko: "예약됨" })} /> : null}
           stub={
             <div className="grid gap-2 p-5">
               <p className="text-xs font-bold opacity-80">
-                {start.kind === "live" || start.kind === "ended" ? tx("開始した時刻", "Started") : tx("開始", "Starts")}
+                {start.kind === "live" || start.kind === "ended" ? tx("開始した時刻", "Started", { tw: "開始時間", ko: "시작 시간" }) : tx("開始", "Starts", { tw: "開始", ko: "시작" })}
               </p>
-              <p className="text-2xl font-black leading-tight">{startsAtLabel ?? tx("未定", "TBD")}</p>
+              <p className="text-2xl font-black leading-tight">{startsAtLabel ?? tx("未定", "TBD", { tw: "未定", ko: "미정" })}</p>
               {startsAtHostLabel ? <p className="text-xs font-semibold opacity-80">{startsAtHostLabel}</p> : null}
               <p className="mt-1 inline-flex w-fit rounded-full bg-white/20 px-2.5 py-1 text-xs font-black">{startStateLabel(start, tx)}</p>
             </div>

@@ -146,7 +146,7 @@ export function MultiDayScheduleGrid({
   startHour,
   endHour,
 }: MultiDayScheduleGridProps) {
-  const { tx } = useI18n();
+  const { tx, intlLocale } = useI18n();
   const viewerTimeZone = useViewerTimeZone();
   const rangeStart = startHour * 60;
   const rangeEnd = endHour * 60;
@@ -171,7 +171,7 @@ export function MultiDayScheduleGrid({
           style={{ "--days": dates.length } as CSSProperties}
         >
           <div className="sticky left-0 top-0 z-30 border-r border-[var(--line)] bg-[var(--brand-surface)] px-1.5 py-3 text-[11px] font-semibold text-[var(--brand-text-muted)] sm:px-3 sm:text-xs">
-            {viewerTimeZone ? timeZoneLabel(viewerTimeZone) : tx("時間", "Time")}
+            {viewerTimeZone ? timeZoneLabel(viewerTimeZone) : tx("時間", "Time", { tw: "時間", ko: "시간" })}
           </div>
 
           {dates.map((date, index) => {
@@ -186,10 +186,10 @@ export function MultiDayScheduleGrid({
               }`}
             >
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <p className="text-sm font-semibold text-[var(--brand-text)]">{formatDateLabel(date, tx("ja-JP", "en-US"))}</p>
+                <p className="text-sm font-semibold text-[var(--brand-text)]">{formatDateLabel(date, intlLocale)}</p>
                 {isToday && (
                   <span className="rounded-full bg-[var(--brand-primary)]/20 px-2 py-0.5 text-[11px] font-bold text-[var(--brand-primary)]">
-                    {tx("当日", "Today")}
+                    {tx("当日", "Today", { tw: "今天", ko: "오늘" })}
                   </span>
                 )}
               </div>

@@ -6,6 +6,7 @@
  * そのときは書いた文字のまま出す。内容（「いちご大福」など）は配信者の文なので訳さない。
  * サーバー（aimentStore）とブラウザの両方から使うので、React には依存させない。
  */
+import type { Locale } from "./i18n";
 export const PROFILE_PRESETS = [
   { key: "birthday", ja: "誕生日", en: "Birthday" },
   { key: "height", ja: "身長", en: "Height" },
@@ -24,7 +25,7 @@ export function isProfilePresetKey(value: unknown): value is ProfilePresetKey {
 }
 
 /** 行の見出しを、表示する言語で返す。よく使う見出しなら訳し、自由に書いたものはそのまま */
-export function profileItemLabel(item: { key?: string; label: string }, locale: "jp" | "en"): string {
+export function profileItemLabel(item: { key?: string; label: string }, locale: Locale): string {
   const preset = PROFILE_PRESETS.find((entry) => entry.key === item.key);
   if (!preset) return item.label;
   return locale === "jp" ? preset.ja : preset.en;

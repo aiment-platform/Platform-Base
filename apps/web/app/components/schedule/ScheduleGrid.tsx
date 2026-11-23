@@ -116,8 +116,8 @@ export function ScheduleGrid({ talents, selectedDate, startHour, endHour, events
   if (talents.length === 0) {
     return (
       <section className="rounded-2xl bg-[var(--brand-surface)] px-5 py-10 text-center">
-        <p className="text-sm font-semibold text-[var(--brand-text)]">{tx("配信スケジュールはまだありません。", "No stream schedule yet.")}</p>
-        <p className="mt-1 text-xs text-[var(--brand-text-muted)]">{tx("配信枠が作成されるとここに表示されます。", "Created stream sessions will appear here.")}</p>
+        <p className="text-sm font-semibold text-[var(--brand-text)]">{tx("配信スケジュールはまだありません。", "No stream schedule yet.", { tw: "目前還沒有直播節目表。", ko: "아직 라이브 일정이 없어요." })}</p>
+        <p className="mt-1 text-xs text-[var(--brand-text-muted)]">{tx("配信枠が作成されるとここに表示されます。", "Created stream sessions will appear here.", { tw: "建立直播場次後會顯示在這裡。", ko: "라이브 회차가 만들어지면 여기에 표시돼요." })}</p>
       </section>
     );
   }
@@ -139,7 +139,7 @@ export function ScheduleGrid({ talents, selectedDate, startHour, endHour, events
     <section className="overflow-hidden rounded-2xl bg-[var(--brand-surface)]">
       <div className="overflow-auto">
         <div className="grid min-w-[980px]" style={{ gridTemplateColumns: `88px repeat(${talents.length}, minmax(200px, 1fr))` }}>
-          <div className="sticky left-0 top-0 z-20 bg-[var(--brand-surface)] px-3 py-3 text-xs font-semibold text-[var(--brand-text-muted)]">{viewerTimeZone ? timeZoneLabel(viewerTimeZone) : tx("時間", "Time")}</div>
+          <div className="sticky left-0 top-0 z-20 bg-[var(--brand-surface)] px-3 py-3 text-xs font-semibold text-[var(--brand-text-muted)]">{viewerTimeZone ? timeZoneLabel(viewerTimeZone) : tx("時間", "Time", { tw: "時間", ko: "시간" })}</div>
 
           {talents.map((talent) => (
             <div key={talent.id} className="sticky top-0 z-10 bg-[var(--brand-surface)] px-3 py-2">

@@ -28,7 +28,7 @@ import {
   type ChatSenderRole,
 } from "../../../lib/chatMessages";
 import type { Reservation, SessionComment } from "../../../lib/apiTypes";
-import { useI18n } from "../../../lib/i18n";
+import { useI18n, type Translate } from "../../../lib/i18n";
 import {
   getStreamSession,
   setStreamSessionStatus,
@@ -197,7 +197,7 @@ function SpeakerTalkOverlay({
   tx,
 }: {
   participants: ParticipantItem[];
-  tx: (ja: string, en: string) => string;
+  tx: Translate;
 }) {
   return (
     <aside className="h-screen overflow-hidden bg-transparent p-2 text-[var(--brand-text)]">
@@ -319,7 +319,7 @@ function SpeakerOverlayLauncher({
   tx,
 }: {
   participants: ParticipantItem[];
-  tx: (ja: string, en: string) => string;
+  tx: Translate;
 }) {
   const [error, setError] = useState<string | null>(null);
   const pipWindowRef = useRef<Window | null>(null);

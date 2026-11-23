@@ -102,12 +102,12 @@ export default function AuthPage() {
         {/* 昔の暗いテーマの「Account Protocol / READY / ACCOUNT」の飾りをやめ、ふつうのパネルにする */}
         <main className="mx-auto max-w-2xl px-4 pb-24 pt-6 md:px-10 md:pt-12 lg:pb-12">
           <section className="ui-panel grid gap-4 p-5 text-center sm:p-7">
-            <h1 className="text-2xl font-black text-[var(--brand-text)]">{tx("ログインしています", "You're logged in")}</h1>
+            <h1 className="text-2xl font-black text-[var(--brand-text)]">{tx("ログインしています", "You're logged in", { tw: "已登入", ko: "로그인되어 있어요" })}</h1>
             <p className="mx-auto max-w-2xl text-sm leading-6 text-[var(--brand-text-muted)]">
-              {tx("すでにログインしています。アカウント管理からプロフィール、認証、配信権限を確認してください。", "You are already logged in. Check your profile, verification, and streaming permissions from account settings.")}
+              {tx("すでにログインしています。アカウント管理からプロフィール、認証、配信権限を確認してください。", "You are already logged in. Check your profile, verification, and streaming permissions from account settings.", { tw: "你已經登入了。可以在帳號設定中查看個人資料、驗證狀態與直播權限。", ko: "이미 로그인되어 있어요. 계정 설정에서 프로필, 인증, 방송 권한을 확인해 주세요." })}
             </p>
             <Link href="/account" className="ui-btn ui-btn-md ui-btn-primary mx-auto w-full sm:w-auto">
-              {tx("アカウント設定へ", "Account settings")}
+              {tx("アカウント設定へ", "Account settings", { tw: "帳號設定", ko: "계정 설정" })}
             </Link>
           </section>
         </main>
@@ -130,7 +130,7 @@ export default function AuthPage() {
       await refreshSession();
       router.push(redirectTo ?? "/account");
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : tx("処理に失敗しました。", "The request failed."));
+      setError(caughtError instanceof Error ? caughtError.message : tx("処理に失敗しました。", "The request failed.", { tw: "處理失敗，請再試一次。", ko: "요청을 처리하지 못했어요." }));
     } finally {
       setSubmitting(false);
     }
@@ -150,16 +150,16 @@ export default function AuthPage() {
         <section className="ui-panel p-5 sm:p-7">
           <div>
             <div className="mb-6">
-              <h1 className="text-2xl font-black">{tx("ログイン", "Log in")}</h1>
-              <p className="mt-1 text-sm text-[var(--brand-text-muted)]">{tx("登録済みアカウントでログインします", "Log in with an existing account")}</p>
+              <h1 className="text-2xl font-black">{tx("ログイン", "Log in", { tw: "登入", ko: "로그인" })}</h1>
+              <p className="mt-1 text-sm text-[var(--brand-text-muted)]">{tx("登録済みアカウントでログインします", "Log in with an existing account", { tw: "使用已註冊的帳號登入", ko: "가입한 계정으로 로그인하세요" })}</p>
             </div>
 
             <form onSubmit={submit} className="space-y-4">
-              <InputLabel label={tx("メールアドレス", "Email")}>
+              <InputLabel label={tx("メールアドレス", "Email", { tw: "電子郵件", ko: "이메일" })}>
                 <TextInput type="email" autoComplete="email" inputMode="email" value={email} onChange={(event) => setEmail(event.target.value)} />
               </InputLabel>
 
-              <InputLabel label={tx("パスワード", "Password")}>
+              <InputLabel label={tx("パスワード", "Password", { tw: "密碼", ko: "비밀번호" })}>
                 <TextInput type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} />
               </InputLabel>
 
@@ -172,7 +172,7 @@ export default function AuthPage() {
                   disabled={submitting}
                   className="ui-btn ui-btn-md ui-btn-primary"
                 >
-                  {submitting ? tx("ログイン中…", "Logging in…") : tx("ログイン", "Log in")}
+                  {submitting ? tx("ログイン中…", "Logging in…", { tw: "登入中…", ko: "로그인 중…" }) : tx("ログイン", "Log in", { tw: "登入", ko: "로그인" })}
                 </button>
                 <button
                   type="button"
@@ -181,14 +181,14 @@ export default function AuthPage() {
                   className="ui-btn ui-btn-md ui-btn-ghost gap-2"
                 >
                   <GoogleLogo />
-                  {tx("Googleでログイン", "Continue with Google")}
+                  {tx("Googleでログイン", "Continue with Google", { tw: "使用 Google 繼續", ko: "Google로 계속하기" })}
                 </button>
               </div>
 
               <p className="pt-1 text-sm text-[var(--brand-text-muted)]">
-                {tx("アカウントを持っていませんか？", "Don't have an account?")}{" "}
+                {tx("アカウントを持っていませんか？", "Don't have an account?", { tw: "還沒有帳號嗎？", ko: "아직 계정이 없으신가요?" })}{" "}
                 <Link href="/auth/signup" className="font-semibold text-[var(--brand-primary-ink)] underline-offset-2 hover:underline">
-                  {tx("アカウントを新規作成", "Create an account")}
+                  {tx("アカウントを新規作成", "Create an account", { tw: "建立帳號", ko: "계정 만들기" })}
                 </Link>
               </p>
             </form>

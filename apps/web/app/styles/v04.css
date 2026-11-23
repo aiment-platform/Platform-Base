@@ -37,6 +37,18 @@ html[data-ui="0.4"] {
   --lime-ink: var(--text); /* ライムの上の文字 */
 }
 
+/* 繁体字・韓国語のときは、その言語の書体を日本語の書体より前に置く（i18n.tsx が html の lang を変える）。
+   英字と数字は Nunito のまま */
+html[data-ui="0.4"]:lang(zh-TW) {
+  --font-latin: var(--font-rounded-latin), var(--font-tc), "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --font-jp: var(--font-rounded-latin), var(--font-tc), "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+
+html[data-ui="0.4"]:lang(ko) {
+  --font-latin: var(--font-rounded-latin), var(--font-kr), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-jp: var(--font-rounded-latin), var(--font-kr), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+
 /* --- 3. 厚み ------------------------------------------------------------- */
 /* 置いてあるだけのパネルは平らに（細い縁だけ）。厚みがあると押せそうに見えてしまう */
 html[data-ui="0.4"] :is(.ui-panel, .ui-card) {

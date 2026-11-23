@@ -79,7 +79,7 @@ export default function HomePage() {
           isSubscribed: true,
           tags: [session.category, "参加型"],
           description: session.description,
-          duration: tx(`約${session.plannedDurationMin ?? 60}分`, `About ${session.plannedDurationMin ?? 60} min`),
+          duration: tx(`約${session.plannedDurationMin ?? 60}分`, `About ${session.plannedDurationMin ?? 60} min`, { tw: `約 ${session.plannedDurationMin ?? 60} 分鐘`, ko: `약 ${session.plannedDurationMin ?? 60}분` }),
           glowColor: "rgba(124,106,230,0.35)",
         })),
     [dynamicSessions, tx],
@@ -106,7 +106,7 @@ export default function HomePage() {
           isSubscribed: true,
           tags: [session.category, "参加型"],
           description: session.description,
-          duration: tx(`配信中 / 約${session.plannedDurationMin ?? 60}分`, `Live now / About ${session.plannedDurationMin ?? 60} min`),
+          duration: tx(`配信中 / 約${session.plannedDurationMin ?? 60}分`, `Live now / About ${session.plannedDurationMin ?? 60} min`, { tw: `直播中 / 約 ${session.plannedDurationMin ?? 60} 分鐘`, ko: `라이브 중 / 약 ${session.plannedDurationMin ?? 60}분` }),
         })),
     [dynamicSessions, tx],
   );
@@ -166,8 +166,8 @@ export default function HomePage() {
         {initialLoading ? (
           showSlowLoading ? (
             <SlowLoadingScreen
-              title={tx("配信枠を読み込んでいます", "Loading streams")}
-              description={tx("最新の配信予定を確認しています。少しだけお待ちください。", "Checking the latest stream schedule. Please wait a moment.")}
+              title={tx("配信枠を読み込んでいます", "Loading streams", { tw: "正在載入直播", ko: "방송을 불러오는 중" })}
+              description={tx("最新の配信予定を確認しています。少しだけお待ちください。", "Checking the latest stream schedule. Please wait a moment.", { tw: "正在確認最新的直播時程，請稍候。", ko: "최신 방송 일정을 확인하고 있어요. 잠시만 기다려 주세요." })}
             />
           ) : (
             <div className="min-h-[360px]" aria-hidden />

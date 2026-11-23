@@ -14,7 +14,7 @@ import { Button } from "../../../../components/ui/Button";
 import { Card } from "../../../../components/ui/Card";
 import { FieldLabel, SelectField, TextArea } from "../../../../components/ui/Field";
 import { TopNav } from "../../../../components/home/TopNav";
-import { useI18n } from "../../../../lib/i18n";
+import { useI18n, type Translate } from "../../../../lib/i18n";
 import { categoryLabel, participationLabel } from "../../../../lib/labels";
 import { createUserReport } from "../../../../lib/reports";
 import { getStreamSession, type StreamSession } from "../../../../lib/streamSessions";
@@ -51,7 +51,6 @@ function formatDateTime(value?: string) {
   });
 }
 
-type Translate = (jp: string, en: string) => string;
 
 function metricCards(session: StreamSession, tx: Translate) {
   const listenerReservations = Math.max(0, session.slotsTotal - session.slotsLeft);
