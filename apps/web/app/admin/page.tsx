@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardDocumentListIcon, GiftIcon, SignalIcon, VideoCameraIcon } from "@heroicons/react/24/outline";
+import { ClipboardDocumentListIcon, FilmIcon, GiftIcon, SignalIcon, VideoCameraIcon } from "@heroicons/react/24/outline";
 
 const CARDS = [
   {
@@ -7,6 +7,12 @@ const CARDS = [
     icon: VideoCameraIcon,
     title: "セッション管理",
     desc: "全VTuberの配信枠を一覧。終了し忘れた配信の強制終了や、不要な枠の削除ができます。",
+  },
+  {
+    href: "/admin/recordings",
+    icon: FilmIcon,
+    title: "録画",
+    desc: "配信の録画を一覧。「全部入り」と「VTuberのみ」をダウンロードできます。",
   },
   {
     href: "/admin/reservations",

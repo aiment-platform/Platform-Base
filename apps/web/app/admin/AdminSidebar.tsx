@@ -7,6 +7,7 @@ import {
   ChatBubbleLeftEllipsisIcon,
   ClipboardDocumentListIcon,
   DocumentTextIcon,
+  FilmIcon,
   GiftIcon,
   PencilSquareIcon,
   SignalIcon,
@@ -18,6 +19,7 @@ import {
 const NAV_ITEMS = [
   { href: "/admin/users", label: "ユーザー管理", icon: UsersIcon },
   { href: "/admin/sessions", label: "セッション管理", icon: SignalIcon },
+  { href: "/admin/recordings", label: "録画", icon: FilmIcon },
   { href: "/admin/reservations", label: "予約確認", icon: ClipboardDocumentListIcon },
   { href: "/admin/supporter-lottery", label: "サポーター抽選", icon: GiftIcon },
   { href: "/admin/tickets", label: "チケット管理", icon: TicketIcon },
